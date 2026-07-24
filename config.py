@@ -26,7 +26,7 @@ def get_config() -> Config:
     root = Path(__file__).resolve().parent
     return Config(
         ollama_url=os.getenv('OLLAMA_URL', 'http://localhost:11434'),
-        model_name=os.getenv('MODEL_NAME', 'cynx-model'),
+        model_name=os.getenv('MODEL_NAME', 'cyn-x:latest'),
         db_path=os.getenv('CYNX_DB_PATH', str(root / 'database' / 'cyn.db')),
         templates_dir=os.getenv('CYNX_TEMPLATES_DIR', str(root / 'prompts')),
         log_dir=os.getenv('CYNX_LOG_DIR', str(root / 'logs')),
