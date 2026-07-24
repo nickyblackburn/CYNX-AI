@@ -1,0 +1,49 @@
+"""
+SQLite helpers: connect and ensure schema.
+"""
+import sqlite3
+from pathlib import Path
+from typing import Optional
+
+
+def connect(db_path: Optional[str] = None) -> sqlite3.Connection:
+    if not db_path:
+        root = Path(__file__).resolve().parents[1]
+        db_path = str(root / 'database' / 'cyn.db')
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+    ensure_schema(conn)
+    return conn
+
+
+def ensure_schema(conn: sqlite3.Connection):
+    cur = conn.cursor()
+    # memories table
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS memories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        kind TEXT,
+        content TEXT,
+        metadata TEXT
+    )
+    ''')
+    # conversations
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS conversations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        role TEXT,
+        message TEXT,
+        ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
+    # tool calls
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS tool_calls (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        args TEXT,
+        result TEXT,
+        ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
+    conn.commit()

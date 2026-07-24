@@ -1,0 +1,7 @@
+# Core requirements for CYN-X (initial scaffold)
+httpx>=0.24.0
+python-dotenv>=1.0
+pydantic>=1.10
+pytest>=7.0
+aiosqlite>=0.18
+discord.py>=2.0.0
