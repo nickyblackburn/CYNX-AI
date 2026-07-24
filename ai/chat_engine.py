@@ -34,6 +34,5 @@ class ChatEngine:
         self.logger and self.logger.debug("Prompt built for user %s", user_id)
         resp = self.ollama.generate(prompt)
         # For now, assume resp contains a top-level 'text' field
-        assistant_text = resp.get('text') or str(resp)
-        # Persist conversation (left as an exercise)
+        assistant_text = resp.get('response') or resp.get('text') or str(resp)        # Persist conversation (left as an exercise)
         return assistant_text
