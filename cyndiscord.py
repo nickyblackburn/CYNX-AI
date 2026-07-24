@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-MODEL = os.getenv("OLLAMA_MODEL", "cyn")
+MODEL = os.getenv("OLLAMA_MODEL", "cyn-x")
 
 intents = discord.Intents.default()
 intents.message_content = True
