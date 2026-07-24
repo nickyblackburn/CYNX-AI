@@ -23,16 +23,50 @@ class ChatEngine:
           - detect tool calls (not implemented here)
           - persist conversation
         """
-        # memory summary (placeholder)
-        mem_summary = ''
+
+        # Retrieve recent memories
+        memories = self.memory_store.retrieve_recent(limit=5)
+
+        mem_summary = "\n".join(
+            [
+                f"- {memory['kind']}: {memory['content']}"
+                for memory in memories
+            ]
+        )
+
         mode_spec = self.mode_manager.get_mode(mode)
+
         personality_frag = ''
-        prompt = self.prompt_builder.build_prompt(text, mode_fragment=mode_spec.instruction_fragment,
-                                                  personality_fragment=personality_frag,
-                                                  memory_summary=mem_summary,
-                                                  history=[])
-        self.logger and self.logger.debug("Prompt built for user %s", user_id)
+
+        prompt = self.prompt_builder.build_prompt(
+            text,
+            mode_fragment=mode_spec.instruction_fragment,
+            personality_fragment=personality_frag,
+            memory_summary=mem_summary,
+            history=[]
+        )
+
+        self.logger and self.logger.debug(
+            "Prompt built for user %s",
+            user_id
+        )
+
         resp = self.ollama.generate(prompt)
-        # For now, assume resp contains a top-level 'text' field
-        assistant_text = resp.get('response') or resp.get('text') or str(resp)        # Persist conversation (left as an exercise)
+
+        # For now, assume resp contains a top-level 'response' field
+        assistant_text = (
+            resp.get('response')
+            or resp.get('text')
+            or str(resp)
+        )
+
+        # Persist conversation
+        self.memory_store.add_memory(
+            kind="conversation",
+            content=f"User: {text}\nAssistant: {assistant_text}",
+            metadata={
+                "user_id": user_id
+            }
+        )
+
         return assistant_text
