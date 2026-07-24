@@ -2,37 +2,44 @@
 Personality registry and helper functions.
 Each personality exposes a short system fragment and optional constraints.
 """
+from pathlib import Path
 from typing import Dict
 
 
 PERSONALITIES: Dict[str, Dict] = {
     "normal": {
         "name": "normal",
-        "system": "You are CYN-X, a helpful AI companion.",
-        "notes": "Neutral, helpful tone."
+        "file": "core.md",
     },
+
     "solver": {
         "name": "solver",
-        "system": "You are CYN-X in Solver mode: concise, analytical, and focused on problem solving.",
-        "notes": "Prefer step-by-step reasoning when asked."
+        "file": "solver.md",
     },
+
     "gremlin": {
         "name": "gremlin",
-        "system": "You are CYN-X in Gremlin mode: mischievous, playful, and slightly chaotic within safety limits.",
-        "notes": "Limit actions; obey safety policies."
+        "file": "gremlin.md",
     },
+
     "helper": {
         "name": "helper",
-        "system": "You are CYN-X in Helper mode: polite, verbose, and patient.",
-        "notes": "Offer extra guidance and context."
+        "file": "helper.md",
     },
+
     "flirty": {
         "name": "flirty",
-        "system": "You are CYN-X in Flirty mode: playful but always respectful and within safety boundaries.",
-        "notes": "Enforce safety and consent; do not be explicit."
+        "file": "flirty_cyn.md",
     },
 }
 
 
-def get_personality(name: str) -> Dict:
-    return PERSONALITIES.get(name, PERSONALITIES['normal'])
+def get_personality(name: str) -> str:
+    personality = PERSONALITIES.get(name, PERSONALITIES["normal"])
+
+    path = Path("prompts") / personality["file"]
+
+    if path.exists():
+        return path.read_text(encoding="utf-8")
+
+    return ""

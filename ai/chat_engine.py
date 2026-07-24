@@ -46,6 +46,10 @@ class ChatEngine:
             history=[]
         )
 
+        print("====== CYN-X PROMPT ======")
+        print(prompt)
+        print("==========================")
+
         self.logger and self.logger.debug(
             "Prompt built for user %s",
             user_id
