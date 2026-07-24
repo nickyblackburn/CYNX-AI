@@ -24,16 +24,26 @@ class ChatEngine:
           - persist conversation
         """
 
+        print("LOADED CHAT ENGINE FROM:", __file__)
+
         # Retrieve recent memories
-        memories = self.memory_store.retrieve_recent(limit=5)
+        """memories = self.memory_store.retrieve_recent(limit=5)
+
+        filtered = []
+
+        for memory in memories:
+            if memory["kind"] == "fact":
+                filtered.append(memory)
 
         mem_summary = "\n".join(
-            [
-                f"- {memory['kind']}: {memory['content']}"
-                for memory in memories
-            ]
-        )
+        [
+        f"- {m['kind']}: {m['content']}"
+        for m in filtered
+        ]
+        )"""
 
+        memories = []
+        mem_summary = ""
         mode_spec = self.mode_manager.get_mode(mode)
 
         personality_frag = ''
@@ -66,11 +76,10 @@ class ChatEngine:
 
         # Persist conversation
         self.memory_store.add_memory(
-            kind="conversation",
-            content=f"User: {text}\nAssistant: {assistant_text}",
+            kind="fact",
+            content=f"User prefers CYN-X personality mode: {personality}",
             metadata={
                 "user_id": user_id
             }
-        )
-
+)
         return assistant_text
