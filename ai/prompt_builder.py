@@ -34,4 +34,5 @@ class PromptBuilder:
             for msg in history[-10:]:
                 parts.append(f"{msg.get('role')}: {msg.get('content')}")
         parts.append("User: " + user_input)
+        print(parts)
         return "\n\n".join([p for p in parts if p])
