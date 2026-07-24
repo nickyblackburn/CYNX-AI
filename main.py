@@ -12,8 +12,10 @@ from ai.mode_manager import ModeManager
 from ai.chat_engine import ChatEngine
 from memory.sqlite import connect as sqlite_connect
 from memory.memory import MemoryStore
+from tools.calculator import CalculatorTool
 from tools.tool_router import ToolRouter
 from interfaces.terminal import TerminalAdapter
+from tools.web_search import WebSearchTool
 
 
 def main():
@@ -36,6 +38,18 @@ def main():
 
     # Tools
     tool_router = ToolRouter()
+
+
+    tool_router.register_tool(
+    WebSearchTool(api_key="123")
+    )
+
+    tool_router.register_tool(
+        CalculatorTool()
+    )
+
+
+    print(tool_router.describe_tools())
 
     # Chat engine
     engine = ChatEngine(
