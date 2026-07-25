@@ -141,7 +141,7 @@ async def chat(data: dict):
         text=message
     )
 
-    voice_engine.speak(response)
+    #voice_engine.speak(response)
 
     return {
         "response": response
