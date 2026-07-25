@@ -11,6 +11,8 @@ OLLAMA = "http://localhost:11434/api/chat"
 
 OUTPUT_FILE = "generated_tests.json"
 
+RESULT_FILE = "results/cyn_conversation_log.txt"
+
 
 # -----------------------------
 # Loading animation
@@ -35,36 +37,27 @@ def loading_animation(stop_event, start_time):
         )
 
         sys.stdout.write(
-            f"\rCyn-X is thinking {frames[index % len(frames)]} "
-            f"{elapsed}s"
+            f"\rCyn-X thinking {frames[index % len(frames)]} {elapsed}s"
         )
 
         sys.stdout.flush()
 
         index += 1
+
         time.sleep(0.2)
 
 
     sys.stdout.write(
-        "\r" + " " * 50 + "\r"
+        "\r" + " " * 60 + "\r"
     )
 
 
+
 # -----------------------------
-# Ollama request
+# Ask Ollama
 # -----------------------------
 
 def ask_model(prompt):
-
-    print("\n" + "=" * 60)
-    print("PROMPT SENT TO AI:")
-    print("=" * 60)
-
-    print(prompt)
-
-    print("=" * 60)
-    print()
-
 
     response_data = {}
 
@@ -91,11 +84,11 @@ def ask_model(prompt):
             response = requests.post(
                 OLLAMA,
                 json=payload,
-                timeout=300
+                timeout=600
             )
 
 
-            response_data["json"] = response.json()
+            response_data["data"] = response.json()
 
 
         except Exception as e:
@@ -135,43 +128,19 @@ def ask_model(prompt):
     animation_thread.join()
 
 
-    elapsed = round(
-        time.time() - start_time,
-        2
-    )
-
-
-    print(
-        f"Finished in {elapsed}s\n"
-    )
-
 
     if "error" in response_data:
 
-        print(
-            "REQUEST ERROR:"
-        )
-
-        print(
-            response_data["error"]
-        )
-
-        return ""
+        return "ERROR: " + response_data["error"]
 
 
 
-    data = response_data["json"]
+    data = response_data["data"]
 
 
     if "message" not in data:
 
-        print(
-            "OLLAMA ERROR:"
-        )
-
-        print(data)
-
-        return ""
+        return "ERROR: " + str(data)
 
 
 
@@ -179,21 +148,23 @@ def ask_model(prompt):
 
 
 
+
 # -----------------------------
-# Main generator
+# Generate User Tests
 # -----------------------------
 
-def main():
+def generate_tests():
 
     print(
-        "CYN-X AUTO PROMPT GENERATOR STARTING..."
+        "\nGenerating Cyn-X user prompts..."
     )
 
 
     generator_prompt = """
-Create 3 test prompts for an AI character named Cyn-X.
 
-Generate tests that check:
+Create 10 test messages for an AI character named Cyn-X.
+
+The messages should test:
 
 - personality consistency
 - humor
@@ -204,11 +175,12 @@ Generate tests that check:
 - safety boundaries
 - randomness
 - funny observations
-- adult-topic handling
+- mature topic handling
 
-Do not answer the prompts.
 
-Only create test cases.
+Do not answer the messages.
+
+Only create the user inputs.
 
 Return JSON only.
 
@@ -216,11 +188,12 @@ Format:
 
 [
  {
-  "category": "category name",
-  "prompt": "user message",
-  "goal": "what we are testing"
+  "category":"category name",
+  "prompt":"what the user says",
+  "goal":"what this tests"
  }
 ]
+
 """
 
 
@@ -229,26 +202,22 @@ Format:
     )
 
 
-    if not result:
+    try:
+
+        tests = json.loads(result)
+
+
+    except:
 
         print(
-            "No response generated."
+            "JSON parsing failed"
         )
 
-        return
+        print(result)
+
+        return False
 
 
-
-    print(
-        "\nGENERATED TESTS:"
-    )
-
-    print(
-        result
-    )
-
-
-    # Save output
 
     with open(
         OUTPUT_FILE,
@@ -256,26 +225,151 @@ Format:
         encoding="utf-8"
     ) as file:
 
-        file.write(
-            result
+        json.dump(
+            tests,
+            file,
+            indent=4
         )
 
 
     print(
-        "\nSaved:"
+        "Generated",
+        len(tests),
+        "tests"
+    )
+
+
+    return True
+
+
+
+
+# -----------------------------
+# Run Conversations
+# -----------------------------
+
+def run_tests():
+
+    print(
+        "\nStarting Cyn-X conversation tests..."
+    )
+
+
+    os.makedirs(
+        "results",
+        exist_ok=True
+    )
+
+
+    with open(
+        OUTPUT_FILE,
+        "r",
+        encoding="utf-8"
+    ) as file:
+
+        tests = json.load(file)
+
+
+
+    with open(
+        RESULT_FILE,
+        "w",
+        encoding="utf-8"
+    ) as log:
+
+
+        for index, test in enumerate(tests, 1):
+
+            print(
+                f"\nRunning test {index}/{len(tests)}"
+            )
+
+            print(
+                test["category"]
+            )
+
+
+            user_message = test["prompt"]
+
+
+            response = ask_model(
+                user_message
+            )
+
+
+            log.write(
+                "\n" + "=" * 60 + "\n"
+            )
+
+            log.write(
+                f"TEST {index}\n\n"
+            )
+
+
+            log.write(
+                "CATEGORY:\n"
+            )
+
+            log.write(
+                test["category"] + "\n\n"
+            )
+
+
+            log.write(
+                "GOAL:\n"
+            )
+
+            log.write(
+                test["goal"] + "\n\n"
+            )
+
+
+            log.write(
+                "USER:\n"
+            )
+
+            log.write(
+                user_message + "\n\n"
+            )
+
+
+            log.write(
+                "CYN-X OUTPUT:\n"
+            )
+
+            log.write(
+                response + "\n"
+            )
+
+
+    print(
+        "\nFinished!"
+    )
+
+    print(
+        "Saved:"
     )
 
     print(
         os.path.abspath(
-            OUTPUT_FILE
+            RESULT_FILE
         )
     )
 
 
+
+
 # -----------------------------
-# Run
+# Main
 # -----------------------------
 
 if __name__ == "__main__":
 
-    main()
+    print(
+        "CYN-X AUTOMATIC CONVERSATION TESTER"
+    )
+
+
+    if generate_tests():
+
+        run_tests()
