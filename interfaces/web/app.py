@@ -13,6 +13,10 @@ from tools.tool_router import ToolRouter
 import sys
 import os
 
+from voice.audio_player import AudioPlayer
+from voice.tts_engine import VoiceEngine
+from voice.voice_manager import VoiceManager
+
 # allow importing CYN modules
 sys.path.append(
     os.path.abspath(
@@ -45,7 +49,14 @@ ollama_client = OllamaClient()
 
 prompt_builder = PromptBuilder()
 
-memory_store = MemoryStore()
+import sqlite3
+
+conn = sqlite3.connect(
+    "database/cyn.db",
+    check_same_thread=False
+)
+
+memory_store = MemoryStore(conn)
 
 tool_router = ToolRouter()
 
@@ -59,27 +70,34 @@ chat_engine = ChatEngine(
     tool_router,
     mode_manager
 )
+tts_engine = VoiceEngine()
 
+audio_player = AudioPlayer()
+
+voice_engine = VoiceManager(
+    tts_engine,
+    audio_player
+)
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
 
     return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request
-        }
+        request=request,
+        name="index.html",
+        context={}
     )
-
-
 @app.post("/chat")
 async def chat(data: dict):
 
     message = data.get("message")
 
-    response = await chat_engine.chat(
-        message
+    response = chat_engine.handle_user_message(
+        user_id="web_user",
+        text=message
     )
+
+    voice_engine.speak(response)
 
     return {
         "response": response
