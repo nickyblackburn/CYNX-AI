@@ -1,2 +1,6 @@
-.wav
+*.wav
+*.mp3
+*.ogg
+__pycache__/
+*.db
 .env
