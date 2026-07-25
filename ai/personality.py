@@ -12,30 +12,35 @@ PERSONALITIES: Dict[str, Dict] = {
         "file": "core.md",
     },
 
-    "solver": {
-        "name": "solver",
-        "file": "solver.md",
-    },
-
-    "gremlin": {
-        "name": "gremlin",
-        "file": "gremlin.md",
-    },
-
-    "helper": {
-        "name": "helper",
-        "file": "helper.md",
-    },
-
-    "flirty": {
-        "name": "flirty",
-        "file": "flirty.md",
-    },
-
     "habits": {
         "name": "habits",
         "file": "habits.md",
     },
+    "examples": {
+        "name": "examples",
+        "file": "examples.md",
+    },   
+    "flirty": {
+        "name": "flirty",
+        "file": "flirty.md",
+    },
+    "modes": {
+        "name": "modes",        
+        "file": "modes.md",
+    },
+    "personality": {
+        "name": "personality",
+        "file": "personality.md",
+    },  
+    "safety": {
+        "name": "safety",
+        "file": "safety.md",
+    },
+    "spontaneous": {
+        "name": "spontaneous",
+        "file": "spontaneous.md",
+    },
+
 }
 
 
