@@ -40,6 +40,10 @@ PERSONALITIES: Dict[str, Dict] = {
         "name": "spontaneous",
         "file": "spontaneous.md",
     },
+    "dialogue_examples": {
+        "name": "dialogue_examples",
+        "file": "dialogue_examples.md",
+    },
 
 }
 
