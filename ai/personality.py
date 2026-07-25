@@ -29,7 +29,7 @@ PERSONALITIES: Dict[str, Dict] = {
 
     "flirty": {
         "name": "flirty",
-        "file": "flirty_cyn.md",
+        "file": "flirty.md",
     },
 }
 

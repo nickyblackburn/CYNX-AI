@@ -1,0 +1,69 @@
+body {
+
+background:#111;
+
+color:white;
+
+font-family:
+Arial, sans-serif;
+
+}
+
+
+.container {
+
+width:600px;
+
+margin:auto;
+
+margin-top:50px;
+
+}
+
+
+#chat {
+
+height:400px;
+
+background:#222;
+
+padding:15px;
+
+overflow-y:auto;
+
+border-radius:10px;
+
+}
+
+
+.input {
+
+display:flex;
+
+margin-top:10px;
+
+}
+
+
+input {
+
+flex:1;
+
+padding:12px;
+
+border-radius:8px;
+
+border:none;
+
+}
+
+
+button {
+
+padding:12px;
+
+margin-left:5px;
+
+border-radius:8px;
+
+}
