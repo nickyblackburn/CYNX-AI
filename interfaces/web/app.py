@@ -3,28 +3,30 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from ai.ollama_client import OllamaClient
-from ai.prompt_builder import PromptBuilder
-from ai.mode_manager import ModeManager
-
-from memory.memory import MemoryStore
-from tools.tool_router import ToolRouter
-
 import sys
 import os
+import sqlite3
 
-from voice.audio_player import AudioPlayer
-from voice.tts_engine import VoiceEngine
-from voice.voice_manager import VoiceManager
 
-# allow importing CYN modules
+# Allow importing CYN modules
 sys.path.append(
     os.path.abspath(
         os.path.join(os.path.dirname(__file__), "../../")
     )
 )
 
+
+from ai.ollama_client import OllamaClient
+from ai.prompt_builder import PromptBuilder
+from ai.mode_manager import ModeManager
 from ai.chat_engine import ChatEngine
+
+from memory.memory import MemoryStore
+from tools.tool_router import ToolRouter
+
+from voice.audio_player import AudioPlayer
+from voice.tts_engine import VoiceEngine
+from voice.voice_manager import VoiceManager
 
 
 app = FastAPI(
@@ -45,11 +47,13 @@ templates = Jinja2Templates(
 
 
 
+# --------------------
+# AI SYSTEMS
+# --------------------
+
 ollama_client = OllamaClient()
 
 prompt_builder = PromptBuilder()
-
-import sqlite3
 
 conn = sqlite3.connect(
     "database/cyn.db",
@@ -70,6 +74,13 @@ chat_engine = ChatEngine(
     tool_router,
     mode_manager
 )
+
+
+
+# --------------------
+# VOICE SYSTEM
+# --------------------
+
 tts_engine = VoiceEngine()
 
 audio_player = AudioPlayer()
@@ -79,6 +90,12 @@ voice_engine = VoiceManager(
     audio_player
 )
 
+
+
+# --------------------
+# WEB ROUTES
+# --------------------
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
 
@@ -87,6 +104,8 @@ async def home(request: Request):
         name="index.html",
         context={}
     )
+
+
 @app.post("/chat")
 async def chat(data: dict):
 
