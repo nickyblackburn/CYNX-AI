@@ -24,9 +24,7 @@ from ai.chat_engine import ChatEngine
 from memory.memory import MemoryStore
 from tools.tool_router import ToolRouter
 
-from voice.audio_player import AudioPlayer
-from voice.tts_engine import VoiceEngine
-from voice.voice_manager import VoiceManager
+from voice import PiperTTS, AudioPlayer, VoiceManager
 
 
 app = FastAPI(
@@ -80,8 +78,35 @@ chat_engine = ChatEngine(
 # --------------------
 # VOICE SYSTEM
 # --------------------
+# Modular Piper TTS architecture - no direct dependency on ChatEngine
+#
+# Model location: models/voices/
+# Current model: en_US-kathleen-low.onnx
+#
+# To add new voices for personality modes:
+# 1. Download Piper ONNX models from https://huggingface.co/rhasspy/piper-voices
+# 2. Place .onnx files in models/voices/ with descriptive names:
+#    - cyn_normal.onnx (default personality)
+#    - cyn_glitch.onnx (error/glitch personality)
+#    - cyn_soft.onnx (empathetic personality)
+# 3. Update the model_path below or implement dynamic switching
+#
+# Future enhancement: Dynamic voice switching based on personality modes
+#   in mode_manager. Example implementation:
+#
+#   voice_model_map = {
+#       "glitch": "models/voices/cyn_glitch.onnx",
+#       "soft": "models/voices/cyn_soft.onnx",
+#       "normal": "models/voices/cyn_normal.onnx"
+#   }
+#   model_path = voice_model_map.get(
+#       mode_manager.current_mode,
+#       "models/voices/cyn_normal.onnx"
+#   )
 
-tts_engine = VoiceEngine()
+tts_engine = PiperTTS(
+    "voice/models/en_US-kathleen-low.onnx"
+)
 
 audio_player = AudioPlayer()
 
