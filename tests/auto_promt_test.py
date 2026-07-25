@@ -9,14 +9,91 @@ import os
 MODEL = "cyn-x"
 OLLAMA = "http://localhost:11434/api/chat"
 
-OUTPUT_FILE = "generated_tests.json"
 
-RESULT_FILE = "results/cyn_conversation_log.txt"
+# Files
+PROMPTS_FOLDER = "../prompts"
+
+GENERATED_TEST_FILE = "generated_tests.json"
+
+RESULT_FOLDER = "results"
+RESULT_FILE = os.path.join(
+    RESULT_FOLDER,
+    "cyn_conversation_log.txt"
+)
 
 
-# -----------------------------
-# Loading animation
-# -----------------------------
+CYN_FILES = [
+    "core.md",
+    "personality.md",
+    "habits.md",
+    "modes.md",
+    "safety.md",
+    "examples.md"
+]
+
+
+# --------------------------------
+# Load Cyn-X Personality
+# --------------------------------
+
+def load_cyn_personality():
+
+    print("\nLoading Cyn-X personality files...\n")
+
+    system_prompt = ""
+
+
+    for filename in CYN_FILES:
+
+        path = os.path.join(
+            PROMPTS_FOLDER,
+            filename
+        )
+
+
+        if os.path.exists(path):
+
+            print(
+                "[LOADED]",
+                path
+            )
+
+
+            with open(
+                path,
+                "r",
+                encoding="utf-8"
+            ) as file:
+
+                system_prompt += (
+                    "\n\n"
+                    "### "
+                    + filename
+                    + "\n\n"
+                )
+
+                system_prompt += file.read()
+
+
+        else:
+
+            print(
+                "[MISSING]",
+                path
+            )
+
+
+    print(
+        "\nPersonality loaded.\n"
+    )
+
+    return system_prompt
+
+
+
+# --------------------------------
+# Spinner
+# --------------------------------
 
 def loading_animation(stop_event, start_time):
 
@@ -29,6 +106,7 @@ def loading_animation(stop_event, start_time):
 
     index = 0
 
+
     while not stop_event.is_set():
 
         elapsed = round(
@@ -36,15 +114,18 @@ def loading_animation(stop_event, start_time):
             1
         )
 
+
         sys.stdout.write(
             f"\rCyn-X thinking {frames[index % len(frames)]} {elapsed}s"
         )
 
         sys.stdout.flush()
 
+
         index += 1
 
         time.sleep(0.2)
+
 
 
     sys.stdout.write(
@@ -53,16 +134,16 @@ def loading_animation(stop_event, start_time):
 
 
 
-# -----------------------------
-# Ask Ollama
-# -----------------------------
+# --------------------------------
+# Ollama Request
+# --------------------------------
 
-def ask_model(prompt):
+def ask_model(user_prompt, system_prompt):
 
     response_data = {}
 
 
-    def send_request():
+    def request():
 
         try:
 
@@ -71,11 +152,21 @@ def ask_model(prompt):
                 "model": MODEL,
 
                 "messages": [
+
+                    {
+                        "role": "system",
+                        "content": system_prompt
+                    },
+
                     {
                         "role": "user",
-                        "content": prompt
+                        "content": user_prompt
                     }
+
                 ],
+                "options": {
+                    "num_ctx": 16384
+                },
 
                 "stream": False
             }
@@ -88,12 +179,12 @@ def ask_model(prompt):
             )
 
 
-            response_data["data"] = response.json()
+            response_data["json"] = response.json()
 
 
-        except Exception as e:
+        except Exception as error:
 
-            response_data["error"] = str(e)
+            response_data["error"] = str(error)
 
 
 
@@ -102,14 +193,16 @@ def ask_model(prompt):
     start_time = time.time()
 
 
-    request_thread = threading.Thread(
-        target=send_request
+
+    thread = threading.Thread(
+        target=request
     )
 
-    request_thread.start()
+    thread.start()
 
 
-    animation_thread = threading.Thread(
+
+    spinner = threading.Thread(
         target=loading_animation,
         args=(
             stop_event,
@@ -117,31 +210,36 @@ def ask_model(prompt):
         )
     )
 
-    animation_thread.start()
+    spinner.start()
 
 
-    request_thread.join()
+
+    thread.join()
 
 
     stop_event.set()
 
-    animation_thread.join()
+    spinner.join()
 
 
 
     if "error" in response_data:
 
-        return "ERROR: " + response_data["error"]
+        return (
+            "ERROR:\n"
+            + response_data["error"]
+        )
 
 
-
-    data = response_data["data"]
+    data = response_data["json"]
 
 
     if "message" not in data:
 
-        return "ERROR: " + str(data)
-
+        return (
+            "OLLAMA ERROR:\n"
+            + str(data)
+        )
 
 
     return data["message"]["content"]
@@ -149,38 +247,39 @@ def ask_model(prompt):
 
 
 
-# -----------------------------
-# Generate User Tests
-# -----------------------------
+# --------------------------------
+# Generate Tests
+# --------------------------------
 
-def generate_tests():
+def generate_tests(system_prompt):
+
 
     print(
-        "\nGenerating Cyn-X user prompts..."
+        "Generating Cyn-X test prompts..."
     )
 
 
-    generator_prompt = """
+    prompt = """
 
-Create 10 test messages for an AI character named Cyn-X.
+Create 10 test prompts for Cyn-X.
 
-The messages should test:
+Test categories:
 
 - personality consistency
 - humor
 - emotional responses
-- technical questions
+- technical knowledge
 - memory behavior
 - breaking character
-- safety boundaries
+- safety behavior
 - randomness
-- funny observations
+- strange human situations
 - mature topic handling
 
 
-Do not answer the messages.
+The prompts should test how Cyn reacts.
 
-Only create the user inputs.
+Do not answer the prompts.
 
 Return JSON only.
 
@@ -188,39 +287,40 @@ Format:
 
 [
  {
-  "category":"category name",
-  "prompt":"what the user says",
-  "goal":"what this tests"
+  "category": "name",
+  "prompt": "user message",
+  "goal": "what this tests"
  }
 ]
 
 """
 
 
-    result = ask_model(
-        generator_prompt
+    output = ask_model(
+        prompt,
+        system_prompt
     )
 
 
     try:
 
-        tests = json.loads(result)
+        tests = json.loads(output)
 
 
-    except:
+    except Exception:
 
         print(
-            "JSON parsing failed"
+            "\nJSON ERROR:"
         )
 
-        print(result)
+        print(output)
 
         return False
 
 
 
     with open(
-        OUTPUT_FILE,
+        GENERATED_TEST_FILE,
         "w",
         encoding="utf-8"
     ) as file:
@@ -233,9 +333,9 @@ Format:
 
 
     print(
-        "Generated",
+        "\nGenerated",
         len(tests),
-        "tests"
+        "tests."
     )
 
 
@@ -244,25 +344,26 @@ Format:
 
 
 
-# -----------------------------
-# Run Conversations
-# -----------------------------
+# --------------------------------
+# Run Tests
+# --------------------------------
 
-def run_tests():
+def run_tests(system_prompt):
+
 
     print(
-        "\nStarting Cyn-X conversation tests..."
+        "\nRunning Cyn-X tests...\n"
     )
 
 
     os.makedirs(
-        "results",
+        RESULT_FOLDER,
         exist_ok=True
     )
 
 
     with open(
-        OUTPUT_FILE,
+        GENERATED_TEST_FILE,
         "r",
         encoding="utf-8"
     ) as file:
@@ -278,13 +379,12 @@ def run_tests():
     ) as log:
 
 
-        for index, test in enumerate(tests, 1):
+        for number, test in enumerate(tests, 1):
+
 
             print(
-                f"\nRunning test {index}/{len(tests)}"
-            )
-
-            print(
+                f"Test {number}/{len(tests)}:"
+                ,
                 test["category"]
             )
 
@@ -293,16 +393,21 @@ def run_tests():
 
 
             response = ask_model(
-                user_message
+                user_message,
+                system_prompt
+            )
+
+
+
+            log.write(
+                "\n"
+                + "=" * 70
+                + "\n"
             )
 
 
             log.write(
-                "\n" + "=" * 60 + "\n"
-            )
-
-            log.write(
-                f"TEST {index}\n\n"
+                f"TEST {number}\n\n"
             )
 
 
@@ -311,7 +416,9 @@ def run_tests():
             )
 
             log.write(
-                test["category"] + "\n\n"
+                test["category"]
+                +
+                "\n\n"
             )
 
 
@@ -320,7 +427,9 @@ def run_tests():
             )
 
             log.write(
-                test["goal"] + "\n\n"
+                test["goal"]
+                +
+                "\n\n"
             )
 
 
@@ -329,7 +438,9 @@ def run_tests():
             )
 
             log.write(
-                user_message + "\n\n"
+                user_message
+                +
+                "\n\n"
             )
 
 
@@ -338,8 +449,11 @@ def run_tests():
             )
 
             log.write(
-                response + "\n"
+                response
+                +
+                "\n"
             )
+
 
 
     print(
@@ -359,17 +473,29 @@ def run_tests():
 
 
 
-# -----------------------------
+# --------------------------------
 # Main
-# -----------------------------
+# --------------------------------
 
 if __name__ == "__main__":
 
+
     print(
-        "CYN-X AUTOMATIC CONVERSATION TESTER"
+        "=============================="
+    )
+
+    print(
+        " CYN-X AUTOMATIC TESTER"
+    )
+
+    print(
+        "=============================="
     )
 
 
-    if generate_tests():
+    cyn_system = load_cyn_personality()
 
-        run_tests()
+
+    if generate_tests(cyn_system):
+
+        run_tests(cyn_system)
