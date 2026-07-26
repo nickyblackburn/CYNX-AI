@@ -1,180 +1,183 @@
 """
-PromptManager loads and assembles Cyn's modular personality prompts.
+PromptManager loads Cyn's modular personality prompts.
 
-Automatically discovers and combines prompt files in the correct order.
-Supports dynamic mode loading without code changes.
+Keeps the base personality small and loads optional material dynamically.
 """
+
 from pathlib import Path
 from typing import Dict, List, Optional
 
 
 class PromptManager:
-    """Manages loading and building Cyn's system prompt from modular files."""
 
-    # Core loading order - these are loaded first and in this sequence
     CORE_ORDER = [
-        'core.md',
-        'personality.md',
-        'voice.md',
-        'conversation.md',
-        'safety.md',
+        "core.md",
+        "personality.md",
+        "voice.md",
     ]
 
-    def __init__(self, prompts_dir: Optional[str] = None):
-        """
-        Initialize PromptManager.
+    OPTIONAL_FILES = {
+        "safety": "safety.md",
+        "conversation": "conversation.md",
+    }
 
-        Args:
-            prompts_dir: Path to prompts directory. Defaults to ./prompts_new
-        """
+
+    def __init__(self, prompts_dir: Optional[str] = None):
+
         if prompts_dir:
             self.prompts_dir = Path(prompts_dir)
         else:
-            self.prompts_dir = Path(__file__).resolve().parents[1] / 'prompts_new'
+            self.prompts_dir = (
+                Path(__file__).resolve().parents[1]
+                / "prompts_new"
+            )
 
         if not self.prompts_dir.exists():
-            raise FileNotFoundError(f"Prompts directory not found: {self.prompts_dir}")
+            raise FileNotFoundError(
+                f"Missing prompts directory: {self.prompts_dir}"
+            )
 
-        self.modes_dir = self.prompts_dir / 'modes'
-        self._prompt_cache: Dict[str, str] = {}
-        self._mode_cache: Dict[str, str] = {}
+        self.modes_dir = self.prompts_dir / "modes"
 
-    def _load_file(self, file_path: Path) -> str:
-        """Load a markdown file, with caching."""
-        if not file_path.exists():
-            return ''
-        return file_path.read_text(encoding='utf-8')
+        self._cache = {}
+        self._mode_cache = {}
 
-    def load_core_prompts(self) -> str:
-        """Load all core personality prompts in order."""
+
+    def _load_file(self, path: Path):
+
+        key = str(path)
+
+        if key in self._cache:
+            return self._cache[key]
+
+        if not path.exists():
+            return ""
+
+        text = path.read_text(
+            encoding="utf-8"
+        )
+
+        self._cache[key] = text
+
+        return text
+
+
+
+    def load_core_prompts(self):
+
         parts = []
-        for filename in self.CORE_ORDER:
-            filepath = self.prompts_dir / filename
-            content = self._load_file(filepath)
-            if content:
-                parts.append(content)
 
-        # Always add examples at the end of core
-        examples_path = self.prompts_dir / 'examples.md'
-        examples = self._load_file(examples_path)
-        if examples:
-            parts.append(examples)
+        for file in self.CORE_ORDER:
+
+            text = self._load_file(
+                self.prompts_dir / file
+            )
+
+            if text:
+                parts.append(text)
+
 
         return "\n\n".join(parts)
 
-    def load_mode(self, mode_name: str) -> str:
-        """
-        Load a specific mode file.
 
-        Args:
-            mode_name: Name of the mode (e.g., 'playful', 'technical', 'comfort')
 
-        Returns:
-            Mode content as string, empty string if not found
-        """
+    def load_optional(self, name):
+
+        filename = self.OPTIONAL_FILES.get(name)
+
+        if not filename:
+            return ""
+
+        return self._load_file(
+            self.prompts_dir / filename
+        )
+
+
+
+    def load_mode(self, mode_name):
+
         if mode_name in self._mode_cache:
             return self._mode_cache[mode_name]
 
-        mode_path = self.modes_dir / f"{mode_name}.md"
-        content = self._load_file(mode_path)
 
-        if content:
-            self._mode_cache[mode_name] = content
+        path = (
+            self.modes_dir /
+            f"{mode_name}.md"
+        )
 
-        return content
+        text = self._load_file(path)
 
-    def get_available_modes(self) -> List[str]:
-        """
-        Get list of available modes.
 
-        Returns:
-            List of mode names without .md extension
-        """
-        if not self.modes_dir.exists():
-            return []
+        if text:
+            self._mode_cache[mode_name] = text
 
-        modes = []
-        for file in self.modes_dir.glob('*.md'):
-            modes.append(file.stem)
 
-        return sorted(modes)
+        return text
+
+
 
     def build_system_prompt(
         self,
-        active_modes: Optional[List[str]] = None,
-        memory_summary: str = '',
-        additional_context: str = ''
-    ) -> str:
-        """
-        Build the complete system prompt.
+        active_modes=None,
+        memory_summary="",
+        additional_context="",
+        include_safety=True,
+    ):
 
-        Args:
-            active_modes: List of mode names to activate (e.g., ['playful', 'technical'])
-            memory_summary: Optional memory/context summary to include
-            additional_context: Optional additional context (tools, constraints, etc.)
-
-        Returns:
-            Complete assembled system prompt
-        """
         parts = []
 
-        # Start with core personality
-        parts.append(self.load_core_prompts())
 
-        # Add active modes
+        # Small personality core
+        core = self.load_core_prompts()
+
+        if core:
+            parts.append(core)
+
+
+
+        # Load only safety if wanted
+        if include_safety:
+
+            safety = self.load_optional(
+                "safety"
+            )
+
+            if safety:
+                parts.append(safety)
+
+
+
+        # Modes only when activated
         if active_modes:
-            for mode_name in active_modes:
-                mode_content = self.load_mode(mode_name)
-                if mode_content:
-                    parts.append(f"# Mode: {mode_name.title()}\n\n{mode_content}")
 
-        # Add memory if provided
+            for mode in active_modes:
+
+                mode_text = self.load_mode(
+                    mode
+                )
+
+                if mode_text:
+
+                    parts.append(
+                        f"[{mode.upper()} MODE]\n{mode_text}"
+                    )
+
+
+
+        # Memory
         if memory_summary:
-            parts.append(f"# Memory Context\n\n{memory_summary}")
 
-        # Add additional context if provided
+            parts.append(
+                f"[MEMORY]\n{memory_summary}"
+            )
+
+
+
         if additional_context:
-            parts.append(additional_context)
 
-        return "\n\n".join([p for p in parts if p])
-
-    def get_prompt_info(self) -> Dict[str, any]:
-        """
-        Get information about available prompts.
-
-        Returns:
-            Dict with core files and available modes
-        """
-        return {
-            'core_files': self.CORE_ORDER,
-            'available_modes': self.get_available_modes(),
-            'prompts_dir': str(self.prompts_dir),
-            'modes_dir': str(self.modes_dir),
-        }
+            parts.append(
+                additional_context
+            )
 
 
-# Convenience function for backwards compatibility
-def get_system_prompt(
-    modes: Optional[List[str]] = None,
-    memory: str = '',
-    context: str = '',
-    prompts_dir: Optional[str] = None
-) -> str:
-    """
-    Convenience function to build system prompt in one call.
-
-    Args:
-        modes: List of mode names to activate
-        memory: Memory summary to include
-        context: Additional context to include
-        prompts_dir: Path to prompts directory
-
-    Returns:
-        Complete system prompt
-    """
-    manager = PromptManager(prompts_dir)
-    return manager.build_system_prompt(
-        active_modes=modes,
-        memory_summary=memory,
-        additional_context=context
-    )
+        return "\n\n".join(parts)
