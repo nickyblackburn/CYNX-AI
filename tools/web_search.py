@@ -18,29 +18,128 @@ class WebSearchTool(BaseTool):
         # Store-specific search improvements
         query_lower = query.lower()
 
-        if "target" in query_lower:
-            query += " site:target.com"
 
-        if "amazon" in query_lower:
-            query += " site:amazon.com"
+        stores = {
+            "target": "target.com",
+            "amazon": "amazon.com",
+            "walmart": "walmart.com",
+        }
 
-        if "walmart" in query_lower:
-            query += " site:walmart.com"
+
+        for store, domain in stores.items():
+
+            if store in query_lower:
+                query += f" site:{domain}"
+                break
+
+
+
+        # Improve product searches
+        if any(word in query_lower for word in [
+            "best",
+            "top",
+            "recommend",
+            "review"
+        ]):
+            query += " reviews"
+
+
+
+        # Product category improvements
+        if "bullet vibrator" in query_lower:
+
+            query += ' "bullet vibrator"'
+
+
+        elif "vibrator" in query_lower:
+
+            query += " product"
+            query += " -massager -massage"
+
+
+
+        if any(word in query_lower for word in [
+            "headset",
+            "keyboard",
+            "phone",
+            "laptop"
+        ]):
+
+            query += " product listing"
+
+
+
+        print("[SEARCH QUERY]", query)
+
 
 
         results = []
+
 
 
         with DDGS() as ddgs:
 
             for item in ddgs.text(
                 query,
-                max_results=5
+                max_results=20
             ):
 
-                results.append(
-                    f"{item['title']}\n{item['body']}\n{item['href']}"
+
+                title = item.get(
+                    "title",
+                    ""
                 )
+
+
+                body = item.get(
+                    "body",
+                    ""
+                )
+
+
+                href = item.get(
+                    "href",
+                    ""
+                )
+
+
+
+                # Skip empty results
+                if not href:
+                    continue
+
+
+
+                # Prefer real product pages
+                if "target.com" in href:
+
+                    if "/p/" not in href:
+                        continue
+
+
+
+                results.append(
+                    f"""
+TITLE:
+{title}
+
+DESCRIPTION:
+{body}
+
+LINK:
+{href}
+"""
+                )
+
+
+
+        if not results:
+
+            return ToolResult(
+                False,
+                "No search results found."
+            )
+
 
 
         return ToolResult(
