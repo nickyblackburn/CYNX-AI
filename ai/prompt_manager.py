@@ -14,6 +14,7 @@ class PromptManager:
         "core.md",
         "personality.md",
         "voice.md",
+        'overrides.md',
     ]
 
     OPTIONAL_FILES = {
