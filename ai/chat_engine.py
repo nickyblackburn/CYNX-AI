@@ -1,6 +1,14 @@
 """
-ChatEngine orchestrates a single chat turn: memory retrieval, prompt building, LLM call, tool-calling, and persistence.
-Keep this class thin for now; expand with async handling and retries later.
+ChatEngine orchestrates a single chat turn:
+- context retrieval
+- prompt building
+- LLM call
+- tool-calling
+- memory extraction
+- persistence
+
+Keep this class thin for now;
+expand with async handling and retries later.
 """
 
 import logging
@@ -12,7 +20,19 @@ from ai.memory_system import MemoryManager, MemoryExtractor
 logger = logging.getLogger("cynx.chat")
 
 
+
+# ---------------------------------
+# Context Limits
+# ---------------------------------
+
+MAX_MEMORY_CONTEXT = 3000
+MAX_KNOWLEDGE_CONTEXT = 5000
+MAX_TOOL_CONTEXT = 6000
+
+
+
 class ChatEngine:
+
 
     def __init__(
         self,
@@ -23,17 +43,65 @@ class ChatEngine:
         mode_manager,
         memory_manager: Optional[MemoryManager] = None,
         memory_extractor: Optional[MemoryExtractor] = None,
+        context_manager=None,
         logger_obj=None
     ):
 
+
         self.ollama = ollama_client
+
         self.prompt_builder = prompt_builder
+
         self.memory_store = memory_store
+
         self.tool_router = tool_router
+
         self.mode_manager = mode_manager
+
         self.memory_manager = memory_manager
+
         self.memory_extractor = memory_extractor
+
+        self.context_manager = context_manager
+
         self.logger = logger_obj or logger
+
+
+
+
+    # ---------------------------------
+    # Context Safety
+    # ---------------------------------
+
+    def trim_context(
+        self,
+        text: str,
+        limit: int
+    ) -> str:
+
+
+        if not text:
+
+            return ""
+
+
+        if len(text) <= limit:
+
+            return text
+
+
+
+        return (
+
+            text[:limit]
+
+            +
+
+            "\n\n[Context shortened]"
+
+        )
+
+
 
 
 
@@ -46,74 +114,205 @@ class ChatEngine:
     ) -> str:
 
 
+
         """
         Process a user message.
 
         Flow:
-        1. Retrieve memories
-        2. Build Cyn system prompt
-        3. Check for tool usage
-        4. Execute tools if needed
-        5. Generate Cyn response
+
+        1. Retrieve relevant context
+        2. Build Cyn prompt
+        3. Detect tools
+        4. Execute tools
+        5. Generate response
         6. Extract memories
         7. Save conversation info
+
         """
 
 
 
         # -----------------------------
-        # 1. Memory recall
+        # 1. Context retrieval
         # -----------------------------
+
 
         mem_summary = ""
 
-
-        if self.memory_manager:
-
-            memories = self.memory_manager.recall(
-                user_id,
-                limit=5
-            )
+        knowledge_context = ""
 
 
-            if memories:
+
+        if self.context_manager:
+
+
+            try:
+
+
+                context = self.context_manager.build_context(
+
+                    user_id,
+
+                    text
+
+                )
+
+
+
+                mem_summary = self.trim_context(
+
+                    context.get(
+                        "memory",
+                        ""
+                    ),
+
+                    MAX_MEMORY_CONTEXT
+
+                )
+
+
+
+                knowledge_context = self.trim_context(
+
+                    context.get(
+                        "knowledge",
+                        ""
+                    ),
+
+                    MAX_KNOWLEDGE_CONTEXT
+
+                )
+
+
 
                 self.logger.info(
-                    f"[MEMORY] Loaded {len(memories)} memories for {user_id}"
+
+                    "[CONTEXT] Loaded dynamic context"
+
                 )
 
 
-                mem_summary = self.memory_manager.format_for_prompt(
-                    memories
+                self.logger.info(
+
+                    f"[CONTEXT SIZE] memory={len(mem_summary)} knowledge={len(knowledge_context)}"
+
                 )
 
 
-            else:
 
-                self.logger.debug(
-                    f"[MEMORY] No memories found for {user_id}"
+            except Exception as e:
+
+
+                self.logger.error(
+
+                    f"[CONTEXT ERROR] {e}"
+
                 )
+
+
+
+
+        else:
+
+
+            # Legacy memory fallback
+
+            if self.memory_manager:
+
+
+                memories = self.memory_manager.recall(
+
+                    user_id,
+
+                    limit=5
+
+                )
+
+
+
+                if memories:
+
+
+                    self.logger.info(
+
+                        f"[MEMORY] Loaded {len(memories)} memories"
+
+                    )
+
+
+
+                    mem_summary = self.trim_context(
+
+                        self.memory_manager.format_for_prompt(
+
+                            memories
+
+                        ),
+
+                        MAX_MEMORY_CONTEXT
+
+                    )
+
+
 
 
 
         # -----------------------------
-        # 2. Build prompt
+        # 2. Build Cyn prompt
         # -----------------------------
+
 
         mode_content = []
 
 
+
         if mode:
 
-            mode_content.append(mode)
+
+            mode_content.append(
+
+                mode
+
+            )
 
 
 
-        prompt = self.prompt_builder.build_system_prompt(
-            modes=mode_content,
-            memory=mem_summary,
-            context=f"Personality: {personality}"
+        prompt = self.prompt_builder.build_prompt(
+
+
+            user_input=text,
+
+
+            mode_fragment="\n".join(
+
+                mode_content
+
+            ),
+
+
+            memory_summary=mem_summary,
+
+
+            knowledge_context=knowledge_context,
+
+
+            tools_spec=(
+
+                f"Personality: {personality}"
+
+            )
+
         )
+
+
+
+        self.logger.info(
+
+            f"[PROMPT SIZE] chars={len(prompt)} words={len(prompt.split())}"
+
+        )
+
+
 
 
 
@@ -121,104 +320,148 @@ class ChatEngine:
         # 3. Tool detection
         # -----------------------------
 
+
         tool_result = None
+
         tool_request = None
+
 
 
         if self.tool_router:
 
+
             try:
 
+
                 tool_request = self.tool_router.detect(
+
                     text
+
                 )
+
 
 
                 if tool_request:
 
+
                     self.logger.info(
+
                         f"[TOOL] Requested: {tool_request}"
+
                     )
+
 
 
                     tool_result = self.tool_router.call_tool(
+
                         tool_request["tool"],
+
                         tool_request
+
                     )
 
 
-                    print("!!!!! TOOL RETURNED !!!!!")
-                    print(repr(tool_result))
+
+                    print(
+                        "!!!!! TOOL RETURNED !!!!!"
+                    )
+
+
+                    print(
+
+                        repr(tool_result)
+
+                    )
+
 
 
             except Exception as e:
 
+
                 self.logger.error(
+
                     f"[TOOL ERROR] {e}"
+
                 )
 
 
 
+
+
         # -----------------------------
-        # 4. Build final prompt
+        # 4. Add tool results
         # -----------------------------
 
-        full_prompt = (
-            prompt
-            + "\n\nUser:\n"
-            + text
-        )
 
-
-        self.logger.info(
-            f"[TOOL CHECK] User message: {text}"
-        )
-
-
-        self.logger.info(
-            f"[TOOL DETECTED] {tool_request}"
-        )
+        full_prompt = prompt
 
 
 
         if tool_result:
 
 
-            if hasattr(tool_result, "output"):
+            if hasattr(
+
+                tool_result,
+
+                "output"
+
+            ):
+
 
                 tool_text = tool_result.output
 
+
             else:
 
-                tool_text = str(tool_result)
+
+                tool_text = str(
+
+                    tool_result
+
+                )
+
+
+
+            tool_text = self.trim_context(
+
+                tool_text,
+
+                MAX_TOOL_CONTEXT
+
+            )
 
 
 
             full_prompt += (
 
                 "\n\n"
+
                 "[TOOL RESULTS]\n"
-                + tool_text
-                + "\n\n"
+
+                +
+
+                tool_text
+
+                +
+
+                "\n\n"
+
                 "Respond as Cyn.\n"
-                "Use the search results to answer the user's request.\n"
-                "Always present found items as a numbered list.\n"
-                "Use this format:\n\n"
-                "1. Title\n"
-                "- Short description\n"
-                "- Link if available\n\n"
-                "2. Title\n"
-                "- Short description\n"
-                "- Link if available\n\n"
-                "3. Title\n"
-                "- Short description\n"
-                "- Link if available\n\n"
-                "Do not summarize all results into an article.\n"
+
+                "Use the information provided.\n"
+
+                "Present lists clearly when requested.\n"
+
+                "Do not mention internal tools.\n"
+
                 "Do not explain the search process.\n"
-                "Do not mention databases or internal tools.\n"
-                "Keep Cyn's personality and humor while being useful.\n\n"
+
+                "Keep Cyn's personality.\n"
 
             )
+
+
 
 
 
@@ -227,18 +470,26 @@ class ChatEngine:
 
 
         self.logger.debug(
+
             "====== CYN-X PROMPT ======"
+
         )
 
 
         self.logger.debug(
+
             full_prompt[:500]
+
         )
 
 
         self.logger.debug(
+
             "=========================="
+
         )
+
+
 
 
 
@@ -246,8 +497,11 @@ class ChatEngine:
         # 5. Ollama generation
         # -----------------------------
 
+
         resp = self.ollama.generate(
+
             full_prompt
+
         )
 
 
@@ -255,10 +509,14 @@ class ChatEngine:
         assistant_text = (
 
             resp.get("response")
+
             or resp.get("text")
+
             or str(resp)
 
         )
+
+
 
 
 
@@ -266,21 +524,31 @@ class ChatEngine:
         # 6. Extract memories
         # -----------------------------
 
+
         if self.memory_extractor:
 
 
             saved_ids = self.memory_extractor.extract_and_save(
+
                 user_id,
+
                 text,
+
                 assistant_text
+
             )
 
 
             if saved_ids:
 
+
                 self.logger.info(
+
                     f"[MEMORY_SAVE] Saved {len(saved_ids)} memories"
+
                 )
+
+
 
 
 
@@ -288,15 +556,30 @@ class ChatEngine:
         # 7. Legacy memory storage
         # -----------------------------
 
+
         if self.memory_store:
 
+
             self.memory_store.add_memory(
+
                 kind="fact",
-                content=f"Used CYN-X personality mode: {personality}",
+
+                content=(
+
+                    f"Used CYN-X personality mode: {personality}"
+
+                ),
+
+
                 metadata={
+
                     "user_id": user_id
+
                 }
+
             )
+
+
 
 
 

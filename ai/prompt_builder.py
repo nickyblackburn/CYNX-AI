@@ -19,14 +19,45 @@ PromptBuilder assembles:
 - tools
 - recent conversation
 - user input
+
+This version keeps the original structure but adds:
+- context budgeting
+- smart trimming
+- memory protection
+- knowledge limits
+- tool limits
+- history limits
 """
+
 
 from typing import List, Optional
 
 from .prompt_manager import PromptManager
 
 
+
 class PromptBuilder:
+
+
+    # ---------------------------------------------
+    # Context Limits
+    # ---------------------------------------------
+
+    MAX_MEMORY_CHARS = 3000
+
+    MAX_KNOWLEDGE_CHARS = 4000
+
+    MAX_TOOL_CHARS = 2000
+
+    MAX_PERSONALITY_CHARS = 2500
+
+    MAX_MODE_CHARS = 2500
+
+    MAX_HISTORY_MESSAGES = 6
+
+    MAX_FINAL_PROMPT_CHARS = 24000
+
+
 
     def __init__(
         self,
@@ -38,6 +69,53 @@ class PromptBuilder:
         )
 
 
+
+    # ---------------------------------------------
+    # Context Utilities
+    # ---------------------------------------------
+
+    def trim_context(
+        self,
+        text: str,
+        limit: int
+    ) -> str:
+
+
+        if not text:
+
+            return ""
+
+
+        if len(text) <= limit:
+
+            return text
+
+
+        return (
+            text[:limit]
+            +
+            "\n\n[Context shortened]"
+        )
+
+
+
+    def should_include_context(
+        self,
+        text: str
+    ) -> bool:
+
+
+        return bool(
+            text
+            and text.strip()
+        )
+
+
+
+    # ---------------------------------------------
+    # System Prompt
+    # ---------------------------------------------
+
     def build_system_prompt(
         self,
         modes: Optional[List[str]] = None,
@@ -45,13 +123,35 @@ class PromptBuilder:
         context: str = ""
     ) -> str:
 
-        return self.manager.build_system_prompt(
-            active_modes=modes,
-            memory_summary=memory,
-            additional_context=context
+
+        memory = self.trim_context(
+            memory,
+            self.MAX_MEMORY_CHARS
         )
 
 
+        context = self.trim_context(
+            context,
+            self.MAX_KNOWLEDGE_CHARS
+        )
+
+
+
+        return self.manager.build_system_prompt(
+
+            active_modes=modes,
+
+            memory_summary=memory,
+
+            additional_context=context
+
+        )
+
+
+
+    # ---------------------------------------------
+    # Full Prompt Builder
+    # ---------------------------------------------
 
     def build_prompt(
         self,
@@ -65,31 +165,61 @@ class PromptBuilder:
     ) -> str:
 
 
+
         # ---------------------------------
-        # Combine temporary context
+        # Temporary Context
         # ---------------------------------
 
         additional_context = []
 
 
-        if knowledge_context:
+
+        if self.should_include_context(
+            knowledge_context
+        ):
+
 
             additional_context.append(
+
                 "Relevant knowledge:\n"
-                + knowledge_context
+                +
+                self.trim_context(
+
+                    knowledge_context,
+
+                    self.MAX_KNOWLEDGE_CHARS
+
+                )
+
             )
 
 
-        if tools_spec:
+
+        if self.should_include_context(
+            tools_spec
+        ):
+
 
             additional_context.append(
+
                 "Available tools:\n"
-                + tools_spec
+                +
+                self.trim_context(
+
+                    tools_spec,
+
+                    self.MAX_TOOL_CHARS
+
+                )
+
             )
+
 
 
         context = "\n\n".join(
+
             additional_context
+
         )
 
 
@@ -115,76 +245,123 @@ class PromptBuilder:
 
 
         # ---------------------------------
-        # Personality override
+        # Personality Override
         # ---------------------------------
 
         if personality_fragment:
 
+
             parts.append(
-                personality_fragment
+
+                self.trim_context(
+
+                    personality_fragment,
+
+                    self.MAX_PERSONALITY_CHARS
+
+                )
+
             )
 
 
 
         # ---------------------------------
-        # Active mode
+        # Mode
         # ---------------------------------
 
         if mode_fragment:
 
+
             parts.append(
-                mode_fragment
+
+                self.trim_context(
+
+                    mode_fragment,
+
+                    self.MAX_MODE_CHARS
+
+                )
+
             )
 
 
 
         # ---------------------------------
-        # Conversation history
+        # History
         # ---------------------------------
 
         if history:
+
 
             parts.append(
                 "Recent conversation:"
             )
 
 
-            for msg in history[-10:]:
+
+            for msg in history[-self.MAX_HISTORY_MESSAGES:]:
+
 
                 role = msg.get(
+
                     "role",
+
                     "unknown"
+
                 )
 
+
                 content = msg.get(
+
                     "content",
+
                     ""
+
                 )
 
 
                 parts.append(
+
                     f"{role}: {content}"
+
                 )
 
 
 
         # ---------------------------------
-        # Current user message
+        # User Input
         # ---------------------------------
 
         parts.append(
+
             "User: "
-            + user_input
+            +
+            user_input
+
         )
 
 
 
-        return "\n\n".join(
+        final_prompt = "\n\n".join(
 
-            p
+            part
 
-            for p in parts
+            for part in parts
 
-            if p
+            if part
+
+        )
+
+
+
+        # ---------------------------------
+        # Final Protection
+        # ---------------------------------
+
+        return self.trim_context(
+
+            final_prompt,
+
+            self.MAX_FINAL_PROMPT_CHARS
 
         )

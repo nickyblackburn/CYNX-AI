@@ -1380,3 +1380,23 @@ class WebSearchTool(BaseTool):
         )
 
 
+    # ============================================================
+    # Result Formatter
+    # ============================================================
+
+    def format_result(
+        title: str,
+        body: str,
+        href: str
+    ) -> str:
+
+        return f"""
+    TITLE:
+    {title}
+
+    DESCRIPTION:
+    {body}
+
+    LINK:
+    {href}
+    """
