@@ -17,7 +17,7 @@ def connect(db_path: Optional[str] = None) -> sqlite3.Connection:
 
 def ensure_schema(conn: sqlite3.Connection):
     cur = conn.cursor()
-    # memories table
+    # memories table (legacy)
     cur.execute('''
     CREATE TABLE IF NOT EXISTS memories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,6 +44,19 @@ def ensure_schema(conn: sqlite3.Connection):
         args TEXT,
         result TEXT,
         ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    ''')
+    # user_memories table (long-term memory system)
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS user_memories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        category TEXT NOT NULL,
+        content TEXT NOT NULL,
+        importance INTEGER DEFAULT 5,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, category, content)
     )
     ''')
     conn.commit()

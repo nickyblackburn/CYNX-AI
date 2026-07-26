@@ -10,6 +10,7 @@ from ai.prompt_builder import PromptBuilder
 from ai.personality import get_personality
 from ai.mode_manager import ModeManager
 from ai.chat_engine import ChatEngine
+from ai.memory_system import MemoryManager, MemoryExtractor
 from memory.sqlite import connect as sqlite_connect
 from memory.memory import MemoryStore
 from tools.calculator import CalculatorTool
@@ -27,6 +28,10 @@ def main():
     conn = sqlite_connect(cfg.db_path)
     memory_store = MemoryStore(conn)
 
+    # Memory system
+    memory_manager = MemoryManager(conn)
+    memory_extractor = MemoryExtractor(memory_manager)
+
     # AI client
     ollama = OllamaClient(base_url=cfg.ollama_url, model=cfg.model_name)
 
@@ -39,26 +44,26 @@ def main():
     # Tools
     tool_router = ToolRouter()
 
-
     tool_router.register_tool(
-    WebSearchTool(api_key="123")
+        WebSearchTool(api_key="123")
     )
 
     tool_router.register_tool(
         CalculatorTool()
     )
 
-
     print(tool_router.describe_tools())
 
-    # Chat engine
+    # Chat engine WITH memory
     engine = ChatEngine(
         ollama_client=ollama,
         prompt_builder=prompt_builder,
         memory_store=memory_store,
         tool_router=tool_router,
         mode_manager=mode_manager,
-        logger=logger,
+        memory_manager=memory_manager,
+        memory_extractor=memory_extractor,
+        logger_obj=logger,
     )
 
     # Default to terminal adapter for now

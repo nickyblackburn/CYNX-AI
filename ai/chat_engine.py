@@ -2,84 +2,169 @@
 ChatEngine orchestrates a single chat turn: memory retrieval, prompt building, LLM call, tool-calling, and persistence.
 Keep this class thin for now; expand with async handling and retries later.
 """
+
+import logging
 from typing import Optional
+
+from ai.memory_system import MemoryManager, MemoryExtractor
+
+
+logger = logging.getLogger("cynx.chat")
 
 
 class ChatEngine:
-    def __init__(self, ollama_client, prompt_builder, memory_store, tool_router, mode_manager, logger=None):
+    def __init__(
+        self,
+        ollama_client,
+        prompt_builder,
+        memory_store,
+        tool_router,
+        mode_manager,
+        memory_manager: Optional[MemoryManager] = None,
+        memory_extractor: Optional[MemoryExtractor] = None,
+        logger_obj=None
+    ):
         self.ollama = ollama_client
         self.prompt_builder = prompt_builder
         self.memory_store = memory_store
         self.tool_router = tool_router
         self.mode_manager = mode_manager
-        self.logger = logger
+        self.memory_manager = memory_manager
+        self.memory_extractor = memory_extractor
+        self.logger = logger_obj or logger
 
-    def handle_user_message(self, user_id: str, text: str, mode: str = 'normal', personality: str = 'normal') -> str:
-        """Process a user message and return assistant response (synchronous version).
+
+    def handle_user_message(
+        self,
+        user_id: str,
+        text: str,
+        mode: str = "normal",
+        personality: str = "normal"
+    ) -> str:
+
+        """
+        Process a user message.
+
         Flow:
-          - retrieve short memory summary
-          - build prompt
-          - call ollama
-          - detect tool calls (not implemented here)
-          - persist conversation
+        1. Retrieve memories
+        2. Build Cyn system prompt
+        3. Send to Ollama
+        4. Extract memories
+        5. Save conversation info
         """
 
-        print("LOADED CHAT ENGINE FROM:", __file__)
+        # -----------------------------
+        # 1. Memory recall
+        # -----------------------------
 
-        # Retrieve recent memories
-        """memories = self.memory_store.retrieve_recent(limit=5)
-
-        filtered = []
-
-        for memory in memories:
-            if memory["kind"] == "fact":
-                filtered.append(memory)
-
-        mem_summary = "\n".join(
-        [
-        f"- {m['kind']}: {m['content']}"
-        for m in filtered
-        ]
-        )"""
-
-        memories = []
         mem_summary = ""
-        mode_spec = self.mode_manager.get_mode(mode)
 
-        personality_frag = ''
+        if self.memory_manager:
+            memories = self.memory_manager.recall(
+                user_id,
+                limit=5
+            )
 
-        prompt = self.prompt_builder.build_prompt(
-            text,
-            mode_fragment=mode_spec.instruction_fragment,
-            personality_fragment=personality_frag,
-            memory_summary=mem_summary,
-            history=[]
+            if memories:
+                self.logger.info(
+                    f"[MEMORY] Loaded {len(memories)} memories for {user_id}"
+                )
+
+                mem_summary = self.memory_manager.format_for_prompt(
+                    memories
+                )
+
+                for mem in memories:
+                    self.logger.debug(
+                        f" - [{mem['category']}] {mem['content']}"
+                    )
+
+            else:
+                self.logger.debug(
+                    f"[MEMORY] No memories found for {user_id}"
+                )
+
+
+        # -----------------------------
+        # 2. Build prompt
+        # -----------------------------
+
+        mode_content = []
+
+        if mode:
+            mode_content.append(mode)
+
+        prompt = self.prompt_builder.build_system_prompt(
+            modes=mode_content,
+            memory=mem_summary,
+            context=f"Personality: {personality}"
         )
 
-        print("====== CYN-X PROMPT ======")
-        print(prompt)
-        print("==========================")
 
-        self.logger and self.logger.debug(
-            "Prompt built for user %s",
-            user_id
+        # Add current user message
+        full_prompt = (
+            prompt
+            + "\n\nUser:\n"
+            + text
+            + "\n\nCyn:"
         )
 
-        resp = self.ollama.generate(prompt)
 
-        # For now, assume resp contains a top-level 'response' field
+        self.logger.debug(
+            "====== CYN-X PROMPT ======"
+        )
+        self.logger.debug(
+            full_prompt[:500]
+        )
+        self.logger.debug(
+            "=========================="
+        )
+
+
+        # -----------------------------
+        # 3. Ollama generation
+        # -----------------------------
+
+        resp = self.ollama.generate(
+            full_prompt
+        )
+
         assistant_text = (
-            resp.get('response')
-            or resp.get('text')
+            resp.get("response")
+            or resp.get("text")
             or str(resp)
         )
 
-        # Persist conversation
+
+        # -----------------------------
+        # 4. Extract memories
+        # -----------------------------
+
+        if self.memory_extractor:
+
+            saved_ids = self.memory_extractor.extract_and_save(
+                user_id,
+                text,
+                assistant_text
+            )
+
+            if saved_ids:
+                self.logger.info(
+                    f"[MEMORY_SAVE] Saved {len(saved_ids)} memories"
+                )
+
+
+        # -----------------------------
+        # 5. Legacy memory storage
+        # -----------------------------
+
         self.memory_store.add_memory(
             kind="fact",
-            content=f"User prefers CYN-X personality mode: {personality}",
+            content=f"Used CYN-X personality mode: {personality}",
             metadata={
                 "user_id": user_id
             }
-)
+        )
+
+
         return assistant_text
