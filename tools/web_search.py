@@ -69,7 +69,37 @@ class WebSearchTool(BaseTool):
 
 
         # -----------------------------
-        # Query priority detection
+        # Answer extraction mode
+        # -----------------------------
+
+        answer_mode = "normal"
+
+
+        if (
+            "best" in query_lower
+            or "top" in query_lower
+            or "1-5" in query_lower
+            or "five" in query_lower
+            or "list" in query_lower
+        ):
+
+            answer_mode = "list"
+
+
+
+        if (
+            "position" in query_lower
+            or "positions" in query_lower
+        ):
+
+            answer_mode = "positions"
+
+
+
+
+
+        # -----------------------------
+        # Intent priority
         # -----------------------------
 
         priority_words = []
@@ -84,17 +114,15 @@ class WebSearchTool(BaseTool):
             priority_words.extend([
                 "position",
                 "intimacy",
+                "health",
                 "relationship",
-                "health"
+                "comfort"
             ])
 
 
+            query += " intimacy guide"
 
-        if "fursuit" in query_lower:
 
-            priority_words.append(
-                "fursuit"
-            )
 
 
 
@@ -112,46 +140,69 @@ class WebSearchTool(BaseTool):
         ):
 
 
-            context_words.extend([
-                "fursuit",
-                "furry"
-            ])
-
-
-
-            fursuit_shop_words = [
-
-                "buy",
-                "purchase",
-                "maker",
-                "commission",
-                "review",
-                "best suit",
-                "custom suit"
-
-            ]
-
-
-
-            if any(
-                word in query_lower
-                for word in fursuit_shop_words
-            ):
+            if not adult_search:
 
 
                 context_words.extend([
-                    "maker",
-                    "review"
+                    "fursuit",
+                    "furry"
                 ])
 
 
-                query += " fursuit maker review"
+
+                fursuit_shop_words = [
+
+                    "buy",
+                    "purchase",
+                    "maker",
+                    "commission",
+                    "review",
+                    "best suit",
+                    "custom suit"
+
+                ]
+
+
+
+                if any(
+                    word in query_lower
+                    for word in fursuit_shop_words
+                ):
+
+
+                    context_words.extend([
+                        "maker",
+                        "review"
+                    ])
+
+
+                    query += " fursuit maker review"
+
+
+
+                else:
+
+
+                    query += " fursuit community"
+
+
 
 
 
             else:
 
-                query += " fursuit community"
+
+                # Adult query:
+                # keep fursuit context
+
+                context_words.extend([
+                    "fursuit",
+                    "furry",
+                    "community"
+                ])
+
+
+                query += " furry community"
 
 
 
@@ -397,7 +448,7 @@ class WebSearchTool(BaseTool):
 
 
                     # -----------------------------
-                    # Remove bad results
+                    # Remove junk
                     # -----------------------------
 
 
@@ -439,16 +490,51 @@ class WebSearchTool(BaseTool):
                     score = 0
 
 
-
                     title_lower = title.lower()
 
 
 
 
 
-                    # Query words
+                    # Query matching
 
                     for word in query_lower.split():
+
+
+                        if word in title_lower:
+
+                            score += 4
+
+
+                        elif word in combined:
+
+                            score += 1
+
+
+
+
+
+                    # Priority matching
+
+                    for word in priority_words:
+
+
+                        if word in title_lower:
+
+                            score += 6
+
+
+                        elif word in combined:
+
+                            score += 2
+
+
+
+
+
+                    # Context matching
+
+                    for word in context_words:
 
 
                         if word in title_lower:
@@ -464,44 +550,49 @@ class WebSearchTool(BaseTool):
 
 
 
-                    # Context words
-
-                    for word in context_words:
-
-
-                        if word in title_lower:
-
-                            score += 4
+                    # -----------------------------
+                    # Answer mode ranking
+                    # -----------------------------
 
 
-                        elif word in combined:
-
-                            score += 2
+                    if answer_mode == "positions":
 
 
+                        if "position" in title_lower:
+
+                            score += 8
 
 
+                        if "guide" in title_lower:
 
-                    # Priority words
-
-                    for word in priority_words:
+                            score += 3
 
 
-                        if word in title_lower:
+                        if "fursuit" in title_lower:
 
                             score += 5
 
 
-                        elif word in combined:
 
-                            score += 1
+
+
+                    if answer_mode == "list":
+
+
+                        if "best" in title_lower:
+
+                            score += 3
+
+
+                        if "top" in title_lower:
+
+                            score += 3
 
 
 
 
 
                     if "/p/" in href:
-
 
                         score += 3
 
@@ -514,7 +605,6 @@ class WebSearchTool(BaseTool):
 
                         if requested_store in href:
 
-
                             score += 5
 
 
@@ -522,7 +612,6 @@ class WebSearchTool(BaseTool):
 
 
                     if score < 1:
-
 
                         continue
 
@@ -610,6 +699,45 @@ LINK:
             for item in results[:10]
 
         )
+
+
+
+
+
+        # -----------------------------
+        # Tell Cyn how to use results
+        # -----------------------------
+
+
+        if answer_mode == "positions":
+
+
+            output += """
+
+[SEARCH TASK]
+
+The user wants a numbered list.
+Do not summarize the websites.
+Extract the useful information from the results.
+Return the answer directly.
+
+"""
+
+
+
+        elif answer_mode == "list":
+
+
+            output += """
+
+[SEARCH TASK]
+
+The user requested a list.
+Pick the most relevant items.
+Use numbering.
+Avoid explaining the search process.
+
+"""
 
 
 
