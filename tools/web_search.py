@@ -1,92 +1,109 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
 from typing import Iterable
 
 from ddgs import DDGS
 from tools.base import BaseTool, ToolResult
 
 
-ADULT_WORDS = {
-    "sex",
-    "porn",
-    "nsfw",
-    "nude",
-    "positions",
-    "position",
-    "knot",
-}
+# ============================================================
+# Output Types
+# ============================================================
 
-POSITION_WORDS = {
-    "position",
-    "positions",
-    "sex position",
-    "sex positions",
-}
+class OutputMode(str, Enum):
+    NORMAL = "normal"
+    ANSWER = "answer"
+    LIST = "list"
+    COMPARISON = "comparison"
+    PRODUCT = "product"
+    GUIDE = "guide"
+    POSITIONS = "positions"
 
-LIST_WORDS = {
-    "best",
-    "top",
-    "recommend",
-    "recommended",
-    "review",
-    "buy",
-    "find",
-    "show me",
-    "list",
-    "five",
-    "1-5",
-}
 
-SHOPPING_WORDS = {
-    "best",
-    "top",
-    "recommend",
-    "review",
-    "buy",
-    "find",
-    "show me",
-}
+# ============================================================
+# Ranking Configuration
+# ============================================================
 
-PRODUCT_WORDS = {
-    "vibrator",
-    "headset",
-    "keyboard",
-    "phone",
-    "laptop",
-    "mouse",
-    "controller",
-}
+@dataclass
+class RankingProfile:
 
-FURSUIT_SHOP_WORDS = {
-    "buy",
-    "purchase",
-    "maker",
-    "commission",
-    "review",
-    "best suit",
-    "custom suit",
-}
+    topic_title: int = 10
+    topic_body: int = 4
 
-BLOCKED_WORDS = {
-    "massage gun",
-    "deep tissue",
-    "school supplies",
-    "vinyl",
-    "makeup",
-    "cake recipe",
-    "dating app",
-    "video chat",
-}
+    priority_title: int = 6
+    priority_body: int = 2
 
-STORE_DOMAINS = {
-    "target": "target.com",
-    "amazon": "amazon.com",
-    "walmart": "walmart.com",
-}
+    context_title: int = 3
+    context_body: int = 1
+
+    query_title: int = 4
+    query_body: int = 1
+
+    negative_title: int = -8
+    negative_body: int = -4
+
+
+
+# ============================================================
+# Search Intent
+# ============================================================
+
+@dataclass
+class SearchIntent:
+    """
+    Represents what the user is actually trying to find.
+    """
+
+    subject: str
+
+    modifiers: list[str] = field(
+        default_factory=list
+    )
+
+    output_type: OutputMode = OutputMode.NORMAL
+
+
+    # Things we want to find
+    positive_keywords: tuple[str, ...] = ()
+
+
+    # Strong ranking signals
+    priority_keywords: tuple[str, ...] = ()
+
+
+    # Supporting context
+    context_keywords: tuple[str, ...] = ()
+
+
+    # Things that hurt ranking
+    negative_keywords: tuple[str, ...] = ()
+
+
+    # Original query tokens
+    query_terms: tuple[str, ...] = ()
+
+
+    requested_store: str | None = None
+
+
+    is_adult_search: bool = False
+
+
+    ranking_profile: RankingProfile = field(
+        default_factory=RankingProfile
+    )
+
+
+
+# ============================================================
+# Constants
+# ============================================================
 
 QUERY_STOPWORDS = {
+
     "the",
     "a",
     "an",
@@ -98,305 +115,1268 @@ QUERY_STOPWORDS = {
     "for",
     "me",
     "show",
-    "showme",
     "please",
     "with",
     "on",
     "at",
     "by",
     "from",
-    "reviews",
-    "review",
-    "product",
-    "products",
-    "listing",
-    "guide",
-    "intimacy",
-    "comfort",
-    "relationship",
-    "health",
+
     "best",
     "top",
+    "review",
+    "reviews",
     "buy",
     "find",
     "list",
+
+    "guide",
+    "product",
+    "products",
+    "listing",
+
 }
 
 
-@dataclass
-class SearchProfile:
-    answer_mode: str = "normal"
-    adult_search: bool = False
-    topic_words: tuple[str, ...] = ()
-    priority_words: tuple[str, ...] = ()
-    context_words: tuple[str, ...] = ()
-    query_terms: tuple[str, ...] = ()
-    requested_store: str | None = None
-    search_query: str = ""
+
+INTENT_PATTERNS = {
+
+    OutputMode.POSITIONS: {
+
+        "position",
+        "positions",
+        "sex position",
+        "sex positions",
+
+    },
 
 
-def is_bad_result(title, body, href):
-    title_lower = (title or "").lower()
-    body_lower = (body or "").lower()
-    href_lower = (href or "").lower()
+    OutputMode.LIST: {
 
-    if not title_lower or not href_lower:
-        return True
+        "best",
+        "top",
+        "recommend",
+        "recommended",
+        "list",
+        "five",
+        "1-5",
 
-    text = f"{title_lower} {body_lower} {href_lower}"
+    },
 
-    junk_indicators = (
-        "javascript:",
-        "about:blank",
-        "data:",
+
+    OutputMode.PRODUCT: {
+
+        "buy",
+        "purchase",
+        "price",
+        "review",
+
+    }
+
+}
+
+
+
+TOPIC_RULES = {
+
+
+    "positions": {
+
+        "positive": (
+
+            "position",
+            "positions",
+            "comfort",
+            "intimacy",
+
+        ),
+
+        "priority": (
+
+            "guide",
+            "health",
+            "relationship",
+
+        ),
+
+        "negative": (
+
+            "community",
+            "wiki",
+            "fandom",
+            "maker",
+            "review",
+
+        ),
+
+    },
+
+
+
+    "fursuit": {
+
+        "positive": (
+
+            "fursuit",
+            "fursuited",
+            "furry",
+
+        ),
+
+        "context": (
+
+            "fursuit",
+            "furry",
+
+        ),
+
+    },
+
+
+    "vibrator": {
+
+        "positive": (
+
+            "vibrator",
+            "product",
+
+        ),
+
+        "context": (
+
+            "review",
+            "product",
+
+        ),
+
+    },
+
+
+}
+
+
+
+PRODUCT_KEYWORDS = {
+
+    "vibrator",
+    "headset",
+    "keyboard",
+    "phone",
+    "laptop",
+    "mouse",
+    "controller",
+
+}
+
+
+
+STORE_DOMAINS = {
+
+    "target": "target.com",
+
+    "amazon": "amazon.com",
+
+    "walmart": "walmart.com",
+
+}
+
+
+
+TRUSTED_DOMAINS = {
+
+    "github.com": 3,
+
+    "python.org": 5,
+
+    "docs.python.org": 6,
+
+    "wikipedia.org": 2,
+
+    "nih.gov": 6,
+
+}
+
+
+
+ADULT_INDICATORS = {
+
+    "sex",
+    "porn",
+    "nsfw",
+    "nude",
+    "position",
+    "positions",
+    "knot",
+
+}
+
+
+
+BLOCKED_PHRASES = {
+
+    "massage gun",
+    "deep tissue",
+    "school supplies",
+    "cake recipe",
+    "dating app",
+    "video chat",
+    "vinyl",
+    "makeup",
+
+}
+
+# ============================================================
+# Utility Functions
+# ============================================================
+
+def contains_any(text: str, words: Iterable[str]) -> bool:
+    return any(word in text for word in words)
+
+
+
+def dedupe_terms(*groups: Iterable[str]) -> list[str]:
+
+    seen = set()
+    output = []
+
+    for group in groups:
+
+        for item in group:
+
+            item = item.strip()
+
+            if item and item not in seen:
+
+                seen.add(item)
+                output.append(item)
+
+    return output
+
+
+
+def extract_query_tokens(query: str) -> tuple[str, ...]:
+
+    tokens = re.findall(
+        r"[a-z0-9-]+",
+        query.lower()
     )
 
-    return any(indicator in text for indicator in junk_indicators)
+    return tuple(
+        token
+        for token in tokens
+        if token not in QUERY_STOPWORDS
+        and len(token) > 1
+    )
 
 
-def _contains_any(text: str, phrases: Iterable[str]) -> bool:
-    return any(phrase in text for phrase in phrases)
+
+# ============================================================
+# Output Detection
+# ============================================================
+
+def detect_output_type(query: str) -> OutputMode:
+
+    query = query.lower()
+
+    for mode, keywords in INTENT_PATTERNS.items():
+
+        if contains_any(query, keywords):
+
+            return mode
 
 
-def _extract_query_tokens(query_lower: str) -> tuple[str, ...]:
-    tokens = re.findall(r"[a-z0-9-]+", query_lower)
-    return tuple(token for token in tokens if token not in QUERY_STOPWORDS and len(token) > 1)
+    return OutputMode.NORMAL
 
 
-def _dedupe_terms(*term_groups: Iterable[str]) -> list[str]:
-    seen = set()
-    deduped: list[str] = []
-    for group in term_groups:
-        for term in group:
-            if not term:
-                continue
-            normalized = term.strip()
-            if normalized and normalized not in seen:
-                seen.add(normalized)
-                deduped.append(normalized)
-    return deduped
+
+# ============================================================
+# Intent Builder
+# ============================================================
+
+def build_intent(query: str) -> SearchIntent:
+
+    query_lower = query.lower().strip()
 
 
-def _build_search_profile(query: str) -> SearchProfile:
-    query = query.strip()
-    query_lower = query.lower()
+    output_type = detect_output_type(
+        query_lower
+    )
 
-    adult_search = _contains_any(query_lower, ADULT_WORDS)
-    position_query = _contains_any(query_lower, POSITION_WORDS)
 
-    if position_query:
-        answer_mode = "positions"
-    elif _contains_any(query_lower, LIST_WORDS):
-        answer_mode = "list"
-    else:
-        answer_mode = "normal"
+    positive = []
+    priority = []
+    context = []
+    negative = []
+    modifiers = []
 
-    topic_words: list[str] = []
-    priority_words: list[str] = []
-    context_words: list[str] = []
-    modifiers: list[str] = []
 
-    if position_query:
-        topic_words.extend(["position", "positions", "intimacy", "relationship", "comfort"])
-        priority_words.extend(["position", "intimacy", "health", "relationship", "comfort"])
-        modifiers.extend(["intimacy", "guide", "position"])
 
-    if ("fursuit" in query_lower or "furry" in query_lower) and adult_search:
-        topic_words.extend(["fursuit", "fursuited", "furry", "intimacy"])
-        context_words.extend(["fursuit", "fursuited", "position", "intimacy", "relationship"])
-        modifiers.extend(['"fursuit"', "intimacy", "guide"])
-    elif "fursuit" in query_lower or "furry" in query_lower:
-        context_words.extend(["fursuit", "furry"])
-        if _contains_any(query_lower, FURSUIT_SHOP_WORDS):
-            context_words.extend(["maker", "review"])
-            modifiers.extend(["fursuit", "maker", "review"])
+    adult_search = contains_any(
+        query_lower,
+        ADULT_INDICATORS
+    )
+
+
+
+    # -------------------------
+    # Position intent
+    # -------------------------
+
+    if output_type == OutputMode.POSITIONS:
+
+        rules = TOPIC_RULES["positions"]
+
+
+        positive.extend(
+            rules["positive"]
+        )
+
+
+        priority.extend(
+            rules["priority"]
+        )
+
+
+        negative.extend(
+            rules["negative"]
+        )
+
+
+        modifiers.extend(
+            [
+                "guide",
+                "comfort",
+            ]
+        )
+
+
+
+    # -------------------------
+    # Fursuit modifier
+    # -------------------------
+
+    has_fursuit = contains_any(
+        query_lower,
+        {
+            "fursuit",
+            "furry"
+        }
+    )
+
+
+    if has_fursuit:
+
+        rules = TOPIC_RULES["fursuit"]
+
+
+        positive.extend(
+            rules["positive"]
+        )
+
+
+        context.extend(
+            rules["context"]
+        )
+
+
+        # IMPORTANT:
+        # Fursuit is a modifier.
+        # It does NOT replace the topic.
+
+        if adult_search:
+
+            modifiers.extend(
+                [
+                    '"fursuit"',
+                    "guide",
+                ]
+            )
+
+
         else:
-            modifiers.append("fursuit community")
 
-    if "vibrator" in query_lower:
-        context_words.extend(["vibrator", "product", "review"])
-        modifiers.extend(["product", "review"])
+            modifiers.append(
+                "fursuit"
+            )
+
+
+
+    # -------------------------
+    # Product intent
+    # -------------------------
+
+    if contains_any(
+        query_lower,
+        PRODUCT_KEYWORDS
+    ):
+
+        rules = TOPIC_RULES["vibrator"]
+
+
+        positive.extend(
+            rules["positive"]
+        )
+
+
+        context.extend(
+            rules["context"]
+        )
+
+
+        modifiers.append(
+            "product review"
+        )
+
+
+
+    # -------------------------
+    # Store targeting
+    # -------------------------
 
     requested_store = None
+
+
     for store, domain in STORE_DOMAINS.items():
+
         if store in query_lower:
+
             requested_store = domain
-            modifiers.append(f"site:{domain}")
+
+            modifiers.append(
+                f"site:{domain}"
+            )
+
             break
 
-    if _contains_any(query_lower, SHOPPING_WORDS):
-        modifiers.append("reviews")
 
-    if _contains_any(query_lower, PRODUCT_WORDS):
-        modifiers.append("product listing")
+
+    # -------------------------
+    # Shopping keywords
+    # -------------------------
+
+    if contains_any(
+        query_lower,
+        {
+            "best",
+            "top",
+            "recommend",
+            "review",
+            "buy",
+            "find",
+            "show me",
+        }
+    ):
+
+        modifiers.append(
+            "reviews"
+        )
+
+
+
+    # -------------------------
+    # Product boosting
+    # -------------------------
+
+    if contains_any(
+        query_lower,
+        PRODUCT_KEYWORDS
+    ):
+
+        modifiers.append(
+            "product listing"
+        )
+
+
+
+    # -------------------------
+    # Special bullet vibrator
+    # -------------------------
 
     if "bullet vibrator" in query_lower:
-        modifiers.extend(['"bullet vibrator"', "-massage", "-massager"])
 
-    query_terms = _extract_query_tokens(query_lower)
+        modifiers.extend(
+            [
+                '"bullet vibrator"',
+                "-massage",
+                "-massager",
+            ]
+        )
 
-    search_query = " ".join(_dedupe_terms([query], modifiers))
 
-    return SearchProfile(
-        answer_mode=answer_mode,
-        adult_search=adult_search,
-        topic_words=tuple(dict.fromkeys(topic_words)),
-        priority_words=tuple(dict.fromkeys(priority_words)),
-        context_words=tuple(dict.fromkeys(context_words)),
-        query_terms=query_terms,
+
+    return SearchIntent(
+
+        subject=query,
+
+        modifiers=dedupe_terms(
+            modifiers
+        ),
+
+        output_type=output_type,
+
+
+        positive_keywords=tuple(
+            dedupe_terms(
+                positive
+            )
+        ),
+
+
+        priority_keywords=tuple(
+            dedupe_terms(
+                priority
+            )
+        ),
+
+
+        context_keywords=tuple(
+            dedupe_terms(
+                context
+            )
+        ),
+
+
+        negative_keywords=tuple(
+            dedupe_terms(
+                negative
+            )
+        ),
+
+
+        query_terms=extract_query_tokens(
+            query_lower
+        ),
+
+
         requested_store=requested_store,
-        search_query=search_query,
+
+
+        is_adult_search=adult_search,
+
     )
 
 
-def _score_text(title_lower: str, combined: str, terms: Iterable[str], title_weight: int, body_weight: int) -> int:
-    score = 0
-    for term in terms:
-        if term in title_lower:
-            score += title_weight
-        elif term in combined:
-            score += body_weight
-    return score
 
+# ============================================================
+# Search Query Builder
+# ============================================================
 
-def _rank_result(title: str, body: str, href: str, profile: SearchProfile) -> int:
-    title_lower = title.lower()
-    combined = f"{title_lower} {body.lower()}"
-    score = 0
+def build_search_query(
+    intent: SearchIntent
+) -> str:
 
-    score += _score_text(title_lower, combined, profile.topic_words, 10, 4)
-    score += _score_text(title_lower, combined, profile.priority_words, 6, 2)
-    score += _score_text(title_lower, combined, profile.context_words, 3, 1)
-    score += _score_text(title_lower, combined, profile.query_terms, 4, 1)
-
-    if profile.answer_mode == "positions":
-        position_boosts = (
-            ("position", 10),
-            ("positions", 10),
-            ("sex position", 12),
-            ("guide", 3),
-            ("fursuit", 3),
-            ("fursuited", 8),
+    return " ".join(
+        dedupe_terms(
+            [
+                intent.subject
+            ],
+            intent.modifiers
         )
-        for term, boost in position_boosts:
-            if term in title_lower:
-                score += boost
+    )
 
-    elif profile.answer_mode == "list":
-        if "best" in title_lower:
+
+# ============================================================
+# Result Filtering
+# ============================================================
+
+class ResultFilter:
+    """
+    Removes duplicate, broken, and unrelated results.
+    """
+
+    def __init__(self):
+
+        self.seen_urls = set()
+
+
+
+    def is_bad_result(
+        self,
+        title: str,
+        body: str,
+        href: str
+    ) -> bool:
+
+
+        if not title or not href:
+
+            return True
+
+
+
+        href_lower = href.lower()
+
+
+        if href_lower in self.seen_urls:
+
+            return True
+
+
+
+        self.seen_urls.add(
+            href_lower
+        )
+
+
+        combined = (
+            title.lower()
+            + " "
+            + body.lower()
+            + " "
+            + href_lower
+        )
+
+
+
+        # Broken pages
+
+        if contains_any(
+            combined,
+            {
+                "javascript:",
+                "about:blank",
+                "data:"
+            }
+        ):
+
+            return True
+
+
+
+        # Junk topics
+
+        if contains_any(
+            combined,
+            BLOCKED_PHRASES
+        ):
+
+            return True
+
+
+
+        return False
+
+
+
+# ============================================================
+# Ranking Engine
+# ============================================================
+
+class ResultRanker:
+    """
+    Scores search results based on intent.
+    """
+
+    def __init__(
+        self,
+        intent: SearchIntent
+    ):
+
+        self.intent = intent
+        self.profile = intent.ranking_profile
+
+
+
+    def rank(
+        self,
+        title: str,
+        body: str,
+        href: str
+    ) -> int:
+
+
+        title_lower = title.lower()
+
+        combined = (
+            title_lower
+            + " "
+            + body.lower()
+        )
+
+
+        score = 0
+
+
+
+        # Positive topic matching
+
+        score += self.score_keywords(
+            title_lower,
+            combined,
+            self.intent.positive_keywords,
+            self.profile.topic_title,
+            self.profile.topic_body
+        )
+
+
+
+        # Important keywords
+
+        score += self.score_keywords(
+            title_lower,
+            combined,
+            self.intent.priority_keywords,
+            self.profile.priority_title,
+            self.profile.priority_body
+        )
+
+
+
+        # Context
+
+        score += self.score_keywords(
+            title_lower,
+            combined,
+            self.intent.context_keywords,
+            self.profile.context_title,
+            self.profile.context_body
+        )
+
+
+
+        # Original query
+
+        score += self.score_keywords(
+            title_lower,
+            combined,
+            self.intent.query_terms,
+            self.profile.query_title,
+            self.profile.query_body
+        )
+
+
+
+        # Negative ranking
+
+        score += self.score_negative(
+            title_lower,
+            combined
+        )
+
+
+
+        # Output type
+
+        score += self.output_bonus(
+            title_lower
+        )
+
+
+
+        # Store bonus
+
+        score += self.store_bonus(
+            href
+        )
+
+
+
+        # Domain quality
+
+        score += self.domain_bonus(
+            href
+        )
+
+
+
+        return score
+
+
+
+    # --------------------------------------------------------
+
+    @staticmethod
+    def score_keywords(
+        title: str,
+        combined: str,
+        keywords: tuple[str, ...],
+        title_weight: int,
+        body_weight: int
+    ) -> int:
+
+
+        score = 0
+
+
+        for keyword in keywords:
+
+
+            if keyword in title:
+
+                score += title_weight
+
+
+            elif keyword in combined:
+
+                score += body_weight
+
+
+
+        return score
+
+
+
+    # --------------------------------------------------------
+
+    def score_negative(
+        self,
+        title: str,
+        combined: str
+    ) -> int:
+
+
+        score = 0
+
+
+        for keyword in self.intent.negative_keywords:
+
+
+            if keyword in title:
+
+                score += self.profile.negative_title
+
+
+            elif keyword in combined:
+
+                score += self.profile.negative_body
+
+
+
+        return score
+
+
+
+    # --------------------------------------------------------
+
+    def output_bonus(
+        self,
+        title: str
+    ) -> int:
+
+
+        score = 0
+
+
+
+        if self.intent.output_type == OutputMode.POSITIONS:
+
+
+            if "position" in title:
+
+                score += 10
+
+
+            if "positions" in title:
+
+                score += 10
+
+
+            if "guide" in title:
+
+                score += 3
+
+
+
+        elif self.intent.output_type == OutputMode.LIST:
+
+
+            if "top" in title:
+
+                score += 3
+
+
+            if "best" in title:
+
+                score += 3
+
+
+
+        elif self.intent.output_type == OutputMode.PRODUCT:
+
+
+            if "review" in title:
+
+                score += 3
+
+
+            if "product" in title:
+
+                score += 3
+
+
+
+        return score
+
+
+
+    # --------------------------------------------------------
+
+    def store_bonus(
+        self,
+        href: str
+    ) -> int:
+
+
+        if (
+            self.intent.requested_store
+            and self.intent.requested_store in href
+        ):
+
+            return 5
+
+
+
+        return 0
+
+
+
+    # --------------------------------------------------------
+
+    @staticmethod
+    def domain_bonus(
+        href: str
+    ) -> int:
+
+
+        score = 0
+
+
+        href_lower = href.lower()
+
+
+        for domain, bonus in TRUSTED_DOMAINS.items():
+
+
+            if domain in href_lower:
+
+                score += bonus
+
+
+
+        if "/p/" in href_lower:
+
             score += 3
-        if "top" in title_lower:
-            score += 3
-
-    if "/p/" in href:
-        score += 3
-
-    if profile.requested_store and profile.requested_store in href:
-        score += 5
-
-    return score
 
 
-def _format_result(title: str, body: str, href: str) -> str:
-    return f"""
-TITLE:
-{title}
 
-DESCRIPTION:
-{body}
-
-LINK:
-{href}
-"""
+        return score
 
 
-def _search_task_footer(answer_mode: str) -> str:
-    if answer_mode == "positions":
-        return """
+# ============================================================
+# CYN Extraction Instructions
+# ============================================================
+
+OUTPUT_INSTRUCTIONS = {
+
+    OutputMode.POSITIONS: """
 
 [SEARCH TASK]
 
 The user wants the actual answer.
 
-Do not only summarize websites.
+Use the search results as information sources.
 
-Extract useful information from the results.
+Rules:
+- Extract the useful information.
+- Ignore unrelated pages.
+- Do not summarize each website.
+- Do not talk about the search process.
+- Return a numbered list when appropriate.
+- Keep the answer focused on the user's requested topic.
 
-If this is a position request:
-- make a numbered list
-- answer the requested topic directly
-- do not focus on unrelated furry culture
-- do not repeat search titles
+Return the answer naturally as CYN.
 
-Return the answer naturally.
+""",
 
-"""
-    if answer_mode == "list":
-        return """
+
+    OutputMode.LIST: """
 
 [SEARCH TASK]
 
 The user requested a list.
-Pick the most relevant items.
-Use numbering.
-Avoid explaining the search process.
 
-"""
-    return ""
+Rules:
+- Pick the most relevant items.
+- Use numbering.
+- Remove duplicates.
+- Ignore advertisements.
+- Do not explain the search process.
 
+Return the list directly.
+
+""",
+
+
+    OutputMode.PRODUCT: """
+
+[SEARCH TASK]
+
+The user wants product information.
+
+Rules:
+- Extract the useful products.
+- Include important differences.
+- Ignore unrelated results.
+- Do not just repeat product titles.
+
+Answer naturally.
+
+""",
+
+
+    OutputMode.NORMAL: """
+
+[SEARCH TASK]
+
+Answer the user's question using the search results.
+
+Rules:
+- Extract useful information.
+- Ignore unrelated results.
+- Do not mention searching unless needed.
+
+""",
+
+}
+
+
+
+# ============================================================
+# Main Search Tool
+# ============================================================
 
 class WebSearchTool(BaseTool):
+
     name = "web_search"
-    description = "Search the internet for current information."
+
+    description = (
+        "Search the internet for current information."
+    )
+
+
 
     def call(self, args):
-        query = args.get("query")
+
+
+        query = args.get(
+            "query"
+        )
+
 
         if not query:
-            return ToolResult(False, "Missing query")
 
-        profile = _build_search_profile(query)
 
-        print("[SEARCH QUERY]", profile.search_query)
+            return ToolResult(
+
+                False,
+
+                "Missing query"
+
+            )
+
+
+
+        # -------------------------
+        # Understand request
+        # -------------------------
+
+        intent = build_intent(
+            query
+        )
+
+
+        search_query = build_search_query(
+            intent
+        )
+
+
+        print(
+            "[SEARCH QUERY]",
+            search_query
+        )
+
+
+
+        # -------------------------
+        # Search
+        # -------------------------
 
         results = []
 
+
+        filter_engine = ResultFilter()
+
+        ranker = ResultRanker(
+            intent
+        )
+
+
+
         try:
+
+
             with DDGS() as ddgs:
-                for item in ddgs.text(profile.search_query, max_results=25):
-                    title = item.get("title", "")
-                    body = item.get("body", "")
-                    href = item.get("href", "")
 
-                    if is_bad_result(title, body, href):
-                        continue
 
-                    combined = f"{title.lower()} {body.lower()}"
+                for item in ddgs.text(
 
-                    if any(bad in combined for bad in BLOCKED_WORDS):
-                        continue
+                    search_query,
 
-                    score = _rank_result(title, body, href, profile)
+                    max_results=25
 
-                    if score < 1:
-                        continue
+                ):
 
-                    results.append(
-                        {
-                            "score": score,
-                            "text": _format_result(title, body, href),
-                        }
+
+
+                    title = item.get(
+                        "title",
+                        ""
                     )
 
-        except Exception as e:
-            return ToolResult(False, f"Search error: {e}")
 
-        results.sort(key=lambda x: x["score"], reverse=True)
+                    body = item.get(
+                        "body",
+                        ""
+                    )
+
+
+                    href = item.get(
+                        "href",
+                        ""
+                    )
+
+
+
+                    if filter_engine.is_bad_result(
+
+                        title,
+
+                        body,
+
+                        href
+
+                    ):
+
+                        continue
+
+
+
+                    score = ranker.rank(
+
+                        title,
+
+                        body,
+
+                        href
+
+                    )
+
+
+
+                    # Ignore weak matches
+
+                    if score < 1:
+
+                        continue
+
+
+
+                    results.append(
+
+                        {
+
+                            "score": score,
+
+                            "text": format_result(
+
+                                title,
+
+                                body,
+
+                                href
+
+                            )
+
+                        }
+
+                    )
+
+
+
+        except Exception as e:
+
+
+            return ToolResult(
+
+                False,
+
+                f"Search error: {e}"
+
+            )
+
+
+
+        # -------------------------
+        # Sort results
+        # -------------------------
+
+        results.sort(
+
+            key=lambda item: item["score"],
+
+            reverse=True
+
+        )
+
+
 
         if not results:
-            return ToolResult(False, "No search results found.")
 
-        output = "\n\n".join(item["text"] for item in results[:10])
-        output += _search_task_footer(profile.answer_mode)
 
-        return ToolResult(True, output)
+            return ToolResult(
+
+                False,
+
+                "No search results found."
+
+            )
+
+
+
+        # -------------------------
+        # Send to Cyn
+        # -------------------------
+
+        output = "\n\n".join(
+
+            item["text"]
+
+            for item in results[:10]
+
+        )
+
+
+
+        output += OUTPUT_INSTRUCTIONS.get(
+
+            intent.output_type,
+
+            OUTPUT_INSTRUCTIONS[
+
+                OutputMode.NORMAL
+
+            ]
+
+        )
+
+
+
+        return ToolResult(
+
+            True,
+
+            output
+
+        )
+
+
