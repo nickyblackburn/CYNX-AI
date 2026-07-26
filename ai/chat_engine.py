@@ -32,6 +32,7 @@ class ChatEngine:
         self.memory_manager = memory_manager
         self.memory_extractor = memory_extractor
         self.logger = logger_obj or logger
+        
 
 
     def handle_user_message(
@@ -48,10 +49,13 @@ class ChatEngine:
         Flow:
         1. Retrieve memories
         2. Build Cyn system prompt
-        3. Send to Ollama
-        4. Extract memories
-        5. Save conversation info
+        3. Check for tool usage
+        4. Execute tools if needed
+        5. Generate Cyn response
+        6. Extract memories
+        7. Save conversation info
         """
+
 
         # -----------------------------
         # 1. Memory recall
@@ -94,6 +98,7 @@ class ChatEngine:
         if mode:
             mode_content.append(mode)
 
+
         prompt = self.prompt_builder.build_system_prompt(
             modes=mode_content,
             memory=mem_summary,
@@ -101,33 +106,97 @@ class ChatEngine:
         )
 
 
-        # Add current user message
+        # -----------------------------
+        # 3. Tool detection
+        # -----------------------------
+
+        tool_result = None
+
+        if self.tool_router:
+
+            try:
+
+                tool_request = self.tool_router.detect(
+                    text
+                )
+
+                if tool_request:
+
+                    self.logger.info(
+                        f"[TOOL] Requested: {tool_request}"
+                    )
+                    tool_result = self.tool_router.call_tool(
+                        tool_request["tool"],
+                        tool_request
+                    )
+
+                    self.logger.info(
+                        "[TOOL] Completed successfully"
+                    )
+
+            except Exception as e:
+
+                self.logger.error(
+                    f"[TOOL ERROR] {e}"
+                )
+
+
+        # -----------------------------
+        # 4. Build final prompt
+        # -----------------------------
+
         full_prompt = (
             prompt
             + "\n\nUser:\n"
             + text
-            + "\n\nCyn:"
+        )
+
+        self.logger.info(f"[TOOL CHECK] User message: {text}")
+
+        tool_request = self.tool_router.detect(text)
+
+        self.logger.info(f"[TOOL DETECTED] {tool_request}")
+
+
+        if tool_result:
+
+            full_prompt += (
+                "\n\n"
+                "[TOOL RESULTS]\n"
+                f"{tool_result}\n\n"
+                "Respond as Cyn.\n"
+                "React naturally to the results.\n"
+                "Do not write a report.\n"
+                "Continue the conversation."
+            )
+
+
+        full_prompt += (
+            "\n\nCyn:"
         )
 
 
         self.logger.debug(
             "====== CYN-X PROMPT ======"
         )
+
         self.logger.debug(
             full_prompt[:500]
         )
+
         self.logger.debug(
             "=========================="
         )
 
 
         # -----------------------------
-        # 3. Ollama generation
+        # 5. Ollama generation
         # -----------------------------
 
         resp = self.ollama.generate(
             full_prompt
         )
+
 
         assistant_text = (
             resp.get("response")
@@ -137,7 +206,7 @@ class ChatEngine:
 
 
         # -----------------------------
-        # 4. Extract memories
+        # 6. Extract memories
         # -----------------------------
 
         if self.memory_extractor:
@@ -155,7 +224,7 @@ class ChatEngine:
 
 
         # -----------------------------
-        # 5. Legacy memory storage
+        # 7. Legacy memory storage
         # -----------------------------
 
         self.memory_store.add_memory(

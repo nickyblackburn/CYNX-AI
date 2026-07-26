@@ -74,3 +74,33 @@ class ToolRouter:
                 False,
                 f"Tool '{name}' exception: {e}"
             )
+
+
+    def detect(self, text: str):
+        """
+        Detect whether a message requires a tool.
+        """
+
+        text_lower = text.lower()
+
+        search_words = [
+            "search",
+            "find",
+            "look up",
+            "best",
+            "compare",
+            "reviews",
+            "price",
+            "target",
+            "amazon",
+            "where can i buy"
+        ]
+
+        if any(word in text_lower for word in search_words):
+
+            return {
+                "tool": "web_search",
+                "query": text
+            }
+
+        return None
