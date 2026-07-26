@@ -10,7 +10,8 @@ class WebSearchTool(BaseTool):
         self.api_key = api_key
 
     def call(self, args):
-        query = args.get("q")
+
+        query = args.get("query")
 
         if not query:
             return ToolResult(False, "Missing query")
