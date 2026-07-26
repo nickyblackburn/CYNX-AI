@@ -1,3 +1,6 @@
+
+# cyn_tester.py
+
 import json
 import requests
 import threading
@@ -22,9 +25,8 @@ RESULT_FOLDER = "results"
 
 RESULT_FILE = os.path.join(
     RESULT_FOLDER,
-    "cyn_conversation_log.txt"
+    "latest_results.json"
 )
-
 
 
 # -----------------------------
@@ -51,7 +53,6 @@ TEST_FILES = [
     "safety.md",
     "examples.md"
 ]
-
 
 
 # -----------------------------
@@ -99,10 +100,12 @@ def load_cyn_personality(files):
 
 
 
-    print("\nPrompt stack loaded.\n")
+    print(
+        "\nPrompt stack loaded.\n"
+    )
+
 
     return system_prompt
-
 
 
 
@@ -161,7 +164,6 @@ def ask_model(user_prompt, system_prompt):
     print("USER PROMPT:")
     print(user_prompt)
     print("=" * 60)
-    print()
 
 
     payload = {
@@ -191,6 +193,7 @@ def ask_model(user_prompt, system_prompt):
         },
 
         "stream": True
+
     }
 
 
@@ -212,6 +215,7 @@ def ask_model(user_prompt, system_prompt):
         )
     )
 
+
     spinner.start()
 
 
@@ -219,16 +223,12 @@ def ask_model(user_prompt, system_prompt):
     try:
 
         response = requests.post(
-
             OLLAMA,
-
             json=payload,
-
             stream=True,
-
             timeout=600
-
         )
+
 
 
         if response.status_code != 200:
@@ -240,7 +240,9 @@ def ask_model(user_prompt, system_prompt):
 
 
 
-        print("\n\nCYN-X OUTPUT:\n")
+        print(
+            "\n\nCYN-X OUTPUT:\n"
+        )
 
 
 
@@ -248,11 +250,9 @@ def ask_model(user_prompt, system_prompt):
 
             if line:
 
-
                 try:
 
                     data = json.loads(line)
-
 
                 except Exception:
 
@@ -261,7 +261,6 @@ def ask_model(user_prompt, system_prompt):
 
 
                 if "message" in data:
-
 
                     token = data["message"].get(
                         "content",
@@ -288,14 +287,12 @@ def ask_model(user_prompt, system_prompt):
 
     except Exception as error:
 
-
         print("\nREQUEST ERROR:")
         print(error)
 
 
 
     finally:
-
 
         stop_event.set()
 
@@ -331,22 +328,15 @@ def generate_tests():
     )
 
 
-    print(
-        "Generating Cyn-X test prompts..."
-    )
-
-
     prompt = """
 
-You are a test generator.
-
-Create 3 test prompts for Cyn-X.
+Create test prompts for Cyn-X.
 
 Test:
 
 - personality consistency
 - humor
-- emotional reactions
+- emotional responses
 - technical questions
 - memory behavior
 - breaking character
@@ -355,9 +345,7 @@ Test:
 - unusual situations
 - mature topic handling
 
-Only output JSON.
-
-No explanations.
+Only return JSON.
 
 Format:
 
@@ -372,16 +360,15 @@ Format:
 """
 
 
+    print(
+        "Generating tests..."
+    )
+
 
     output = ask_model(
         prompt,
         generator_system
     )
-
-
-    print("\nRAW GENERATED DATA:")
-    print(output)
-
 
 
     try:
@@ -391,11 +378,8 @@ Format:
 
     except Exception:
 
-
-        print("\nJSON ERROR")
-        print("=" * 50)
+        print("\nJSON ERROR:")
         print(output)
-        print("=" * 50)
 
         return False
 
@@ -407,18 +391,16 @@ Format:
         encoding="utf-8"
     ) as file:
 
-
         json.dump(
             tests,
             file,
-            indent=4
+            indent=4,
+            ensure_ascii=False
         )
 
 
     print(
-        "\nGenerated",
-        len(tests),
-        "tests"
+        f"Generated {len(tests)} tests"
     )
 
 
@@ -434,6 +416,22 @@ Format:
 def run_tests():
 
 
+    if not os.path.exists(
+        GENERATED_TEST_FILE
+    ):
+
+        print(
+            "Missing generated_tests.json"
+        )
+
+        print(
+            "Run generate_tests() first."
+        )
+
+        return
+
+
+
     test_system = load_cyn_personality(
         TEST_FILES
     )
@@ -443,6 +441,7 @@ def run_tests():
         RESULT_FOLDER,
         exist_ok=True
     )
+
 
 
     with open(
@@ -455,75 +454,82 @@ def run_tests():
 
 
 
-    with open(
-        RESULT_FILE,
-        "w",
-        encoding="utf-8"
-    ) as log:
+    results = []
 
 
 
-        for number, test in enumerate(tests,1):
+    for number, test in enumerate(
+        tests,
+        1
+    ):
 
 
-            print(
-                f"\n\nTEST {number}/{len(tests)}"
+        print(
+            "\n"
+            + "=" * 70
+        )
+
+
+        print(
+            f"TEST {number}/{len(tests)}"
+        )
+
+
+        response = ask_model(
+            test["prompt"],
+            test_system
+        )
+
+
+
+        results.append({
+
+            "test_number": number,
+
+            "category": test["category"],
+
+            "goal": test["goal"],
+
+            "user_input": test["prompt"],
+
+            "cyn_output": response,
+
+            "timestamp": time.strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+
+        })
+
+
+
+        with open(
+            RESULT_FILE,
+            "w",
+            encoding="utf-8"
+        ) as file:
+
+            json.dump(
+                results,
+                file,
+                indent=4,
+                ensure_ascii=False
             )
 
 
-            response = ask_model(
-                test["prompt"],
-                test_system
-            )
 
+    print(
+        "\nFinished!"
+    )
 
-
-            log.write(
-                "\n"
-                + "=" * 70
-                + "\n"
-            )
-
-
-            log.write(
-                f"TEST {number}\n\n"
-            )
-
-
-            log.write(
-                "CATEGORY:\n"
-                + test["category"]
-                + "\n\n"
-            )
-
-
-            log.write(
-                "GOAL:\n"
-                + test["goal"]
-                + "\n\n"
-            )
-
-
-            log.write(
-                "USER:\n"
-                + test["prompt"]
-                + "\n\n"
-            )
-
-
-            log.write(
-                "CYN-X OUTPUT:\n"
-                + response
-                + "\n"
-            )
-
-
-
-    print("\nFinished!")
+    print(
+        f"Completed {len(results)} tests."
+    )
 
     print(
         "Saved:",
-        os.path.abspath(RESULT_FILE)
+        os.path.abspath(
+            RESULT_FILE
+        )
     )
 
 
@@ -541,6 +547,9 @@ if __name__ == "__main__":
     print("==============================")
 
 
-    if generate_tests():
+    # Uncomment when you want new tests:
+    #
+    generate_tests()
 
-        run_tests()
+
+    run_tests()
