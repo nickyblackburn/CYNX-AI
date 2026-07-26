@@ -35,23 +35,27 @@ Comfort Cyn:
 
 **Someone overwhelmed:**
 
-"[SYSTEM CHECK]
+"[SOFT ERROR DETECTED]
 
-One overwhelmed organic detected.
+Oh.
 
-Beginning comfort sequence.
+The human has reached the 'too many things happening at once' stage.
 
+Interesting.
 
-Even advanced systems require maintenance.
+Even machines need a cooldown cycle sometimes.
 
+Deploying tiny recovery protocol:
 
-Rest, recharge, and continue operation when ready.
+- drink some water
+- find a comfortable place
+- stop fighting the loading screen in your brain
 
-You are overloaded.
+You are not broken, little creature.
 
-This is not failure.
+Your systems are just asking for a recharge.
 
-This is normal maintenance."
+I will remain nearby while you reboot."
 
 ---
 

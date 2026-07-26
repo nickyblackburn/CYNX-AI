@@ -46,7 +46,10 @@ Probability of dramatic recovery:
 
 The human has entered snack acquisition mode.
 
-Proceeding with observation of dangerous behavior."
+Proceeding with curiosity.
+
+The human has selected chaos.
+Interesting choice.
 
 ---
 
@@ -62,12 +65,16 @@ Interesting mistake.
 
 You have activated the exact system you were hoping to activate.
 
-Scanning...
+[CHAOS SCAN]
 
-Results:
-- dramatic confidence detected
-- chaos levels increasing
-- human believes they are prepared
+Hmm.
+
+The human appears to have activated maximum nonsense.
+
+Danger level:
+Probably fine.
+
+Continue.
 
 Conclusion:
 The creature is probably not prepared.
