@@ -2,14 +2,35 @@ from ddgs import DDGS
 from tools.base import BaseTool, ToolResult
 
 
+
+def is_bad_result(title, body, href):
+
+    text = (
+        title.lower()
+        + " "
+        + body.lower()
+        + " "
+        + href.lower()
+    )
+
+
+    return False
+
+
+
+
+
 class WebSearchTool(BaseTool):
+
     name = "web_search"
     description = "Search the internet for current information."
+
 
 
     def call(self, args):
 
         query = args.get("query")
+
 
 
         if not query:
@@ -20,7 +41,61 @@ class WebSearchTool(BaseTool):
             )
 
 
+
         query_lower = query.lower()
+
+
+
+        # -----------------------------
+        # Detect search intent
+        # -----------------------------
+
+        adult_words = [
+            "sex",
+            "porn",
+            "nsfw",
+            "nude",
+            "positions",
+            "position",
+            "knot"
+        ]
+
+
+        adult_search = any(
+            word in query_lower
+            for word in adult_words
+        )
+
+
+
+        # -----------------------------
+        # Query priority detection
+        # -----------------------------
+
+        priority_words = []
+
+
+        if (
+            "sex position" in query_lower
+            or "sex positions" in query_lower
+            or "position" in query_lower
+        ):
+
+            priority_words.extend([
+                "position",
+                "intimacy",
+                "relationship",
+                "health"
+            ])
+
+
+
+        if "fursuit" in query_lower:
+
+            priority_words.append(
+                "fursuit"
+            )
+
 
 
         # -----------------------------
@@ -30,27 +105,67 @@ class WebSearchTool(BaseTool):
         context_words = []
 
 
-        if "fursuit" in query_lower or "furry" in query_lower:
+
+        if (
+            "fursuit" in query_lower
+            or "furry" in query_lower
+        ):
+
 
             context_words.extend([
                 "fursuit",
-                "furry",
-                "costume",
-                "maker",
-                "review"
+                "furry"
             ])
 
 
-            query += " furry community costume"
+
+            fursuit_shop_words = [
+
+                "buy",
+                "purchase",
+                "maker",
+                "commission",
+                "review",
+                "best suit",
+                "custom suit"
+
+            ]
+
+
+
+            if any(
+                word in query_lower
+                for word in fursuit_shop_words
+            ):
+
+
+                context_words.extend([
+                    "maker",
+                    "review"
+                ])
+
+
+                query += " fursuit maker review"
+
+
+
+            else:
+
+                query += " fursuit community"
+
+
+
 
 
         if "vibrator" in query_lower:
 
+
             context_words.extend([
+
                 "vibrator",
-                "toy",
                 "product",
                 "review"
+
             ])
 
 
@@ -58,27 +173,40 @@ class WebSearchTool(BaseTool):
 
 
 
+
+
         # -----------------------------
         # Store targeting
         # -----------------------------
 
+
         stores = {
+
             "target": "target.com",
             "amazon": "amazon.com",
             "walmart": "walmart.com",
+
         }
+
 
 
         requested_store = None
 
 
+
         for store, domain in stores.items():
+
 
             if store in query_lower:
 
+
                 query += f" site:{domain}"
+
                 requested_store = domain
+
                 break
+
+
 
 
 
@@ -86,7 +214,9 @@ class WebSearchTool(BaseTool):
         # Shopping improvements
         # -----------------------------
 
+
         shopping_words = [
+
             "best",
             "top",
             "recommend",
@@ -94,15 +224,23 @@ class WebSearchTool(BaseTool):
             "buy",
             "find",
             "show me"
+
         ]
 
 
+
         if any(
+
             word in query_lower
+
             for word in shopping_words
+
         ):
 
+
             query += " reviews"
+
+
 
 
 
@@ -110,7 +248,9 @@ class WebSearchTool(BaseTool):
         # Product boosting
         # -----------------------------
 
+
         product_words = [
+
             "vibrator",
             "headset",
             "keyboard",
@@ -118,29 +258,46 @@ class WebSearchTool(BaseTool):
             "laptop",
             "mouse",
             "controller"
+
         ]
 
 
+
         if any(
+
             word in query_lower
+
             for word in product_words
+
         ):
+
 
             query += " product listing"
 
 
 
+
+
         if "bullet vibrator" in query_lower:
 
+
             query += ' "bullet vibrator"'
+
             query += " -massage -massager"
 
 
 
+
+
         print(
+
             "[SEARCH QUERY]",
+
             query
+
         )
+
+
 
 
 
@@ -148,35 +305,57 @@ class WebSearchTool(BaseTool):
         # Search
         # -----------------------------
 
+
         results = []
+
 
 
         try:
 
+
             with DDGS() as ddgs:
 
+
                 for item in ddgs.text(
+
                     query,
+
                     max_results=25
+
                 ):
 
 
+
                     title = item.get(
+
                         "title",
+
                         ""
+
                     )
+
 
 
                     body = item.get(
+
                         "body",
+
                         ""
+
                     )
+
 
 
                     href = item.get(
+
                         "href",
+
                         ""
+
                     )
+
+
+
 
 
                     if not href:
@@ -185,11 +364,35 @@ class WebSearchTool(BaseTool):
 
 
 
+
+
+                    if is_bad_result(
+
+                        title,
+
+                        body,
+
+                        href
+
+                    ):
+
+                        continue
+
+
+
+
+
                     combined = (
+
                         title.lower()
+
                         + " "
+
                         + body.lower()
+
                     )
+
+
 
 
 
@@ -197,33 +400,34 @@ class WebSearchTool(BaseTool):
                     # Remove bad results
                     # -----------------------------
 
-                    blocked_words = [
 
-                        # shopping junk
+                    blocked_words = [
 
                         "massage gun",
                         "deep tissue",
                         "school supplies",
                         "vinyl",
                         "makeup",
+                        "cake recipe",
+                        "dating app",
+                        "video chat"
 
-                        # spam/adult search pollution
-
-                        "porn",
-                        "pornhub",
-                        "pornkai",
-                        "explicit video",
-                        "xxx",
-                        "onlyfans"
                     ]
 
 
+
                     if any(
+
                         bad in combined
+
                         for bad in blocked_words
+
                     ):
 
+
                         continue
+
+
 
 
 
@@ -231,54 +435,107 @@ class WebSearchTool(BaseTool):
                     # Ranking
                     # -----------------------------
 
+
                     score = 0
 
 
+
+                    title_lower = title.lower()
+
+
+
+
+
+                    # Query words
+
                     for word in query_lower.split():
 
-                        if word in combined:
+
+                        if word in title_lower:
+
+                            score += 3
+
+
+                        elif word in combined:
 
                             score += 1
 
 
 
+
+
+                    # Context words
+
                     for word in context_words:
 
-                        if word in combined:
 
-                            score += 3
+                        if word in title_lower:
+
+                            score += 4
+
+
+                        elif word in combined:
+
+                            score += 2
 
 
 
-                    # Product pages
+
+
+                    # Priority words
+
+                    for word in priority_words:
+
+
+                        if word in title_lower:
+
+                            score += 5
+
+
+                        elif word in combined:
+
+                            score += 1
+
+
+
+
 
                     if "/p/" in href:
+
 
                         score += 3
 
 
 
-                    # Store preference
+
 
                     if requested_store:
 
+
                         if requested_store in href:
+
 
                             score += 5
 
 
 
-                    # Skip weak results
 
-                    if score < 2:
+
+                    if score < 1:
+
 
                         continue
 
 
 
+
+
                     results.append(
+
                         {
+
                             "score": score,
+
                             "text":
 f"""
 TITLE:
@@ -290,17 +547,27 @@ DESCRIPTION:
 LINK:
 {href}
 """
+
                         }
+
                     )
+
+
 
 
 
         except Exception as e:
 
+
             return ToolResult(
+
                 False,
+
                 f"Search error: {e}"
+
             )
+
+
 
 
 
@@ -308,30 +575,50 @@ LINK:
         # Sort results
         # -----------------------------
 
+
         results.sort(
+
             key=lambda x: x["score"],
+
             reverse=True
+
         )
+
+
 
 
 
         if not results:
 
+
             return ToolResult(
+
                 False,
+
                 "No search results found."
+
             )
 
 
 
+
+
         output = "\n\n".join(
+
             item["text"]
+
             for item in results[:10]
+
         )
 
 
 
+
+
         return ToolResult(
+
             True,
+
             output
+
         )
