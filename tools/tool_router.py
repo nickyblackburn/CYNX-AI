@@ -1,4 +1,3 @@
-
 """
 ToolRouter:
 - Register tools
@@ -62,7 +61,7 @@ class ToolRouter:
             result = tool.call(args)
 
             print(
-                f"[RESULT] {result.message}"
+                f"[RESULT] {result.output}"
             )
 
             return result

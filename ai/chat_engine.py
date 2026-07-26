@@ -130,6 +130,9 @@ class ChatEngine:
                         tool_request
                     )
 
+                    print("!!!!! TOOL RETURNED !!!!!")
+                    print(repr(tool_result))
+
                     self.logger.info(
                         "[TOOL] Completed successfully"
                     )

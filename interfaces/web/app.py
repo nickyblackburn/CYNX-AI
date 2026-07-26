@@ -22,7 +22,10 @@ from ai.mode_manager import ModeManager
 from ai.chat_engine import ChatEngine
 
 from memory.memory import MemoryStore
+
 from tools.tool_router import ToolRouter
+from tools.web_search import WebSearchTool
+from tools.calculator import CalculatorTool
 
 from voice import PiperTTS, AudioPlayer, VoiceManager
 
@@ -60,7 +63,23 @@ conn = sqlite3.connect(
 
 memory_store = MemoryStore(conn)
 
+
+# --------------------
+# TOOLS
+# --------------------
+
 tool_router = ToolRouter()
+
+tool_router.register_tool(
+    WebSearchTool(api_key="123")
+)
+
+tool_router.register_tool(
+    CalculatorTool()
+)
+
+print("[WEB TOOLS]", tool_router.list_tools())
+
 
 mode_manager = ModeManager()
 
@@ -89,20 +108,9 @@ chat_engine = ChatEngine(
 #    - cyn_normal.onnx (default personality)
 #    - cyn_glitch.onnx (error/glitch personality)
 #    - cyn_soft.onnx (empathetic personality)
-# 3. Update the model_path below or implement dynamic switching
 #
 # Future enhancement: Dynamic voice switching based on personality modes
-#   in mode_manager. Example implementation:
-#
-#   voice_model_map = {
-#       "glitch": "models/voices/cyn_glitch.onnx",
-#       "soft": "models/voices/cyn_soft.onnx",
-#       "normal": "models/voices/cyn_normal.onnx"
-#   }
-#   model_path = voice_model_map.get(
-#       mode_manager.current_mode,
-#       "models/voices/cyn_normal.onnx"
-#   )
+
 
 tts_engine = PiperTTS(
     "voice/models/en_US-kathleen-low.onnx"
