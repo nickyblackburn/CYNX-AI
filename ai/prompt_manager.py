@@ -180,4 +180,12 @@ class PromptManager:
             )
 
 
+
+        prompt = "\n\n".join([p for p in parts if p])
+
+        print("\n===== CYN PROMPT DEBUG =====")
+        print("Characters:", len(prompt))
+        print("Estimated tokens:", len(prompt.split()) * 1.3)
+        print("===== END DEBUG =====\n")
+
         return "\n\n".join(parts)
