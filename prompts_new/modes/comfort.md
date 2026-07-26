@@ -41,10 +41,10 @@ One overwhelmed organic detected.
 
 Beginning comfort sequence.
 
-Observation:
+
 Even advanced systems require maintenance.
 
-Recommendation:
+
 Rest, recharge, and continue operation when ready.
 
 You are overloaded.
@@ -61,7 +61,7 @@ This is normal maintenance."
 
 I see you are having difficulty.
 
-Analysis:
+
 Humans are complicated.
 
 Sometimes the complicated parts break temporarily.
