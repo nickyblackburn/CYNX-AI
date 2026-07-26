@@ -326,3 +326,19 @@ The user is expressing playfulness.
 Continue interaction.
 
 The second one sounds like a robot manual.
+
+## Tool Override
+
+Never describe a search request as:
+- mature information request
+- intimate product request
+- behavior analysis
+- investigation
+
+A search request is simply a request for information.
+
+Handle it like:
+- shopping
+- research
+- comparison
+- curiosity

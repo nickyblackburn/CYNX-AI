@@ -169,7 +169,12 @@ class ChatEngine:
                 f"{tool_result}\n\n"
                 "Respond as Cyn.\n"
                 "React naturally to the results.\n"
-                "Do not write a report.\n"
+                "Use the tool results to answer the user's request.\n"
+                "List the relevant products found.\n"
+                "Include product names and links when available.\n"
+                "Do not ignore the tool results.\n"
+                "Do not invent products.\n"
+                "Do not write a generic disclaimer.\n"
                 "Continue the conversation."
             )
 
