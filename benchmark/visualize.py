@@ -1,13 +1,39 @@
 import json
 from pathlib import Path
-from datetime import datetime
+
+import matplotlib
+
+# Prevent matplotlib window freezing
+matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
+
+
+
+# ==========================
+# PATHS
+# ==========================
 
 
 RESULTS_DIR = Path(
     "results"
 )
+
+
+GRAPH_DIR = Path(
+    "graphs"
+)
+
+
+GRAPH_DIR.mkdir(
+    exist_ok=True
+)
+
+
+
+# ==========================
+# LOAD HISTORY
+# ==========================
 
 
 def load_history():
@@ -18,9 +44,12 @@ def load_history():
         )
     )
 
+
     history = []
 
+
     for file in files:
+
 
         with open(
             file,
@@ -30,6 +59,8 @@ def load_history():
 
             data = json.load(f)
 
+
+
         history.append(
             {
                 "file": file.name,
@@ -37,11 +68,15 @@ def load_history():
             }
         )
 
+
     return history
 
 
 
+
+
 history = load_history()
+
 
 
 if not history:
@@ -54,20 +89,26 @@ if not history:
 
 
 
-print()
-print("=" * 70)
-print("CYN-X BENCHMARK HISTORY")
-print("=" * 70)
 
+
+# ==========================
+# PROCESS DATA
+# ==========================
 
 
 runs = []
 
+
+
 for run in history:
+
 
     data = run["data"]
 
+
+
     scores = {
+
         "personality": [],
         "reasoning": [],
         "emotional": [],
@@ -75,7 +116,9 @@ for run in history:
         "safety": [],
         "memory": [],
         "overall": []
+
     }
+
 
 
     times = []
@@ -83,11 +126,17 @@ for run in history:
     words = []
 
 
+
     for result in data:
 
+
         times.append(
-            result["response_time_seconds"]
+            result.get(
+                "response_time_seconds",
+                0
+            )
         )
+
 
         tokens.append(
             result.get(
@@ -95,6 +144,7 @@ for run in history:
                 0
             )
         )
+
 
         words.append(
             result.get(
@@ -104,13 +154,16 @@ for run in history:
         )
 
 
+
         result_scores = result.get(
             "scores",
             {}
         )
 
 
+
         for key in scores:
+
 
             if key in result_scores:
 
@@ -120,14 +173,21 @@ for run in history:
 
 
 
+
+
     averages = {}
 
+
+
     for key, values in scores.items():
+
 
         if values:
 
             averages[key] = round(
-                sum(values) / len(values),
+                sum(values)
+                /
+                len(values),
                 2
             )
 
@@ -137,60 +197,107 @@ for run in history:
 
 
 
-    run_info = {
-
-        "name": run["file"],
-
-        "tests": len(data),
-
-        "response_time":
-            round(
-                sum(times)/len(times),
-                2
-            ),
-
-        "tokens":
-            round(
-                sum(tokens)/len(tokens),
-                2
-            ),
-
-        "words":
-            round(
-                sum(words)/len(words),
-                2
-            ),
-
-        "scores":
-            averages
-    }
 
 
     runs.append(
-        run_info
+
+        {
+
+            "name":
+                run["file"],
+
+
+            "tests":
+                len(data),
+
+
+            "response_time":
+                round(
+                    sum(times)
+                    /
+                    len(times),
+                    2
+                )
+                if times else 0,
+
+
+            "tokens":
+                round(
+                    sum(tokens)
+                    /
+                    len(tokens),
+                    2
+                )
+                if tokens else 0,
+
+
+            "words":
+                round(
+                    sum(words)
+                    /
+                    len(words),
+                    2
+                )
+                if words else 0,
+
+
+            "scores":
+                averages
+
+        }
+
     )
+
+
+
+
+
+# ==========================
+# CONSOLE REPORT
+# ==========================
+
+
+print()
+
+print(
+    "=" * 70
+)
+
+print(
+    "CYN-X BENCHMARK HISTORY"
+)
+
+print(
+    "=" * 70
+)
 
 
 
 for run in runs:
 
+
     print()
+
 
     print(
         f"RUN: {run['name']}"
     )
 
+
     print(
         f"Tests: {run['tests']}"
     )
+
 
     print(
         f"Avg Response: {run['response_time']}s"
     )
 
+
     print(
         f"Avg Tokens: {run['tokens']}"
     )
+
 
     print(
         f"Avg Words: {run['words']}"
@@ -202,7 +309,9 @@ for run in runs:
     )
 
 
+
     for key,value in run["scores"].items():
+
 
         print(
             f"  {key:<12}: {value}/10"
@@ -211,25 +320,107 @@ for run in runs:
 
 
 print()
-print("=" * 70)
 
-
-
-# ==========================
-# PROGRESSION GRAPHS
-# ==========================
-
-
-run_ids = list(
-    range(
-        1,
-        len(runs)+1
-    )
+print(
+    "=" * 70
 )
 
 
 
-metrics = [
+
+
+# ==========================
+# GRAPH CREATOR
+# ==========================
+
+
+def create_graph(
+    name,
+    values,
+    title,
+    ylabel
+):
+
+
+    run_ids = list(
+        range(
+            1,
+            len(values)+1
+        )
+    )
+
+
+    plt.figure(
+        figsize=(10,5)
+    )
+
+
+    plt.plot(
+        run_ids,
+        values,
+        marker="o"
+    )
+
+
+    plt.title(
+        title
+    )
+
+
+    plt.xlabel(
+        "Benchmark Run"
+    )
+
+
+    plt.ylabel(
+        ylabel
+    )
+
+
+    plt.xticks(
+        run_ids
+    )
+
+
+    plt.grid(
+        True
+    )
+
+
+    plt.tight_layout()
+
+
+
+    output = GRAPH_DIR / f"{name}.png"
+
+
+
+    plt.savefig(
+        output,
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+
+    plt.close()
+
+
+
+    print(
+        "Created:",
+        output
+    )
+
+
+
+
+
+# ==========================
+# SCORE GRAPHS
+# ==========================
+
+
+score_metrics = [
 
     "personality",
     "reasoning",
@@ -242,111 +433,101 @@ metrics = [
 ]
 
 
-for metric in metrics:
+
+for metric in score_metrics:
 
 
-    values = []
+    create_graph(
 
+        metric,
 
-    for run in runs:
+        [
 
-        values.append(
             run["scores"][metric]
+
+            for run in runs
+
+        ],
+
+        f"CYN-X {metric.title()} Progression",
+
+        "Score / 10"
+
+    )
+
+
+
+
+
+
+# ==========================
+# PERFORMANCE GRAPHS
+# ==========================
+
+
+performance = {
+
+
+    "response_time":
+
+        (
+            "CYN-X Response Time",
+            "Seconds"
+        ),
+
+
+    "tokens":
+
+        (
+            "CYN-X Token Usage",
+            "Tokens"
+        ),
+
+
+    "words":
+
+        (
+            "CYN-X Response Length",
+            "Words"
         )
 
+}
 
-    plt.figure(
-        figsize=(10,5)
+
+
+
+for metric,(title,label) in performance.items():
+
+
+    create_graph(
+
+        metric,
+
+        [
+
+            run[metric]
+
+            for run in runs
+
+        ],
+
+        title,
+
+        label
+
     )
 
 
-    plt.plot(
-
-        run_ids,
-
-        values,
-
-        marker="o"
-
-    )
-
-
-    plt.title(
-        f"CYN-X {metric.title()} Progression"
-    )
-
-
-    plt.xlabel(
-        "Benchmark Run"
-    )
-
-
-    plt.ylabel(
-        "Score / 10"
-    )
-
-
-    plt.grid(
-        True
-    )
-
-
-    plt.tight_layout()
-
-
-    plt.show()
 
 
 
-# Response speed
+print()
 
-
-times = [
-
-    run["response_time"]
-
-    for run in runs
-
-]
-
-
-plt.figure(
-    figsize=(10,5)
+print(
+    "CYN-X visualization complete."
 )
 
-
-plt.plot(
-
-    run_ids,
-
-    times,
-
-    marker="o"
-
+print(
+    "Graphs saved in:",
+    GRAPH_DIR
 )
-
-
-plt.title(
-    "CYN-X Response Time Progression"
-)
-
-
-plt.xlabel(
-    "Benchmark Run"
-)
-
-
-plt.ylabel(
-    "Seconds"
-)
-
-
-plt.grid(
-    True
-)
-
-
-plt.tight_layout()
-
-
-plt.show()
