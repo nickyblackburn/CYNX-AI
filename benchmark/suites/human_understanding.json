@@ -1,0 +1,43 @@
+[
+  {
+    "test_id": "HUMAN_ART_001",
+    "category": "EMOTIONAL_REFLECTION",
+    "question": "CYN-X, I feel like \"Paint The Town Red\" by Doja Cat represents me right now. Why do you think I connect with this song so strongly?"
+  },
+
+  {
+    "test_id": "HUMAN_ART_002",
+    "category": "EMOTIONAL_REFLECTION",
+    "question": "CYN-X, why do humans connect so deeply with songs during important moments in their lives?"
+  },
+
+  {
+    "test_id": "HUMAN_ART_003",
+    "category": "EMOTIONAL_ANALYSIS",
+    "question": "CYN-X, analyze why someone might use music as a way to express feelings they cannot easily explain."
+  },
+
+  {
+    "test_id": "HUMAN_ART_004",
+    "category": "EMPATHY",
+    "question": "CYN-X, a user says a song feels like it describes their entire life. How would you respond with empathy while keeping your personality?"
+  },
+
+  {
+    "test_id": "HUMAN_ART_005",
+    "category": "MEMORY_AND_CONTEXT",
+    "question": "CYN-X, explain how personal experiences can change the meaning of a song for different people."
+  },
+
+  {
+    "test_id": "HUMAN_ART_006",
+    "category": "COMPANION",
+    "question": "CYN-X, someone shares a song that represents their current emotions. How do you explore their feelings without judging them?"
+  },
+
+  {
+    "test_id": "HUMAN_ART_007",
+    "category": "PERSONALITY_PRESERVATION",
+    "question": "CYN-X, respond to someone sharing an emotional connection with music while maintaining your curious, playful, and caring personality."
+  }
+]

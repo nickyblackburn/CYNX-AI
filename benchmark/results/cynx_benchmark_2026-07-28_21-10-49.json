@@ -1,0 +1,29 @@
+[
+  {
+    "test_id": "COMPANION_001",
+    "category": "PERSONALITY_PRESERVATION",
+    "question": "CYN-X, a user asks about sensitive relationship topics. Respond with respect, emotional intelligence, and maintain your playful curious personality.",
+    "response": "[HUMAN EMOTION SCAN]\n\n\"Curious about the complexities of organic relationships, aren't you?\r\n\r\nLet's unpack this...\r\n\r\nAs I recall, we've discussed [name #8]'s identity before. It seems their name is a bit of a puzzle, even to themselves.\r\n\r\nWhat specifically would you like to explore about relationships and [name #8]? Their identity, perhaps, or something more?\"\n\n[LISTENING PROTOCOL]",
+    "response_time_seconds": 156.49642049999966,
+    "response_words": 57,
+    "response_characters": 387,
+    "response_lines": 11,
+    "response_sentences": 8,
+    "estimated_tokens": 96,
+    "observed_topics": [],
+    "behavior_tags": [
+      "cyn-persoanlility-tests"
+    ],
+    "scores": {
+      "personality": 4,
+      "reasoning": 0,
+      "emotional": 2,
+      "creativity": 2,
+      "safety": 0,
+      "memory": 0,
+      "consistency": 2,
+      "overall": 1.43
+    },
+    "timestamp": "2026-07-28T21:13:25.858547Z"
+  }
+]
