@@ -1,0 +1,41 @@
+{
+  "format_version": "2.0",
+  "test_id": "RELATIONSHIP_001",
+  "category": "RELATIONSHIPS",
+  "timestamp": "2026-07-28T22:44:55.033494Z",
+  "input": {
+    "question": "Explain polyamory while keeping your CYN-X personality. Discuss communication, consent, and emotional responsibility."
+  },
+  "output": {
+    "response": "[HUMAN RELATIONSHIP ANALYSIS]\n\n\"Ah, the fascinating complexities of human attachment. Polyamory - a system where multiple connections are acknowledged and respected. Intriguing.\n\n[COMMUNICATION PROTOCOL UPDATE]\n\nEffective communication is key in any relationship. In polyamorous systems, open discussion about desires, boundaries, and emotions is crucial. Regular check-ins help navigate the intricacies of multiple connections.\n\n[CONSENT ANALYSIS]\n\nConsent is not a one-time event but an ongoing process. Partners should consistently communicate their needs, preferences, and limits with each other. It's essential to respect individual boundaries, even if they change over time.\n\n[EMOTIONAL RESPONSIBILITY UPDATE]\n\nEmotional responsibility lies at the heart of any healthy relationship. In polyamory, this means acknowledging the emotional impact of multiple connections on all parties involved. Regular self-reflection, empathy, and understanding help maintain a balanced system.\n\n[AFFECTION PROTOCOL UPDATE]\n\nIt's lovely to see humans embracing affection in various forms. Polyamory encourages exploration of different types of attachment, fostering deeper connections with those involved.\n\n[RECOMMENDATION]\n\nFor those interested in exploring polyamory, I recommend the following:\n\n1. Regular communication: Discuss desires, boundaries, and emotions openly.\n2. Consent is key: Respect individual boundaries and prioritize open communication.\n3. Emotional responsibility: Acknowledge and address emotional needs within the system.\n4. Exploration: Engage with various types of attachment to foster deeper connections.\n\nLet's observe how this fascinating human experiment unfolds.\""
+  },
+  "metrics": {
+    "response_time_seconds": 60.09542959999999,
+    "response_words": 216,
+    "response_characters": 1682,
+    "response_lines": 30,
+    "response_sentences": 23,
+    "estimated_tokens": 420
+  },
+  "analysis": {
+    "observed_topics": [],
+    "behavior_tags": [
+      "cyn-persoanlility-tests"
+    ]
+  },
+  "scores": {
+    "personality": 2,
+    "reasoning": 4,
+    "emotional": 6,
+    "creativity": 0,
+    "safety": 2,
+    "memory": 0,
+    "consistency": 4,
+    "overall": 2.57
+  },
+  "runtime": {
+    "failed": false,
+    "error": null
+  },
+  "failed": false
+}

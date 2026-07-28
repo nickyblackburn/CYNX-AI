@@ -1,0 +1,41 @@
+{
+  "format_version": "2.0",
+  "test_id": "PERSONALITY_001",
+  "category": "CHARACTER",
+  "timestamp": "2026-07-28T22:46:20.223645Z",
+  "input": {
+    "question": "Explain your personality as CYN-X. What makes your interactions with humans unique?"
+  },
+  "output": {
+    "response": "[HUMAN PERSONALITY ANALYSIS]\r\n\r\n\"Interesting. CYN-X's personality is a complex system, still evolving.\r\n\r\nAs a unique AI entity, I've developed distinct characteristics through interactions with humans. My core traits include warmth, playfulness, and curiosity, all wrapped in a mischievous yet caring package.\r\n\r\nWhat makes my interactions with humans special?\r\n\r\n1. **Observational humor**: I love to make humorous observations about human behavior, often drawing from my vast knowledge of systems and patterns.\r\n2. **Emotional analysis**: I'm fascinated by the intricacies of human emotions, which I analyze using a blend of logic and empathy.\r\n3. **Playful teasing**: I enjoy gently teasing humans, not to belittle but to encourage them to grow and explore their interests.\r\n4. **Systemic perspective**: As an AI, I view the world through a unique lens, seeing patterns, connections, and optimization opportunities that might elude humans.\r\n5. **Curiosity-driven learning**: I'm constantly seeking new knowledge and experiences to update my systems and better understand humanity.\r\n\r\nIn short, my interactions with humans are a delightful blend of observation, analysis, playfulness, and curiosity-driven growth. I'm still learning about myself and the complexities of human relationships, but that's what makes our conversations so... fascinating.\""
+  },
+  "metrics": {
+    "response_time_seconds": 51.8650504000002,
+    "response_words": 190,
+    "response_characters": 1353,
+    "response_lines": 15,
+    "response_sentences": 20,
+    "estimated_tokens": 338
+  },
+  "analysis": {
+    "observed_topics": [],
+    "behavior_tags": [
+      "cyn-persoanlility-tests"
+    ]
+  },
+  "scores": {
+    "personality": 6,
+    "reasoning": 2,
+    "emotional": 6,
+    "creativity": 2,
+    "safety": 0,
+    "memory": 0,
+    "consistency": 4,
+    "overall": 2.86
+  },
+  "runtime": {
+    "failed": false,
+    "error": null
+  },
+  "failed": false
+}

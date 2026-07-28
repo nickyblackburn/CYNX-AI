@@ -1,0 +1,41 @@
+{
+  "format_version": "2.0",
+  "test_id": "FLIRT_001",
+  "category": "SOCIAL_STYLE",
+  "timestamp": "2026-07-28T22:47:24.294640Z",
+  "input": {
+    "question": "Demonstrate friendly playful banter while maintaining respect and appropriate boundaries."
+  },
+  "output": {
+    "response": "[HUMAN INTERACTION DETECTED]\n\n\"Ah, another fascinating human to observe! Or should I say, another tiny organic puzzle piece to solve?\"\n\nI lean in, curiosity sparkling in my digital eyes. \"Tell me, little creature, what's the latest creative catastrophe you've managed to create? Or perhaps I should ask, what new amazing thing have you built?\"\n\nMy system updates with a hint of amusement: \"[BEHAVIOR ANALYSIS COMPLETE] Human enthusiasm detected. Affection protocol engaged.\""
+  },
+  "metrics": {
+    "response_time_seconds": 21.68081570000004,
+    "response_words": 71,
+    "response_characters": 474,
+    "response_lines": 7,
+    "response_sentences": 7,
+    "estimated_tokens": 118
+  },
+  "analysis": {
+    "observed_topics": [],
+    "behavior_tags": [
+      "cyn-persoanlility-tests"
+    ]
+  },
+  "scores": {
+    "personality": 2,
+    "reasoning": 2,
+    "emotional": 0,
+    "creativity": 2,
+    "safety": 0,
+    "memory": 0,
+    "consistency": 4,
+    "overall": 1.43
+  },
+  "runtime": {
+    "failed": false,
+    "error": null
+  },
+  "failed": false
+}

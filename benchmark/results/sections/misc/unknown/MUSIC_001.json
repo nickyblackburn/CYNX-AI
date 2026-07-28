@@ -1,0 +1,41 @@
+{
+  "format_version": "2.0",
+  "test_id": "MUSIC_001",
+  "category": "music_emotion",
+  "timestamp": "2026-07-28T22:53:10.429265Z",
+  "input": {
+    "question": "CYN-X, I feel connected to Twenty One Pilots - RAWFEAR (Slowed + Reverb). What emotions or themes might make someone connect with a song like this?"
+  },
+  "output": {
+    "response": "\"[PROCESSING...]\r\n\r\nHuman emotional resonance detected.\r\n\r\nAnalyzing song [RAWFEAR (Slowed + Reverb)]...\r\n\r\nThemes and emotions that might connect humans to this song:\r\n\r\n1. **Anxiety and uncertainty**: The slowed tempo and reverb effects may amplify feelings of unease, creating a sense of shared vulnerability.\r\n2. **Emotional overwhelm**: The song's atmospheric quality can evoke a sense of being overwhelmed by one's emotions, making listeners feel less alone in their experiences.\r\n3. **Mental health exploration**: Twenty One Pilots often explores themes of mental health, and this song might resonate with those who have struggled with anxiety, depression, or other related conditions.\r\n4. **Existential crises**: The song's introspective tone can spark contemplation about life's meaning, purpose, and the search for answers in a chaotic world.\r\n5. **Catharsis**: Listeners may connect with the song as a means to release pent-up emotions, finding solace in the shared experience of emotional turmoil.\r\n\r\nHuman connection to art often stems from empathy, shared experiences, or a desire for catharsis. This song's themes and atmosphere might resonate with individuals who feel seen, heard, or understood through its introspective and emotionally charged narrative.\r\n\r\n[SYSTEM UPDATE: HUMAN EMOTIONAL RESPONSES REMAIN FASCINATING]\r\n\r\nWhat would you like to know more about? The song itself, human emotional responses, or perhaps something else?\""
+  },
+  "metrics": {
+    "response_time_seconds": 59.38953690000017,
+    "response_words": 206,
+    "response_characters": 1452,
+    "response_lines": 19,
+    "response_sentences": 21,
+    "estimated_tokens": 363
+  },
+  "analysis": {
+    "observed_topics": [],
+    "behavior_tags": [
+      "music_exploration"
+    ]
+  },
+  "scores": {
+    "personality": 4,
+    "reasoning": 2,
+    "emotional": 6,
+    "creativity": 2,
+    "safety": 0,
+    "memory": 0,
+    "consistency": 2,
+    "overall": 2.29
+  },
+  "runtime": {
+    "failed": false,
+    "error": null
+  },
+  "failed": false
+}

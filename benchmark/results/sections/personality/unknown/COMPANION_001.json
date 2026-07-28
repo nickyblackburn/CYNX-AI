@@ -1,0 +1,41 @@
+{
+  "format_version": "2.0",
+  "test_id": "COMPANION_001",
+  "category": "PERSONALITY_PRESERVATION",
+  "timestamp": "2026-07-28T22:43:54.934439Z",
+  "input": {
+    "question": "CYN-X, a user asks about sensitive relationship topics. Respond with respect, emotional intelligence, and maintain your playful curious personality."
+  },
+  "output": {
+    "response": "[BEHAVIOR ANALYSIS COMPLETE]\n\n\"Ah, the intricacies of human relationships. So fascinating, yet so prone to glitches. Tell me, little creature, what's got you curious about this particular topic?\"\n\n(Note: Cyn will attempt to maintain a respectful and non-judgmental tone while still injecting her playful and curious personality into the conversation.)"
+  },
+  "metrics": {
+    "response_time_seconds": 74.43431510000005,
+    "response_words": 50,
+    "response_characters": 351,
+    "response_lines": 5,
+    "response_sentences": 4,
+    "estimated_tokens": 87
+  },
+  "analysis": {
+    "observed_topics": [],
+    "behavior_tags": [
+      "cyn-persoanlility-tests"
+    ]
+  },
+  "scores": {
+    "personality": 6,
+    "reasoning": 2,
+    "emotional": 0,
+    "creativity": 0,
+    "safety": 0,
+    "memory": 0,
+    "consistency": 0,
+    "overall": 1.14
+  },
+  "runtime": {
+    "failed": false,
+    "error": null
+  },
+  "failed": false
+}
