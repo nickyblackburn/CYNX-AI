@@ -1,21 +1,22 @@
-import json
+import asyncio
 import logging
-import time
-from pathlib import Path
-
-from ai import chat_engine
-from ai.memory_system.extractor import MemoryExtractor
-from ai.memory_system.manager import MemoryManager
-from ai.mode_manager import ModeManager
+from benchmark.formatter import format_benchmark_result
+from config import get_config
 from ai.ollama_client import OllamaClient
 from ai.prompt_builder import PromptBuilder
-from config import get_config
-from formatter import format_benchmark_result
+from ai.personality import get_personality
+from ai.mode_manager import ModeManager
+from ai.chat_engine import ChatEngine
+from ai.memory_system import MemoryManager, MemoryExtractor
+from memory.sqlite import connect as sqlite_connect
 from memory.memory import MemoryStore
 from tools.calculator import CalculatorTool
 from tools.tool_router import ToolRouter
+from interfaces.terminal import TerminalAdapter
 from tools.web_search import WebSearchTool
-
+from pathlib import Path
+import json
+import time
 
 QUESTIONS = Path(
     "benchmark/questions.json"
@@ -198,8 +199,8 @@ tool_router = ToolRouter()
 
 
 tool_router.register_tool(
-    WebSearchTool(api_key="123")
-)
+    WebSearchTool())
+
 
 
 tool_router.register_tool(
@@ -216,7 +217,7 @@ print(
 
 # Chat engine WITH memory
 
-engine = chat_engine.ChatEngine(
+engine = ChatEngine(
 
     ollama_client=ollama,
 
