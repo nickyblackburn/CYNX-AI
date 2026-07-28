@@ -424,6 +424,56 @@ class PromptManager:
                 )
 
             )
+            conversation = self.load_optional(
+
+            "conversation"
+
+        )
+
+
+        if conversation:
+
+
+            parts.append(
+
+                self.trim_text(
+
+                    conversation,
+
+                    self.MAX_CONTEXT_CHARS
+
+                )
+
+            )
+
+
+
+
+        # -----------------------------
+        # Examples
+        # -----------------------------
+
+        examples = self.load_optional(
+
+            "examples"
+
+        )
+
+
+        if examples:
+
+
+            parts.append(
+
+                self.trim_text(
+
+                    examples,
+
+                    self.MAX_CONTEXT_CHARS
+
+                )
+
+            )
 
 
 
@@ -649,6 +699,20 @@ class PromptManager:
 
         )
 
+        print(
+            "Safety Loaded:",
+            bool(safety)
+        )
+
+        print(
+            "Conversation Loaded:",
+            bool(conversation)
+        )
+
+        print(
+            "Examples Loaded:",
+            bool(examples)
+        )
 
         print(
 
