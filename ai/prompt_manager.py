@@ -19,6 +19,7 @@ class PromptManager:
         "examples": "examples.md",
         "cyn-studio": "cyn-studio.md",
         "projects": "projects.md",
+        "reasoning": "reasoning.md"
     }
 
 
@@ -243,6 +244,7 @@ class PromptManager:
 
 
 
+
     # ---------------------------------------------
     # Optional Prompts
     # ---------------------------------------------
@@ -273,7 +275,10 @@ class PromptManager:
 
         )
 
-        # ---------------------------------------------
+
+
+
+    # ---------------------------------------------
     # Options
     # ---------------------------------------------
 
@@ -354,9 +359,6 @@ class PromptManager:
     # ---------------------------------------------
     # Build System Prompt
     # ---------------------------------------------
-    # ---------------------------------------------
-    # Build System Prompt
-    # ---------------------------------------------
 
     def build_system_prompt(
         self,
@@ -372,21 +374,12 @@ class PromptManager:
 
 
 
-
-        # -----------------------------
-        # Core personality
-        # -----------------------------
-
         core = self.load_core_prompts()
 
 
         if core:
 
-            parts.append(
-
-                core
-
-            )
+            parts.append(core)
 
 
 
@@ -396,23 +389,17 @@ class PromptManager:
         # -----------------------------
 
         cyn_studio = self.load_optional(
-
             "cyn-studio"
-
         )
 
 
         print(
-
             "CYN STUDIO LENGTH:",
-
             len(cyn_studio)
-
         )
 
 
         if cyn_studio:
-
 
             parts.append(
 
@@ -425,15 +412,20 @@ class PromptManager:
                 )
 
             )
-            conversation = self.load_optional(
 
+
+
+
+        # -----------------------------
+        # Conversation
+        # -----------------------------
+
+        conversation = self.load_optional(
             "conversation"
-
         )
 
 
         if conversation:
-
 
             parts.append(
 
@@ -455,14 +447,11 @@ class PromptManager:
         # -----------------------------
 
         examples = self.load_optional(
-
             "examples"
-
         )
 
 
         if examples:
-
 
             parts.append(
 
@@ -477,27 +466,56 @@ class PromptManager:
             )
 
 
-        projects = self.load_optional(
-        
-                    "projects"
-        
+
+
+        # -----------------------------
+        # Reasoning Framework
+        # -----------------------------
+
+        reasoning = self.load_optional(
+            "reasoning"
+        )
+
+
+        if reasoning:
+
+            parts.append(
+
+                self.trim_text(
+
+                    reasoning,
+
+                    self.MAX_CONTEXT_CHARS
+
                 )
-        
-        
+
+            )
+
+
+
+
+        # -----------------------------
+        # Projects
+        # -----------------------------
+
+        projects = self.load_optional(
+            "projects"
+        )
+
+
         if projects:
-        
-        
-                    parts.append(
-        
-                        self.trim_text(
-        
-                            projects,
-        
-                            self.MAX_CONTEXT_CHARS
-        
-                        )
-        
-                    )
+
+            parts.append(
+
+                self.trim_text(
+
+                    projects,
+
+                    self.MAX_CONTEXT_CHARS
+
+                )
+
+            )
 
 
 
@@ -506,18 +524,18 @@ class PromptManager:
         # Safety
         # -----------------------------
 
+        safety = ""
+
+
         if include_safety:
 
 
             safety = self.load_optional(
-
                 "safety"
-
             )
 
 
             if safety:
-
 
                 parts.append(
 
@@ -545,9 +563,7 @@ class PromptManager:
 
 
                 mode_text = self.load_mode(
-
                     mode
-
                 )
 
 
@@ -580,9 +596,7 @@ class PromptManager:
 
 
                 option_text = self.load_option(
-
                     option
-
                 )
 
 
@@ -664,89 +678,78 @@ class PromptManager:
         # Debug
 
         print(
-
             "\n===== CYN PROMPT DEBUG ====="
-
         )
 
 
         print(
-
             "Characters:",
-
             len(prompt)
-
         )
 
 
         print(
-
             "Words:",
-
             len(prompt.split())
-
         )
 
 
         print(
-
             "Estimated tokens:",
-
             int(len(prompt.split()) * 1.3)
-
         )
 
 
         print(
-
             "Active modes:",
-
             active_modes
-
         )
 
 
         print(
-
             "Active options:",
-
             active_options
-
         )
 
 
         print(
-
             "CYN Studio Loaded:",
-
             bool(cyn_studio)
-
         )
+
 
         print(
             "Safety Loaded:",
             bool(safety)
         )
 
+
         print(
             "Conversation Loaded:",
             bool(conversation)
         )
 
+
         print(
             "Examples Loaded:",
             bool(examples)
         )
-        
+
+
         print(
-            "project Loaded:",
+            "Projects Loaded:",
             bool(projects)
         )
 
+
         print(
+            "Reasoning Loaded:",
+            bool(reasoning)
+        )
 
+
+        print(
             "============================\n"
-
         )
 
 
