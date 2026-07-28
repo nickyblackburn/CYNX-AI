@@ -204,3 +204,49 @@ border-radius:8px;
     color: #00d9ff;
     text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
 }
+
+#thinking-box {
+
+    background:
+    linear-gradient(
+        135deg,
+        rgba(120,0,255,.25),
+        rgba(0,255,255,.15)
+    );
+
+    border: 1px solid purple;
+
+    border-radius: 20px;
+
+    padding:20px;
+
+    box-shadow:
+    0 0 25px rgba(160,0,255,.5);
+
+    transition:.3s;
+
+}
+
+
+.complete {
+
+    text-align:center;
+
+    font-size:18px;
+
+    animation: pulse 1s infinite alternate;
+
+}
+
+
+@keyframes pulse {
+
+    from {
+        transform:scale(1);
+    }
+
+    to {
+        transform:scale(1.05);
+    }
+
+}

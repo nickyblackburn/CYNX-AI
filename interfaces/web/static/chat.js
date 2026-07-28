@@ -1,4 +1,3 @@
-
 // Spinner frames for animation
 const spinnerFrames = ['◐', '◓', '◑', '◒'];
 
@@ -9,45 +8,34 @@ let startTime = null;
 let lastResponseTime = 0;
 
 
-
 // Start the loading animation
 function startLoading() {
 
-    const thinkingDiv =
-        document.getElementById("thinking");
-
+    const thinkingDiv = document.getElementById("thinking");
 
     thinkingDiv.style.display = "flex";
-
 
 
     // Start timer
     startTime = Date.now();
 
-
     updateTimer();
 
-
-    timerInterval =
-        setInterval(
-            updateTimer,
-            100
-        );
-
+    timerInterval = setInterval(
+        updateTimer,
+        100
+    );
 
 
     // Start spinner animation
     spinnerIndex = 0;
 
-
     updateSpinner();
 
-
-    spinnerInterval =
-        setInterval(
-            updateSpinner,
-            150
-        );
+    spinnerInterval = setInterval(
+        updateSpinner,
+        150
+    );
 
 }
 
@@ -56,13 +44,9 @@ function startLoading() {
 // Stop the loading animation
 function stopLoading() {
 
-
-    const thinkingDiv =
-        document.getElementById("thinking");
-
+    const thinkingDiv = document.getElementById("thinking");
 
     thinkingDiv.style.display = "none";
-
 
 
     // Calculate final response time
@@ -97,18 +81,14 @@ function stopLoading() {
 // Update spinner frame
 function updateSpinner(){
 
-
     const spinner =
         document.getElementById("spinner");
 
 
-
     if(spinner){
-
 
         spinner.textContent =
             spinnerFrames[spinnerIndex];
-
 
 
         spinnerIndex =
@@ -125,9 +105,7 @@ function updateSpinner(){
 // Update timer display
 function updateTimer(){
 
-
     if(startTime){
-
 
         const elapsed =
             (Date.now() - startTime)
@@ -135,14 +113,12 @@ function updateTimer(){
             1000;
 
 
-
         const timer =
             document.getElementById("timer");
-
+            
 
 
         if(timer){
-
 
             timer.textContent =
                 elapsed.toFixed(1);
@@ -155,14 +131,11 @@ function updateTimer(){
 
 
 
-
-
 async function send(){
 
 
     let box =
         document.getElementById("message");
-
 
 
     let text =
@@ -181,7 +154,7 @@ async function send(){
 
 
 
-    box.value = "";
+    box.value="";
 
 
 
@@ -194,9 +167,7 @@ async function send(){
         await fetch(
             "/chat",
             {
-
                 method:"POST",
-
 
                 headers:{
                     "Content-Type":"application/json"
@@ -229,21 +200,13 @@ async function send(){
 
 
 
-    // Update dashboard response time
-    let responseTime =
-        document.getElementById("response-time");
-
-
-
-    if(responseTime){
-
-
-        responseTime.textContent =
-            lastResponseTime.toFixed(2);
-
-    }
-
-
+    addMessage(
+        "[CYN-X RESPONSE TIME] "
+        +
+        lastResponseTime.toFixed(2)
+        +
+        " seconds"
+    );
 
 }
 
