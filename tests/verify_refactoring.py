@@ -97,7 +97,16 @@ def test_key_features_present():
     """Test that all key Cyn features are preserved."""
     print("\n[TEST] All key Cyn features present")
     manager = PromptManager()
-    full = manager.build_system_prompt()
+    full = manager.build_system_prompt(
+    active_modes=[
+        "companion"
+    ],
+    active_options=[
+        "playful",
+        "creative"
+    ],
+    include_safety=True
+)
 
     features = [
         ("Glitchy AI style", "glitchy"),

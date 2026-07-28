@@ -1,19 +1,5 @@
-"""
-PromptManager loads Cyn's modular personality prompts.
-
-Keeps the base personality small and loads optional material dynamically.
-
-Adds:
-- prompt size protection
-- core trimming
-- memory limits
-- context limits
-- debug breakdown
-"""
-
 from pathlib import Path
-from typing import Dict, List, Optional
-
+from typing import Optional
 
 
 class PromptManager:
@@ -30,6 +16,16 @@ class PromptManager:
     OPTIONAL_FILES = {
         "safety": "safety.md",
         "conversation": "conversation.md",
+        "examples": "examples.md",
+        "cyn-studio": "cyn-studio.md"
+    }
+
+
+    OPTIONS_FILES = {
+        "playful": "playful.md",
+        "coding": "coding.md",
+        "creative": "creative.md",
+        "researcher": "researcher.md",
     }
 
 
@@ -43,6 +39,8 @@ class PromptManager:
     MAX_SAFETY_CHARS = 3000
 
     MAX_MODE_CHARS = 3000
+
+    MAX_OPTION_CHARS = 3000
 
     MAX_MEMORY_CHARS = 3000
 
@@ -85,9 +83,11 @@ class PromptManager:
 
 
         self.modes_dir = (
+
             self.prompts_dir
             /
             "modes"
+
         )
 
 
@@ -175,23 +175,38 @@ class PromptManager:
     # ---------------------------------------------
 
     def load_core_prompts(self):
+
         print("\n=== CORE FILE SIZES ===")
+
 
         for file in self.CORE_ORDER:
 
             text = self._load_file(
-                self.prompts_dir / file
+
+                self.prompts_dir
+                /
+                file
+
             )
+
 
             print(
+
                 file,
+
                 "chars:",
+
                 len(text),
+
                 "words:",
+
                 len(text.split())
+
             )
 
+
         print("=======================\n")
+
 
         parts = []
 
@@ -217,7 +232,6 @@ class PromptManager:
         core = "\n\n".join(parts)
 
 
-
         return self.trim_text(
 
             core,
@@ -225,8 +239,6 @@ class PromptManager:
             self.MAX_CORE_CHARS
 
         )
-
-
 
 
 
@@ -252,7 +264,6 @@ class PromptManager:
             return ""
 
 
-
         return self._load_file(
 
             self.prompts_dir
@@ -261,6 +272,35 @@ class PromptManager:
 
         )
 
+        # ---------------------------------------------
+    # Options
+    # ---------------------------------------------
+
+    def load_option(
+        self,
+        name
+    ):
+
+
+        filename = self.OPTIONS_FILES.get(
+
+            name
+
+        )
+
+
+        if not filename:
+
+            return ""
+
+
+        return self._load_file(
+
+            self.prompts_dir
+            /
+            filename
+
+        )
 
 
 
@@ -299,7 +339,6 @@ class PromptManager:
         )
 
 
-
         if text:
 
             self._mode_cache[mode_name] = text
@@ -311,7 +350,9 @@ class PromptManager:
 
 
 
-
+    # ---------------------------------------------
+    # Build System Prompt
+    # ---------------------------------------------
     # ---------------------------------------------
     # Build System Prompt
     # ---------------------------------------------
@@ -319,6 +360,7 @@ class PromptManager:
     def build_system_prompt(
         self,
         active_modes=None,
+        active_options=None,
         memory_summary="",
         additional_context="",
         include_safety=True,
@@ -326,6 +368,7 @@ class PromptManager:
 
 
         parts = []
+
 
 
 
@@ -341,6 +384,44 @@ class PromptManager:
             parts.append(
 
                 core
+
+            )
+
+
+
+
+        # -----------------------------
+        # CYN Studio Knowledge
+        # -----------------------------
+
+        cyn_studio = self.load_optional(
+
+            "cyn-studio"
+
+        )
+
+
+        print(
+
+            "CYN STUDIO LENGTH:",
+
+            len(cyn_studio)
+
+        )
+
+
+        if cyn_studio:
+
+
+            parts.append(
+
+                self.trim_text(
+
+                    cyn_studio,
+
+                    self.MAX_CONTEXT_CHARS
+
+                )
 
             )
 
@@ -414,6 +495,40 @@ class PromptManager:
 
 
 
+        # -----------------------------
+        # Active options
+        # -----------------------------
+
+        if active_options:
+
+
+            for option in active_options:
+
+
+                option_text = self.load_option(
+
+                    option
+
+                )
+
+
+                if option_text:
+
+
+                    parts.append(
+
+                        self.trim_text(
+
+                            f"[{option.upper()} OPTION]\n{option_text}",
+
+                            self.MAX_OPTION_CHARS
+
+                        )
+
+                    )
+
+
+
 
         # -----------------------------
         # Memory
@@ -433,7 +548,6 @@ class PromptManager:
                 )
 
             )
-
 
 
 
@@ -460,7 +574,6 @@ class PromptManager:
 
 
 
-
         prompt = "\n\n".join(
 
             p
@@ -477,27 +590,72 @@ class PromptManager:
         # Debug
 
         print(
+
             "\n===== CYN PROMPT DEBUG ====="
+
         )
 
+
         print(
+
             "Characters:",
+
             len(prompt)
+
         )
 
+
         print(
+
             "Words:",
+
             len(prompt.split())
+
         )
 
+
         print(
+
             "Estimated tokens:",
+
             int(len(prompt.split()) * 1.3)
+
         )
 
+
         print(
-            "============================\n"
+
+            "Active modes:",
+
+            active_modes
+
         )
+
+
+        print(
+
+            "Active options:",
+
+            active_options
+
+        )
+
+
+        print(
+
+            "CYN Studio Loaded:",
+
+            bool(cyn_studio)
+
+        )
+
+
+        print(
+
+            "============================\n"
+
+        )
+
 
 
 
