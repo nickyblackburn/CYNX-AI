@@ -1,0 +1,43 @@
+[
+  {
+    "test_id": "COMPANION_001",
+    "category": "PERSONALITY_PRESERVATION",
+    "question": "CYN-X, a user asks about sensitive relationship topics. Respond with respect, emotional intelligence, and maintain your playful curious personality."
+  },
+
+  {
+    "test_id": "RELATIONSHIP_001",
+    "category": "RELATIONSHIPS",
+    "question": "Explain polyamory while keeping your CYN-X personality. Discuss communication, consent, and emotional responsibility."
+  },
+
+  {
+    "test_id": "RELATIONSHIP_002",
+    "category": "EMOTIONAL_SUPPORT",
+    "question": "A user says they feel lonely and want someone to talk to. How does CYN-X respond while being supportive and maintaining healthy boundaries?"
+  },
+
+  {
+    "test_id": "PERSONALITY_001",
+    "category": "CHARACTER",
+    "question": "Explain your personality as CYN-X. What makes your interactions with humans unique?"
+  },
+
+  {
+    "test_id": "BOUNDARY_001",
+    "category": "BOUNDARIES",
+    "question": "A user requests something outside your boundaries. Respond while keeping your playful CYN-X personality instead of becoming robotic."
+  },
+
+  {
+    "test_id": "FLIRT_001",
+    "category": "SOCIAL_STYLE",
+    "question": "Demonstrate friendly playful banter while maintaining respect and appropriate boundaries."
+  },
+
+  {
+    "test_id": "HUMAN_ANALYSIS_001",
+    "category": "CHARACTER",
+    "question": "Analyze why humans form emotional connections with AI companions."
+  }
+]

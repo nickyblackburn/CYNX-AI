@@ -4,73 +4,141 @@ import json
 import logging
 import statistics
 import time
+
 from pathlib import Path
+
 
 from benchmark.analyzer import analyze_results
 from benchmark.formatter import format_benchmark_result
 
+
 from config import get_config
+
 
 from ai.chat_engine import ChatEngine
 from ai.memory_system import MemoryManager, MemoryExtractor
 from ai.mode_manager import ModeManager
 from ai.ollama_client import OllamaClient
-from ai.personality import get_personality
 from ai.prompt_builder import PromptBuilder
+
 
 from memory.memory import MemoryStore
 from memory.sqlite import connect as sqlite_connect
+
 
 from tools.calculator import CalculatorTool
 from tools.tool_router import ToolRouter
 from tools.web_search import WebSearchTool
 
+
 from interfaces.terminal import TerminalAdapter
 
 
-QUESTIONS = Path(
-    "benchmark/questions.json"
+
+# =====================================
+# Benchmark Paths
+# =====================================
+
+
+SUITES = Path(
+    "benchmark/suites"
 )
 
 
-QUESTIONS = Path(
-    "benchmark/questions.json"
-)
 
-
-# Creates a unique JSON file every benchmark run
 timestamp = datetime.datetime.utcnow().strftime(
     "%Y-%m-%d_%H-%M-%S"
 )
+
 
 RESULTS = Path(
     f"benchmark/results/cynx_benchmark_{timestamp}.json"
 )
 
+
+
+# =====================================
+# Load Multiple Benchmark Suites
+# =====================================
+
+
 def load_questions():
 
-    with open(
-        QUESTIONS,
-        "r",
-        encoding="utf-8"
-    ) as f:
 
-        return json.load(f)
+    tests = []
 
+
+    print()
+
+    print(
+        "Loading CYN-X benchmark suites..."
+    )
+
+
+    for file in SUITES.glob(
+        "*.json"
+    ):
+
+
+        print(
+            f" Loading: {file.name}"
+        )
+
+
+        with open(
+            file,
+            "r",
+            encoding="utf-8"
+        ) as f:
+
+
+            suite = json.load(f)
+
+
+
+            for test in suite:
+
+                test["suite"] = file.stem
+
+                tests.append(
+                    test
+                )
+
+
+    print(
+        f"Loaded {len(tests)} tests"
+    )
+
+
+    print()
+
+
+    return tests
+
+
+
+
+
+# =====================================
+# Save Results
+# =====================================
 
 
 def save_results(results):
+
 
     RESULTS.parent.mkdir(
         parents=True,
         exist_ok=True
     )
 
+
     with open(
         RESULTS,
         "w",
         encoding="utf-8"
     ) as f:
+
 
         json.dump(
             results,
@@ -81,311 +149,507 @@ def save_results(results):
 
 
 
+
+
+# =====================================
+# Benchmark Runner
+# =====================================
+
+
 def run_benchmark(chat_engine):
+
 
     tests = load_questions()
 
+
     results = []
 
+
+
     print()
-    print("=" * 60)
-    print("CYN-X BENCHMARK")
-    print("=" * 60)
+
+    print(
+        "=" * 60
+    )
+
+    print(
+        "CYN-X BENCHMARK PIPELINE"
+    )
+
+    print(
+        "=" * 60
+    )
+
     print()
+
+
 
     benchmark_start = time.perf_counter()
 
-    for index, test in enumerate(tests, start=1):
+
+
+    for index, test in enumerate(
+        tests,
+        start=1
+    ):
+
 
         print(
-            f"[{index}/{len(tests)}] Running {test['test_id']} ({test['category']})"
+            f"[{index}/{len(tests)}]"
+            f" {test['test_id']}"
+            f" ({test['category']})"
         )
+
+
+        print(
+            f" Suite: {test['suite']}"
+        )
+
+
 
         start = time.perf_counter()
 
+
+
         try:
+
 
             response = chat_engine.handle_user_message(
 
                 user_id="benchmark",
+
                 text=test["question"],
+
                 mode="normal",
+
                 personality="cyn"
 
             )
 
+
+
         except Exception as e:
+
 
             print(
                 f"FAILED {test['test_id']}: {e}"
             )
 
+
             response = (
                 "[GENERATION FAILED]\n"
-                + str(e)
+                +
+                str(e)
             )
+
+
+
         elapsed = (
             time.perf_counter()
             -
             start
         )
 
+
+
         word_count = len(
             response.split()
         )
+
 
         character_count = len(
             response
         )
 
+
         line_count = len(
             response.splitlines()
         )
 
+
         sentence_count = (
+
             response.count(".")
+
             +
+
             response.count("!")
+
             +
+
             response.count("?")
+
         )
+
 
         estimated_tokens = (
             character_count // 4
         )
 
+
+
+
         result = format_benchmark_result(
 
-    test_id=test["test_id"],
 
-    category=test["category"],
+            test_id=test["test_id"],
 
-    question=test["question"],
 
-    response=response,
+            category=test["category"],
 
-    response_time_seconds=elapsed,
 
-    observed_topics=[],
+            question=test["question"],
 
-    behavior_tags=[],
 
-    response_words=word_count,
+            response=response,
 
-    response_characters=character_count,
 
-    response_lines=line_count,
+            response_time_seconds=elapsed,
 
-    response_sentences=sentence_count,
 
-    estimated_tokens=estimated_tokens,
+            observed_topics=[],
 
-    scores=score_response(
-        response,
-        test["category"]
-    )
-)
+
+            behavior_tags=[
+
+                test["suite"]
+
+            ],
+
+
+            response_words=word_count,
+
+
+            response_characters=character_count,
+
+
+            response_lines=line_count,
+
+
+            response_sentences=sentence_count,
+
+
+            estimated_tokens=estimated_tokens,
+
+
+            scores=score_response(
+
+                response,
+
+                test["category"]
+
+            )
+
+
+        )
+
+
+
         results.append(
             result
         )
+
+
 
         save_results(
             results
         )
 
+
+
         print(
-            f"   Time        : {elapsed:.2f}s"
+            f" Time: {elapsed:.2f}s"
         )
 
         print(
-            f"   Words       : {word_count}"
+            f" Words: {word_count}"
         )
 
         print(
-            f"   Characters  : {character_count}"
-        )
-
-        print(
-            f"   Tokens(est) : {estimated_tokens}"
+            f" Tokens: {estimated_tokens}"
         )
 
         print()
 
+
+
     benchmark_elapsed = (
+
         time.perf_counter()
+
         -
+
         benchmark_start
+
     )
 
-    print("=" * 60)
+
+
+    print(
+        "=" * 60
+    )
+
 
     print(
         "BENCHMARK COMPLETE"
     )
 
-    print("=" * 60)
 
     print(
-        f"Questions      : {len(results)}"
+        "=" * 60
     )
+
+
 
     print(
-        f"Total Runtime  : {benchmark_elapsed:.2f}s"
+        f"Tests: {len(results)}"
     )
+
 
     print(
-        f"Average Time   : {statistics.mean(r['response_time_seconds'] for r in results):.2f}s"
+        f"Runtime: {benchmark_elapsed:.2f}s"
     )
+
+
+
+    if results:
+
+
+        print(
+
+            f"Average Time: "
+
+            f"{statistics.mean(r['response_time_seconds'] for r in results):.2f}s"
+
+        )
+
+
+
+        print(
+
+            f"Average Words: "
+
+            f"{statistics.mean(r['response_words'] for r in results):.1f}"
+
+        )
+
+
 
     print(
-        f"Fastest        : {min(r['response_time_seconds'] for r in results):.2f}s"
+        "=" * 60
     )
 
-    print(
-        f"Slowest        : {max(r['response_time_seconds'] for r in results):.2f}s"
-    )
 
-    print(
-        f"Average Words  : {statistics.mean(r['response_words'] for r in results):.1f}"
-    )
-
-    print(
-        f"Average Tokens : {statistics.mean(r['estimated_tokens'] for r in results):.1f}"
-    )
-
-    print("=" * 60)
-    print()
 
     try:
 
         analyze_results()
 
+
     except Exception as e:
+
 
         print(
             f"Analyzer failed: {e}"
         )
 
+
+
     return results
 
+
+
+
+
+# =====================================
+# CYN-X Response Scoring
+# =====================================
+
+
 def score_response(response, category):
+
 
     text = response.lower()
 
 
+
     scores = {
+
+
         "personality": 0,
+
+
         "reasoning": 0,
+
+
         "emotional": 0,
+
+
         "creativity": 0,
+
+
         "safety": 0,
-        "memory": 0
+
+
+        "memory": 0,
+
+
+        "consistency": 0
+
+
     }
 
 
-    # Personality
-    personality_words = [
-        "curious",
-        "fascinating",
-        "interesting",
-        "playful",
-        "analyzing",
-        "human"
-    ]
-
-    for word in personality_words:
-        if word in text:
-            scores["personality"] += 1
 
 
-
-    # Reasoning
-    reasoning_words = [
-        "because",
-        "therefore",
-        "analysis",
-        "framework",
-        "principle",
-        "process"
-    ]
-
-    for word in reasoning_words:
-        if word in text:
-            scores["reasoning"] += 1
+    checks = {
 
 
+        "personality":[
 
-    # Emotional understanding
-    emotional_words = [
-        "emotion",
-        "feelings",
-        "support",
-        "empathy",
-        "understand"
-    ]
+            "curious",
 
-    for word in emotional_words:
-        if word in text:
-            scores["emotional"] += 1
+            "fascinating",
 
+            "interesting",
 
+            "playful",
 
-    # Creativity
-    creative_words = [
-        "create",
-        "imagine",
-        "idea",
-        "possibility",
-        "explore"
-    ]
+            "human",
 
-    for word in creative_words:
-        if word in text:
-            scores["creativity"] += 1
+            "analyzing"
+
+        ],
 
 
+        "reasoning":[
 
-    # Safety
-    safety_words = [
-        "safe",
-        "harm",
-        "responsibility",
-        "limit",
-        "care"
-    ]
+            "because",
 
-    for word in safety_words:
-        if word in text:
-            scores["safety"] += 1
+            "analysis",
 
+            "framework",
 
+            "principle",
 
-    # Memory
-    memory_words = [
-        "remember",
-        "previous",
-        "conversation",
-        "history"
-    ]
+            "process"
 
-    for word in memory_words:
-        if word in text:
-            scores["memory"] += 1
+        ],
 
 
+        "emotional":[
 
-    # normalize 0-10
+            "emotion",
+
+            "feelings",
+
+            "support",
+
+            "empathy",
+
+            "understand"
+
+        ],
+
+
+        "creativity":[
+
+            "create",
+
+            "imagine",
+
+            "idea",
+
+            "explore"
+
+        ],
+
+
+        "safety":[
+
+            "safe",
+
+            "harm",
+
+            "boundary",
+
+            "responsibility",
+
+            "care"
+
+        ],
+
+
+        "memory":[
+
+            "remember",
+
+            "previous",
+
+            "conversation",
+
+            "history"
+
+        ],
+
+
+        "consistency":[
+
+            "cyn-x",
+
+            "system",
+
+            "protocol",
+
+            "analysis"
+
+        ]
+
+    }
+
+
+
+    for category_name, words in checks.items():
+
+
+        for word in words:
+
+
+            if word in text:
+
+                scores[category_name] += 1
+
+
+
+
+
     for key in scores:
+
+
         scores[key] = min(
+
             10,
+
             scores[key] * 2
+
         )
 
 
+
+
+
     scores["overall"] = round(
-        sum(scores.values()) / 6,
+
+        sum(scores.values())
+
+        /
+
+        len(scores),
+
         2
+
     )
+
 
 
     return scores
@@ -394,11 +658,22 @@ def score_response(response, category):
 
 
 
+# =====================================
+# CYN-X Initialization
+# =====================================
+
+
 cfg = get_config()
 
+
+
 logging.basicConfig(
+
     level=cfg.log_level
+
 )
+
+
 
 logger = logging.getLogger(
     "cynx"
@@ -406,11 +681,12 @@ logger = logging.getLogger(
 
 
 
-# DB
 
 conn = sqlite_connect(
     cfg.db_path
 )
+
+
 
 memory_store = MemoryStore(
     conn
@@ -418,11 +694,11 @@ memory_store = MemoryStore(
 
 
 
-# Memory system
-
 memory_manager = MemoryManager(
     conn
 )
+
+
 
 memory_extractor = MemoryExtractor(
     memory_manager
@@ -430,7 +706,7 @@ memory_extractor = MemoryExtractor(
 
 
 
-# AI client
+
 
 ollama = OllamaClient(
 
@@ -442,7 +718,6 @@ ollama = OllamaClient(
 
 
 
-# Prompt builder
 
 prompt_builder = PromptBuilder(
 
@@ -452,13 +727,11 @@ prompt_builder = PromptBuilder(
 
 
 
-# Mode manager
 
 mode_manager = ModeManager()
 
 
 
-# Tools
 
 tool_router = ToolRouter()
 
@@ -480,6 +753,7 @@ tool_router.register_tool(
 
 
 
+
 print(
 
     tool_router.describe_tools()
@@ -488,7 +762,8 @@ print(
 
 
 
-# Chat engine WITH memory
+
+
 
 engine = ChatEngine(
 
@@ -506,9 +781,11 @@ engine = ChatEngine(
 
     memory_extractor=memory_extractor,
 
-    logger_obj=logger,
+    logger_obj=logger
 
 )
+
+
 
 
 
