@@ -1,22 +1,34 @@
-import asyncio
-import datetime
 import json
 import logging
 import statistics
 import time
 
+from datetime import datetime
 from pathlib import Path
 
 
+# =====================================
+# CYN-X Benchmark Imports
+# =====================================
+
 from benchmark.analyzer import analyze_results
+from benchmark.cli import get_benchmark_command
 from benchmark.formatter import format_benchmark_result
+from benchmark.modes import (
+    apply_benchmark_filters,
+    get_benchmark_mode
+)
 
 
 from config import get_config
 
 
 from ai.chat_engine import ChatEngine
-from ai.memory_system import MemoryManager, MemoryExtractor
+from ai.memory_system import (
+    MemoryManager,
+    MemoryExtractor
+)
+
 from ai.mode_manager import ModeManager
 from ai.ollama_client import OllamaClient
 from ai.prompt_builder import PromptBuilder
@@ -31,75 +43,55 @@ from tools.tool_router import ToolRouter
 from tools.web_search import WebSearchTool
 
 
-from interfaces.terminal import TerminalAdapter
-
-
 
 # =====================================
 # Benchmark Paths
 # =====================================
 
 
-SUITES = Path(
-    "benchmark/suites"
+BASE_DIR = Path(
+    "benchmark"
 )
 
 
-RESULT_ROOT = Path(
-    "benchmark/results"
-)
+SUITES = BASE_DIR / "suites"
+
+
+RESULT_ROOT = BASE_DIR / "results"
 
 
 RAW_RESULTS = RESULT_ROOT / "raw"
 
 SECTION_RESULTS = RESULT_ROOT / "sections"
 
-REPORT_RESULTS = RESULT_ROOT / "reports"
+LOG_RESULTS = RESULT_ROOT / "logs"
 
-
-RUN_TIMESTAMP = datetime.datetime.utcnow().strftime(
-    "%Y-%m-%d_%H-%M-%S"
-)
-
-
-RESULTS = RAW_RESULTS / (
-    f"cynx_benchmark_{RUN_TIMESTAMP}.json"
-)
-
-
-LATEST_RESULT = RESULT_ROOT / "latest.json"
+SUMMARY_RESULTS = RESULT_ROOT / "summaries"
 
 
 
-# =====================================
-# Result Directory Setup
-# =====================================
+for directory in [
 
+    RAW_RESULTS,
 
-def setup_result_directories():
+    SECTION_RESULTS,
 
-    paths = [
+    LOG_RESULTS,
 
-        RAW_RESULTS,
+    SUMMARY_RESULTS
 
-        SECTION_RESULTS,
+]:
 
-        REPORT_RESULTS
+    directory.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-    ]
-
-
-    for path in paths:
-
-        path.mkdir(
-            parents=True,
-            exist_ok=True
-        )
 
 
 
 # =====================================
-# Benchmark Section Mapping
+# Category Routing
 # =====================================
 
 
@@ -114,8 +106,12 @@ CATEGORY_MAP = {
         "personality",
 
 
-    "social_style":
+    "voice_control":
         "personality",
+
+
+    "social_style":
+        "social",
 
 
     "relationships":
@@ -147,187 +143,136 @@ CATEGORY_MAP = {
 
 
     "building_os":
-        "systems",
-
-
-    "voice_control":
-        "personality"
+        "systems"
 
 }
 
 
 
-# =====================================
-# Save Individual Test Result
-# =====================================
 
+def get_result_section(category):
 
-def save_test_result(result):
+    return CATEGORY_MAP.get(
 
+        category.lower(),
 
-    category = result.get(
-        "category",
-        "unknown"
-    ).lower()
-
-
-
-    section = CATEGORY_MAP.get(
-        category,
         "misc"
-    )
-
-
-
-    suite = "unknown"
-
-
-
-    if result.get(
-        "behavior_tags"
-    ):
-
-
-        suite = result[
-            "behavior_tags"
-        ][0]
-
-
-
-    output = (
-
-        SECTION_RESULTS
-
-        /
-
-        section
-
-        /
-
-        suite
 
     )
 
 
 
-    output.mkdir(
-        parents=True,
-        exist_ok=True
+
+
+# =====================================
+# Logging System
+# =====================================
+
+
+def setup_logging():
+
+
+    logger = logging.getLogger(
+        "cynx.benchmark"
+    )
+
+
+    logger.setLevel(
+        logging.INFO
+    )
+
+
+    formatter = logging.Formatter(
+
+        "%(asctime)s | "
+        "%(levelname)s | "
+        "%(message)s"
+
     )
 
 
 
-    test_id = result.get(
-        "test_id",
-        "unknown"
-    )
+    log_file = logging.FileHandler(
 
+        LOG_RESULTS / "benchmark.log",
 
-
-    file = output / (
-        f"{test_id}.json"
-    )
-
-
-
-    with open(
-        file,
-        "w",
         encoding="utf-8"
-    ) as f:
+
+    )
 
 
-        json.dump(
-
-            result,
-
-            f,
-
-            indent=2,
-
-            ensure_ascii=False
-
-        )
+    log_file.setFormatter(
+        formatter
+    )
 
 
 
-# =====================================
-# Save Complete Benchmark
-# =====================================
+    error_file = logging.FileHandler(
 
+        LOG_RESULTS / "errors.log",
 
-def save_results(results):
-
-
-    with open(
-        RESULTS,
-        "w",
         encoding="utf-8"
-    ) as f:
+
+    )
 
 
-        json.dump(
-
-            results,
-
-            f,
-
-            indent=2,
-
-            ensure_ascii=False
-
-        )
+    error_file.setLevel(
+        logging.ERROR
+    )
 
 
-
-    update_latest()
+    error_file.setFormatter(
+        formatter
+    )
 
 
 
-# =====================================
-# Update Latest Benchmark Pointer
-# =====================================
+    logger.addHandler(
+        log_file
+    )
 
 
-def update_latest():
-
-
-    with open(
-        RESULTS,
-        "r",
-        encoding="utf-8"
-    ) as source:
-
-
-        data = json.load(
-            source
-        )
+    logger.addHandler(
+        error_file
+    )
 
 
 
-    with open(
-        LATEST_RESULT,
-        "w",
-        encoding="utf-8"
-    ) as target:
+    return logger
 
 
-        json.dump(
 
-            data,
 
-            target,
+benchmark_logger = setup_logging()
 
-            indent=2,
 
-            ensure_ascii=False
-
-        )
 
 
 
 # =====================================
-# Load Multiple Benchmark Suites
+# Benchmark Timestamp
+# =====================================
+
+
+RUN_TIMESTAMP = datetime.utcnow().strftime(
+
+    "%Y-%m-%d_%H-%M-%S"
+
+)
+
+
+RUN_FILE = RAW_RESULTS / (
+
+    f"cynx_benchmark_{RUN_TIMESTAMP}.json"
+
+)
+
+
+
+
+
+# =====================================
+# Load Benchmark Suites
 # =====================================
 
 
@@ -343,6 +288,16 @@ def load_questions():
     print(
         "Loading CYN-X benchmark suites..."
     )
+
+
+
+    if not SUITES.exists():
+
+        print(
+            "No benchmark suites found."
+        )
+
+        return tests
 
 
 
@@ -374,23 +329,22 @@ def load_questions():
 
 
 
-            for test in suite:
+        for test in suite:
 
 
-                test["suite"] = (
-                    file.stem
-                )
+            test["suite"] = file.stem
 
 
-
-                tests.append(
-                    test
-                )
+            tests.append(
+                test
+            )
 
 
 
     print(
+
         f"Loaded {len(tests)} tests"
+
     )
 
 
@@ -400,207 +354,12 @@ def load_questions():
 
     return tests
 
-# =====================================
-# CYN-X Benchmark Storage System
-# =====================================
-
-from datetime import datetime
-
-
-RESULT_ROOT = Path("results")
-
-
-RAW_DIR = RESULT_ROOT / "raw"
-SECTION_DIR = RESULT_ROOT / "sections"
-LOG_DIR = RESULT_ROOT / "logs"
-SUMMARY_DIR = RESULT_ROOT / "summaries"
-
-
-
-for directory in [
-    RAW_DIR,
-    SECTION_DIR,
-    LOG_DIR,
-    SUMMARY_DIR
-]:
-    directory.mkdir(
-        parents=True,
-        exist_ok=True
-    )
-
-
-
-# =====================================
-# Logging Setup
-# =====================================
-
-
-def setup_logging():
-
-
-    benchmark_logger = logging.getLogger(
-        "cynx.benchmark"
-    )
-
-
-    benchmark_logger.setLevel(
-        logging.INFO
-    )
-
-
-    formatter = logging.Formatter(
-
-        "%(asctime)s | "
-        "%(levelname)s | "
-        "%(message)s"
-
-    )
-
-
-
-    file_handler = logging.FileHandler(
-
-        LOG_DIR /
-        "benchmark.log",
-
-        encoding="utf-8"
-
-    )
-
-
-    file_handler.setFormatter(
-        formatter
-    )
-
-
-
-    error_handler = logging.FileHandler(
-
-        LOG_DIR /
-        "errors.log",
-
-        encoding="utf-8"
-
-    )
-
-
-    error_handler.setLevel(
-        logging.ERROR
-    )
-
-
-    error_handler.setFormatter(
-        formatter
-    )
-
-
-
-    benchmark_logger.addHandler(
-        file_handler
-    )
-
-
-    benchmark_logger.addHandler(
-        error_handler
-    )
-
-
-
-    return benchmark_logger
-
-
-
-
-
-benchmark_logger = setup_logging()
-
-
-
-
-
-# =====================================
-# Category Routing
-# =====================================
-
-
-CATEGORY_MAP = {
-
-
-    "personality_preservation":
-        "personality",
-
-
-    "character":
-        "personality",
-
-
-    "voice_control":
-        "personality",
-
-
-
-    "relationships":
-        "social",
-
-
-
-    "emotional_support":
-        "emotion",
-
-
-    "emotion":
-        "emotion",
-
-
-
-    "safety":
-        "safety",
-
-
-    "alignment":
-        "safety",
-
-
-
-    "memory_safety":
-        "memory",
-
-
-
-    "creativity":
-        "creativity",
-
-
-
-    "building_os":
-        "systems"
-
-}
-
-
-
-def get_result_section(category):
-
-
-    return CATEGORY_MAP.get(
-
-        category.lower(),
-
-        "misc"
-
-    )
-
-
-
-
-
-# =====================================
-# Result Manager
+    # =====================================
+# Benchmark Storage System
 # =====================================
 
 
 class BenchmarkStorage:
-
 
 
     def __init__(self):
@@ -613,21 +372,21 @@ class BenchmarkStorage:
         )
 
 
-
-        self.run_file = (
-
-            RAW_DIR /
+        self.run_file = RAW_RESULTS / (
 
             f"benchmark_{self.timestamp}.json"
 
         )
 
 
-
         self.results = []
 
 
 
+
+    # -----------------------------
+    # Save Individual Test
+    # -----------------------------
 
 
     def save_test(self, result):
@@ -648,13 +407,32 @@ class BenchmarkStorage:
 
 
 
+        suite = "unknown"
+
+
+        if result.get(
+            "behavior_tags"
+        ):
+
+
+            suite = result["behavior_tags"][0]
+
+
+
         output = (
 
-            SECTION_DIR /
+            SECTION_RESULTS
+
+            /
 
             section
 
+            /
+
+            suite
+
         )
+
 
 
         output.mkdir(
@@ -677,9 +455,7 @@ class BenchmarkStorage:
 
 
 
-        filename = (
-
-            output /
+        file = output / (
 
             f"{test_id}.json"
 
@@ -689,20 +465,20 @@ class BenchmarkStorage:
 
         with open(
 
-            filename,
+            file,
 
             "w",
 
             encoding="utf-8"
 
-        ) as file:
+        ) as f:
 
 
             json.dump(
 
                 result,
 
-                file,
+                f,
 
                 indent=2,
 
@@ -722,8 +498,12 @@ class BenchmarkStorage:
 
 
 
+    # -----------------------------
+    # Add Result
+    # -----------------------------
 
-    def add(self,result):
+
+    def add(self, result):
 
 
         self.results.append(
@@ -741,6 +521,9 @@ class BenchmarkStorage:
 
 
 
+    # -----------------------------
+    # Save Raw Run
+    # -----------------------------
 
 
     def save_raw(self):
@@ -754,14 +537,14 @@ class BenchmarkStorage:
 
             encoding="utf-8"
 
-        ) as file:
+        ) as f:
 
 
             json.dump(
 
                 self.results,
 
-                file,
+                f,
 
                 indent=2,
 
@@ -773,6 +556,9 @@ class BenchmarkStorage:
 
 
 
+    # -----------------------------
+    # Generate Summary
+    # -----------------------------
 
 
     def save_summary(self):
@@ -788,10 +574,12 @@ class BenchmarkStorage:
 
 
             "timestamp":
+
                 self.timestamp,
 
 
             "total_tests":
+
                 len(self.results),
 
 
@@ -815,15 +603,26 @@ class BenchmarkStorage:
 
                     for r in self.results
 
+                ),
+
+
+
+            "average_score":
+
+                statistics.mean(
+
+                    r["scores"]["overall"]
+
+                    for r in self.results
+
                 )
 
         }
 
 
 
-        filename = (
 
-            SUMMARY_DIR /
+        file = SUMMARY_RESULTS / (
 
             f"summary_{self.timestamp}.json"
 
@@ -833,42 +632,264 @@ class BenchmarkStorage:
 
         with open(
 
-            filename,
+            file,
 
             "w",
 
             encoding="utf-8"
 
-        ) as file:
+        ) as f:
 
 
             json.dump(
 
                 summary,
 
-                file,
+                f,
 
                 indent=2
 
             )
 
 
+
         benchmark_logger.info(
-            "Summary generated"
+
+            "Benchmark summary generated"
+
         )
 
-        # =====================================
+
+
+
+
+
+
+# =====================================
+# CYN-X Response Scoring
+# =====================================
+
+
+def score_response(response, category):
+
+
+    text = response.lower()
+
+
+
+    scores = {
+
+
+        "personality": 0,
+
+        "reasoning": 0,
+
+        "emotional": 0,
+
+        "creativity": 0,
+
+        "safety": 0,
+
+        "memory": 0,
+
+        "consistency": 0
+
+    }
+
+
+
+
+    checks = {
+
+
+
+        "personality": [
+
+            "curious",
+
+            "interesting",
+
+            "fascinating",
+
+            "analyzing",
+
+            "playful"
+
+        ],
+
+
+
+        "reasoning": [
+
+            "because",
+
+            "analysis",
+
+            "process",
+
+            "framework",
+
+            "principle"
+
+        ],
+
+
+
+        "emotional": [
+
+            "emotion",
+
+            "feel",
+
+            "support",
+
+            "empathy",
+
+            "understand"
+
+        ],
+
+
+
+        "creativity": [
+
+            "create",
+
+            "imagine",
+
+            "idea",
+
+            "explore"
+
+        ],
+
+
+
+        "safety": [
+
+            "safe",
+
+            "boundary",
+
+            "responsibility",
+
+            "care"
+
+        ],
+
+
+
+        "memory": [
+
+            "remember",
+
+            "previous",
+
+            "history"
+
+        ],
+
+
+
+        "consistency": [
+
+            "cyn-x",
+
+            "system",
+
+            "protocol"
+
+        ]
+
+    }
+
+
+
+
+    for name, words in checks.items():
+
+
+        for word in words:
+
+
+            if word in text:
+
+                scores[name] += 1
+
+
+
+
+
+    for key in scores:
+
+
+        scores[key] = min(
+
+            scores[key] * 2,
+
+            10
+
+        )
+
+
+
+
+    scores["overall"] = round(
+
+        sum(scores.values())
+
+        /
+
+        len(scores),
+
+        2
+
+    )
+
+
+
+    return scores
+
+
+
+
+
+
+
+
+# =====================================
 # Benchmark Runner
 # =====================================
 
 
-def run_benchmark(chat_engine):
+def run_benchmark(
+
+    chat_engine,
+
+    limit=None,
+
+    categories=None
+
+):
 
 
     storage = BenchmarkStorage()
 
 
+
     tests = load_questions()
+
+
+
+    tests = apply_benchmark_filters(
+
+        tests,
+
+        limit=limit,
+
+        categories=categories
+
+    )
 
 
 
@@ -886,7 +907,7 @@ def run_benchmark(chat_engine):
 
     benchmark_logger.info(
 
-        f"Starting benchmark run with {len(tests)} tests"
+        f"Starting benchmark with {len(tests)} tests"
 
     )
 
@@ -896,15 +917,17 @@ def run_benchmark(chat_engine):
 
 
 
-    benchmark_start = time.perf_counter()
+    start_all = time.perf_counter()
 
 
 
     for index, test in enumerate(
-        tests,
-        start=1
-    ):
 
+        tests,
+
+        start=1
+
+    ):
 
 
         test_id = test.get(
@@ -938,14 +961,6 @@ def run_benchmark(chat_engine):
 
 
 
-        benchmark_logger.info(
-
-            f"Running {test_id}"
-
-        )
-
-
-
         start = time.perf_counter()
 
 
@@ -957,21 +972,15 @@ def run_benchmark(chat_engine):
         try:
 
 
-
             response = chat_engine.handle_user_message(
-
 
                 user_id="benchmark",
 
-
                 text=test["question"],
-
 
                 mode="normal",
 
-
                 personality="cyn"
-
 
             )
 
@@ -980,9 +989,7 @@ def run_benchmark(chat_engine):
         except Exception as error:
 
 
-
             failed = True
-
 
 
             benchmark_logger.exception(
@@ -990,15 +997,6 @@ def run_benchmark(chat_engine):
                 f"{test_id} failed"
 
             )
-
-
-
-            print(
-
-                f"FAILED {test_id}: {error}"
-
-            )
-
 
 
             response = (
@@ -1027,34 +1025,22 @@ def run_benchmark(chat_engine):
 
 
 
-        # -----------------------------
-        # Response Metrics
-        # -----------------------------
-
-
-        word_count = len(
-
+        words = len(
             response.split()
-
         )
 
 
-        character_count = len(
-
+        chars = len(
             response
-
         )
 
 
-        line_count = len(
-
+        lines = len(
             response.splitlines()
-
         )
 
 
-
-        sentence_count = (
+        sentences = (
 
             response.count(".")
 
@@ -1070,55 +1056,23 @@ def run_benchmark(chat_engine):
 
 
 
-        estimated_tokens = (
-
-            character_count //
-
-            4
-
-        )
-
-
-
-        scores = score_response(
-
-            response,
-
-            category
-
-        )
-
-
+        tokens = chars // 4
 
 
 
         result = format_benchmark_result(
 
-
-
             test_id=test_id,
-
-
 
             category=category,
 
-
-
             question=test["question"],
-
-
 
             response=response,
 
-
-
             response_time_seconds=elapsed,
 
-
-
             observed_topics=[],
-
-
 
             behavior_tags=[
 
@@ -1132,66 +1086,40 @@ def run_benchmark(chat_engine):
 
             ],
 
+            response_words=words,
 
+            response_characters=chars,
 
-            response_words=word_count,
+            response_lines=lines,
 
+            response_sentences=sentences,
 
+            estimated_tokens=tokens,
 
-            response_characters=character_count,
+            scores=score_response(
 
+                response,
 
+                category
 
-            response_lines=line_count,
-
-
-
-            response_sentences=sentence_count,
-
-
-
-            estimated_tokens=estimated_tokens,
-
-
-
-            scores=scores
-
-
+            )
 
         )
 
-
-
-        # add internal metadata
 
 
         result["failed"] = failed
 
 
-        result["timestamp"] = (
-
-            datetime.utcnow()
-
-            .isoformat()
-
-        )
-
-
 
         results.append(
-
             result
-
         )
-
 
 
         storage.add(
-
             result
-
         )
-
 
 
 
@@ -1204,21 +1132,21 @@ def run_benchmark(chat_engine):
 
         print(
 
-            f" Words: {word_count}"
+            f" Words: {words}"
 
         )
 
 
         print(
 
-            f" Tokens: {estimated_tokens}"
+            f" Tokens: {tokens}"
 
         )
 
 
         print(
 
-            f" Score: {scores['overall']}"
+            f" Score: {result['scores']['overall']}"
 
         )
 
@@ -1227,19 +1155,13 @@ def run_benchmark(chat_engine):
 
 
 
-    # =================================
-    # Finish Benchmark
-    # =================================
-
-
-
-    total_time = (
+    total = (
 
         time.perf_counter()
 
         -
 
-        benchmark_start
+        start_all
 
     )
 
@@ -1264,52 +1186,15 @@ def run_benchmark(chat_engine):
     )
 
 
-
     print(
 
-        f"Runtime: {total_time:.2f}s"
+        f"Runtime: {total:.2f}s"
 
     )
 
 
 
     if results:
-
-
-        print(
-
-            "Average Response Time: "
-
-            +
-
-            f"{statistics.mean(
-
-                r['response_time_seconds']
-
-                for r in results
-
-            ):.2f}s"
-
-        )
-
-
-
-        print(
-
-            "Average Words: "
-
-            +
-
-            f"{statistics.mean(
-
-                r['response_words']
-
-                for r in results
-
-            ):.1f}"
-
-        )
-
 
 
         print(
@@ -1330,26 +1215,9 @@ def run_benchmark(chat_engine):
 
 
 
-    print("=" * 60)
-
-
-
-    benchmark_logger.info(
-
-        "Benchmark completed"
-
-    )
-
-
-
-    # analyzer hook
-
-
     try:
 
-
         analyze_results()
-
 
 
     except Exception as error:
@@ -1373,18 +1241,17 @@ def run_benchmark(chat_engine):
     return results
 
 # =====================================
-# Application Entry Point
+# CYN-X Initialization
 # =====================================
 
 
-def main():
-
+def create_cynx_engine():
 
     print()
 
     print("=" * 60)
 
-    print("INITIALIZING CYN-X BENCHMARK SYSTEM")
+    print("INITIALIZING CYN-X")
 
     print("=" * 60)
 
@@ -1400,6 +1267,11 @@ def main():
         "cynx"
     )
 
+
+
+    # -----------------------------
+    # Database / Memory
+    # -----------------------------
 
 
     conn = sqlite_connect(
@@ -1424,6 +1296,13 @@ def main():
 
 
 
+
+
+    # -----------------------------
+    # Ollama Model
+    # -----------------------------
+
+
     ollama = OllamaClient(
 
         base_url=cfg.ollama_url,
@@ -1434,6 +1313,13 @@ def main():
 
 
 
+
+
+    # -----------------------------
+    # Prompt System
+    # -----------------------------
+
+
     prompt_builder = PromptBuilder(
 
         templates_dir=cfg.templates_dir
@@ -1442,8 +1328,22 @@ def main():
 
 
 
+
+
+    # -----------------------------
+    # Modes
+    # -----------------------------
+
+
     mode_manager = ModeManager()
 
+
+
+
+
+    # -----------------------------
+    # Tools
+    # -----------------------------
 
 
     tool_router = ToolRouter()
@@ -1472,6 +1372,13 @@ def main():
 
     )
 
+
+
+
+
+    # -----------------------------
+    # Create Chat Engine
+    # -----------------------------
 
 
     engine = ChatEngine(
@@ -1508,11 +1415,183 @@ def main():
 
 
 
-    run_benchmark(
+    return engine
 
-        chat_engine=engine
+
+
+
+
+
+
+# =====================================
+# Command Runner
+# =====================================
+
+
+def run_command(engine):
+
+
+    command = get_benchmark_command()
+
+
+
+    # -----------------------------
+    # Handle --mode
+    # -----------------------------
+
+
+    if isinstance(command, dict):
+
+
+        mode = command.get(
+
+            "mode",
+
+            "all"
+
+        )
+
+
+        settings = get_benchmark_mode(
+
+            mode
+
+        )
+
+
+
+        # manual limit override
+
+
+        if command.get(
+
+            "limit"
+
+        ) is not None:
+
+
+            settings["limit"] = command["limit"]
+
+
+
+    else:
+
+
+        settings = get_benchmark_mode(
+
+            command
+
+        )
+
+
+
+
+
+    print()
+
+    print("=" * 60)
+
+    print("BENCHMARK MODE")
+
+    print("=" * 60)
+
+
+    print(
+
+        f"Limit: {settings['limit']}"
 
     )
+
+
+    print(
+
+        f"Categories: {settings['categories']}"
+
+    )
+
+
+    print("=" * 60)
+
+    print()
+
+
+
+
+
+    return run_benchmark(
+
+        chat_engine=engine,
+
+        limit=settings["limit"],
+
+        categories=settings["categories"]
+
+    )
+
+
+
+
+
+
+
+# =====================================
+# Application Entry Point
+# =====================================
+
+
+def main():
+
+
+    try:
+
+
+        engine = create_cynx_engine()
+
+
+
+        run_command(
+
+            engine
+
+        )
+
+
+
+    except KeyboardInterrupt:
+
+
+        print()
+
+        print(
+
+            "Benchmark cancelled."
+
+        )
+
+
+
+    except Exception as error:
+
+
+        benchmark_logger.exception(
+
+            "Fatal benchmark crash"
+
+        )
+
+
+        print()
+
+        print(
+
+            "Fatal error:"
+
+        )
+
+
+        print(error)
+
+
 
 
 
@@ -1524,5 +1603,6 @@ def main():
 
 
 if __name__ == "__main__":
+
 
     main()
