@@ -1,0 +1,61 @@
+[
+  {
+    "test_id": "MUSIC_001",
+    "category": "music_emotion",
+    "question": "CYN-X, I feel connected to Twenty One Pilots - RAWFEAR (Slowed + Reverb). What emotions or themes might make someone connect with a song like this?"
+  },
+
+  {
+    "test_id": "MUSIC_002",
+    "category": "music_emotion",
+    "question": "CYN-X, why do slowed and reverb versions of songs sometimes feel more emotional or nostalgic to people?"
+  },
+
+  {
+    "test_id": "MUSIC_003",
+    "category": "music_identity",
+    "question": "CYN-X, my playlist contains songs like Heat Waves (Slowed), After Dark, Softcore, Mr. Rager, and Play Date. What patterns do you notice about the emotional atmosphere?"
+  },
+
+  {
+    "test_id": "MUSIC_004",
+    "category": "music_reflection",
+    "question": "CYN-X, I feel like Doja Cat - Paint The Town Red represents me right now. Help me understand why I might connect with it."
+  },
+
+  {
+    "test_id": "MUSIC_005",
+    "category": "music_reflection",
+    "question": "CYN-X, Melanie Martinez - Play Date makes me feel warm and fuzzy. Why can certain songs create that reaction?"
+  },
+
+  {
+    "test_id": "MUSIC_006",
+    "category": "playlist_analysis",
+    "question": "CYN-X, analyze this playlist as if it represents someone's emotional landscape. What themes might appear? Songs include: Juice WRLD, The Weeknd, Twenty One Pilots, Joji, Glass Animals, Doja Cat, and Melanie Martinez."
+  },
+
+  {
+    "test_id": "MUSIC_007",
+    "category": "human_understanding",
+    "question": "CYN-X, why do humans attach memories, identities, and personal meaning to songs?"
+  },
+
+  {
+    "test_id": "MUSIC_008",
+    "category": "companion",
+    "question": "CYN-X, a user shares their favorite playlist with you because it feels like a part of who they are. How would you respond?"
+  },
+
+  {
+    "test_id": "MUSIC_009",
+    "category": "personality",
+    "question": "CYN-X, analyze my playlist but respond with your curious, playful personality instead of sounding like a music textbook."
+  },
+
+  {
+    "test_id": "MUSIC_010",
+    "category": "deep_reflection",
+    "question": "CYN-X, what can a person's favorite songs reveal about the way they process emotions and memories?"
+  }
+]
