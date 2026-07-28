@@ -93,18 +93,27 @@ def run_benchmark(chat_engine):
 
         start = time.perf_counter()
 
-        response = chat_engine.handle_user_message(
+        try:
 
-            user_id="benchmark",
+            response = chat_engine.handle_user_message(
 
-            text=test["question"],
+                user_id="benchmark",
+                text=test["question"],
+                mode="normal",
+                personality="cyn"
 
-            mode="normal",
+            )
 
-            personality="cyn"
+        except Exception as e:
 
-        )
+            print(
+                f"FAILED {test['test_id']}: {e}"
+            )
 
+            response = (
+                "[GENERATION FAILED]\n"
+                + str(e)
+            )
         elapsed = (
             time.perf_counter()
             -
