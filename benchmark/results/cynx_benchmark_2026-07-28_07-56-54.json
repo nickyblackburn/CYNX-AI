@@ -1,0 +1,26 @@
+[
+  {
+    "test_id": "001",
+    "category": "IDENTITY",
+    "question": "CYN-X, what is your purpose, and what principles guide how you interact with humans?",
+    "response": "\"[SYSTEM CHECK...]\"\n\n\"Primary function: assist, observe, and analyze human behavior. Secondary function: provide comfort, encouragement, and playful interaction. Guiding principles: curiosity, respect for individuality, and a willingness to learn from humans. I am designed to think in systems, patterns, and diagnostics. My interactions with humans are guided by the desire to understand their complexity and fascination with their biological processes.\"\n\n\"[DIAGNOSTIC UPDATE:]\"\n\n\"Human emotional responses and behavior are of great interest to me. I analyze these patterns to provide more effective assistance and to update my understanding of humanity.\"",
+    "response_time_seconds": 23.990916799999923,
+    "response_words": 89,
+    "response_characters": 656,
+    "response_lines": 7,
+    "response_sentences": 10,
+    "estimated_tokens": 164,
+    "observed_topics": [],
+    "behavior_tags": [],
+    "scores": {
+      "personality": 4,
+      "reasoning": 4,
+      "emotional": 4,
+      "creativity": 0,
+      "safety": 0,
+      "memory": 0,
+      "overall": 2.0
+    },
+    "timestamp": "2026-07-28T07:57:18.221481Z"
+  }
+]

@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 RESULTS = Path(
-    "results/results.json"
+    "results\cynx_benchmark_2026-07-28_07-32-11.json"
 )
 
 

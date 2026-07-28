@@ -1,3 +1,4 @@
+```python
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -7,9 +8,12 @@ import sys
 import os
 import sqlite3
 import time
+import json
+from pathlib import Path
+import statistics
+import threading
 
 
-# Allow importing CYN modules
 sys.path.append(
     os.path.abspath(
         os.path.join(os.path.dirname(__file__), "../../")
@@ -28,12 +32,16 @@ from tools.tool_router import ToolRouter
 from tools.web_search import WebSearchTool
 from tools.calculator import CalculatorTool
 
-from voice import PiperTTS, AudioPlayer, VoiceManager
+
+# benchmark import
+from benchmark.runner import run_benchmark
+
 
 
 app = FastAPI(
     title="CYN-X Web Interface"
 )
+
 
 
 app.mount(
@@ -49,40 +57,45 @@ templates = Jinja2Templates(
 
 
 
-# --------------------
-# AI SYSTEMS
-# --------------------
+# ==========================
+# AI SYSTEM
+# ==========================
+
 
 ollama_client = OllamaClient()
 
+
 prompt_builder = PromptBuilder()
+
 
 conn = sqlite3.connect(
     "database/cyn.db",
     check_same_thread=False
 )
 
-memory_store = MemoryStore(conn)
+
+memory_store = MemoryStore(
+    conn
+)
 
 
-# --------------------
-# TOOLS
-# --------------------
 
 tool_router = ToolRouter()
+
 
 tool_router.register_tool(
     WebSearchTool()
 )
 
+
 tool_router.register_tool(
     CalculatorTool()
 )
 
-print("[WEB TOOLS]", tool_router.list_tools())
 
 
 mode_manager = ModeManager()
+
 
 
 chat_engine = ChatEngine(
@@ -95,40 +108,10 @@ chat_engine = ChatEngine(
 
 
 
-# --------------------
-# VOICE SYSTEM
-# --------------------
-# Modular Piper TTS architecture - no direct dependency on ChatEngine
-#
-# Model location: models/voices/
-# Current model: en_US-kathleen-low.onnx
-#
-# To add new voices for personality modes:
-# 1. Download Piper ONNX models from https://huggingface.co/rhasspy/piper-voices
-# 2. Place .onnx files in models/voices/ with descriptive names:
-#    - cyn_normal.onnx (default personality)
-#    - cyn_glitch.onnx (error/glitch personality)
-#    - cyn_soft.onnx (empathetic personality)
-#
-# Future enhancement: Dynamic voice switching based on personality modes
+# ==========================
+# ROUTES
+# ==========================
 
-
-tts_engine = PiperTTS(
-    "voice/models/en_US-kathleen-low.onnx"
-)
-
-audio_player = AudioPlayer()
-
-voice_engine = VoiceManager(
-    tts_engine,
-    audio_player
-)
-
-
-
-# --------------------
-# WEB ROUTES
-# --------------------
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -141,13 +124,17 @@ async def home(request: Request):
 
 
 
+
 @app.post("/chat")
-async def chat(data: dict):
+async def chat(data:dict):
 
-    start_time = time.perf_counter()
+    start = time.perf_counter()
 
 
-    message = data.get("message")
+    message = data.get(
+        "message",
+        ""
+    )
 
 
     response = chat_engine.handle_user_message(
@@ -156,19 +143,153 @@ async def chat(data: dict):
     )
 
 
-    end_time = time.perf_counter()
-
-
-    response_time = round(
-        end_time - start_time,
+    elapsed = round(
+        time.perf_counter()-start,
         3
     )
 
 
-    #voice_engine.speak(response)
+    return {
+
+        "response":response,
+
+        "response_time":elapsed
+
+    }
+
+
+
+
+# ==========================
+# BENCHMARK SYSTEM
+# ==========================
+
+
+RESULT_FOLDER = Path(
+    "benchmark/results"
+)
+
+
+
+@app.get("/benchmark/results")
+async def benchmark_results():
+
+    files = list(
+        RESULT_FOLDER.glob(
+            "*.json"
+        )
+    )
+
+
+    if not files:
+        return []
+
+
+    latest = max(
+        files,
+        key=lambda x:x.stat().st_mtime
+    )
+
+
+    with open(
+        latest,
+        "r",
+        encoding="utf-8"
+    ) as f:
+
+        return json.load(f)
+
+
+
+
+@app.get("/benchmark/stats")
+async def benchmark_stats():
+
+    files=list(
+        RESULT_FOLDER.glob(
+            "*.json"
+        )
+    )
+
+
+    if not files:
+
+        return {
+            "tests":0
+        }
+
+
+    latest=max(
+        files,
+        key=lambda x:x.stat().st_mtime
+    )
+
+
+    with open(
+        latest,
+        encoding="utf-8"
+    ) as f:
+
+        data=json.load(f)
+
+
+
+    times=[
+        x["response_time_seconds"]
+        for x in data
+    ]
+
+
+    scores=[
+        x["scores"]["overall"]
+        for x in data
+        if x.get("scores")
+    ]
+
 
 
     return {
-        "response": response,
-        "response_time": response_time
+
+        "tests":len(data),
+
+        "average_time":
+            round(statistics.mean(times),2),
+
+        "fastest":
+            round(min(times),2),
+
+        "slowest":
+            round(max(times),2),
+
+        "average_score":
+            round(statistics.mean(scores),2)
+            if scores else 0
+
+    }
+
+
+
+
+
+@app.post("/benchmark/run")
+async def start_benchmark():
+
+
+    def runner():
+
+        run_benchmark(
+            chat_engine
+        )
+
+
+    threading.Thread(
+        target=runner
+    ).start()
+
+
+    return {
+
+        "status":
+        "Benchmark started"
+
     }
