@@ -4,7 +4,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 
-RESULTS = Path("benchmark/results/results.json")
+RESULTS = Path("results/results.json")
 
 
 with open(
