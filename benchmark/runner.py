@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import json
 import logging
 import statistics
@@ -31,11 +32,20 @@ QUESTIONS = Path(
     "benchmark/questions.json"
 )
 
-RESULTS = Path(
-    "benchmark/results/results.json"
+
+QUESTIONS = Path(
+    "benchmark/questions.json"
 )
 
 
+# Creates a unique JSON file every benchmark run
+timestamp = datetime.datetime.utcnow().strftime(
+    "%Y-%m-%d_%H-%M-%S"
+)
+
+RESULTS = Path(
+    f"benchmark/results/cynx_benchmark_{timestamp}.json"
+)
 
 def load_questions():
 
