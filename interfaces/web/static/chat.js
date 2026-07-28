@@ -1,6 +1,16 @@
-```javascript
-// Spinner frames for animation
-const spinnerFrames = ['◐', '◓', '◑', '◒'];
+// ==========================
+// CYN-X CHAT CLIENT
+// ==========================
+
+
+// Spinner animation
+const spinnerFrames = [
+    "◐",
+    "◓",
+    "◑",
+    "◒"
+];
+
 
 let spinnerIndex = 0;
 let spinnerInterval = null;
@@ -11,25 +21,25 @@ let lastResponseTime = 0;
 
 
 // ==========================
-// LOADING SYSTEM
+// LOADING DISPLAY
 // ==========================
 
 
-function startLoading() {
+function startLoading(){
 
-    const thinkingDiv =
+
+    const thinking =
         document.getElementById("thinking");
 
 
-    if(thinkingDiv)
-        thinkingDiv.style.display = "flex";
+    if(thinking){
+        thinking.style.display = "flex";
+    }
 
 
 
     startTime = Date.now();
 
-
-    updateTimer();
 
 
     timerInterval = setInterval(
@@ -39,66 +49,47 @@ function startLoading() {
 
 
 
-    spinnerIndex = 0;
-
-
-    updateSpinner();
-
-
     spinnerInterval = setInterval(
         updateSpinner,
         150
     );
+
 
 }
 
 
 
 
+function stopLoading(){
 
-function stopLoading() {
 
-
-    const thinkingDiv =
+    const thinking =
         document.getElementById("thinking");
 
 
-
-    if(thinkingDiv)
-        thinkingDiv.style.display = "none";
+    if(thinking){
+        thinking.style.display = "none";
+    }
 
 
 
     if(startTime){
 
         lastResponseTime =
-            (Date.now() - startTime)
-            /
-            1000;
+            (Date.now() - startTime) / 1000;
 
     }
 
 
 
-
-    if(timerInterval)
-        clearInterval(timerInterval);
-
-
-
-    if(spinnerInterval)
-        clearInterval(spinnerInterval);
-
-
-
-
-    spinnerIndex = 0;
-
-    startTime = null;
+    clearInterval(timerInterval);
+    clearInterval(spinnerInterval);
 
 
 
     updateResponseTime();
+
+
 
 }
 
@@ -110,13 +101,15 @@ function updateSpinner(){
 
 
     const spinner =
-        document.getElementById("spinner");
+        document.getElementById(
+            "spinner"
+        );
 
 
 
     if(spinner){
 
-        spinner.textContent =
+        spinner.innerText =
             spinnerFrames[spinnerIndex];
 
 
@@ -135,13 +128,26 @@ function updateSpinner(){
 
 
 
+
 function updateTimer(){
 
 
-    if(startTime){
+    if(!startTime)
+        return;
 
 
-        const elapsed =
+
+    const timer =
+        document.getElementById(
+            "timer"
+        );
+
+
+
+    if(timer){
+
+
+        let seconds =
             (
                 Date.now()
                 -
@@ -152,19 +158,11 @@ function updateTimer(){
 
 
 
-        const timer =
-            document.getElementById("timer");
-
-
-
-        if(timer){
-
-            timer.textContent =
-                elapsed.toFixed(1);
-
-        }
+        timer.innerText =
+            seconds.toFixed(1);
 
     }
+
 
 }
 
@@ -181,39 +179,47 @@ function updateResponseTime(){
         );
 
 
+
     if(display){
 
-        display.textContent =
+
+        display.innerText =
             "Last Response: "
             +
             lastResponseTime.toFixed(2)
             +
             " seconds";
 
+
     }
+
 
 }
 
 
 
 
+
+
+
 // ==========================
-// CHAT SYSTEM
+// CHAT
 // ==========================
 
 
 async function send(){
 
 
-    let box =
+
+    const input =
         document.getElementById(
             "message"
         );
 
 
 
-    let text =
-        box.value;
+    const text =
+        input.value.trim();
 
 
 
@@ -222,16 +228,13 @@ async function send(){
 
 
 
-
     addMessage(
-        "You: "
-        +
-        text
+        "You: " + text
     );
 
 
 
-    box.value = "";
+    input.value = "";
 
 
 
@@ -239,15 +242,16 @@ async function send(){
 
 
 
-    try {
+    try{
 
 
-        let response =
+        const response =
             await fetch(
                 "/chat",
                 {
 
                     method:"POST",
+
 
                     headers:{
                         "Content-Type":
@@ -262,12 +266,13 @@ async function send(){
 
                     })
 
+
                 }
             );
 
 
 
-        let data =
+        const data =
             await response.json();
 
 
@@ -285,19 +290,9 @@ async function send(){
 
 
 
-        addMessage(
-
-            "[CYN-X RESPONSE TIME] "
-            +
-            lastResponseTime.toFixed(2)
-            +
-            " seconds"
-
-        );
-
-
-
     }
+
+
 
     catch(error){
 
@@ -305,16 +300,14 @@ async function send(){
         stopLoading();
 
 
-
         addMessage(
             "[ERROR] "
             +
-            error
+            error.message
         );
 
 
     }
-
 
 
 }
@@ -325,25 +318,40 @@ async function send(){
 
 
 
-function addMessage(msg){
+// ==========================
+// CHAT DISPLAY
+// ==========================
 
 
-    let chat =
+function addMessage(message){
+
+
+    const chat =
         document.getElementById(
             "chat"
         );
 
 
 
-    let div =
+    if(!chat)
+        return;
+
+
+
+    const div =
         document.createElement(
             "div"
         );
 
 
 
+    div.className =
+        "message";
+
+
+
     div.innerText =
-        msg;
+        message;
 
 
 
@@ -356,264 +364,100 @@ function addMessage(msg){
     chat.scrollTop =
         chat.scrollHeight;
 
+
 }
+
+
 
 
 
 
 
 // ==========================
-// BENCHMARK SYSTEM
+// KEYBOARD SUPPORT
 // ==========================
 
-
-
-async function loadBenchmark(){
-
-
-    try{
-
-
-        let response =
-            await fetch(
-                "/benchmark/results"
-            );
-
-
-        let data =
-            await response.json();
-
-
-
-        displayBenchmark(
-            data
-        );
-
-
-    }
-
-
-    catch(error){
-
-
-        addMessage(
-            "[BENCHMARK ERROR] "
-            +
-            error
-        );
-
-
-    }
-
-}
-
-
-
-
-
-async function loadBenchmarkStats(){
-
-
-    try{
-
-
-        let response =
-            await fetch(
-                "/benchmark/stats"
-            );
-
-
-
-        let stats =
-            await response.json();
-
-
-
-        let panel =
-            document.getElementById(
-                "stats"
-            );
-
-
-
-        if(panel){
-
-
-            panel.innerText =
-
-            `
-CYN-X BENCHMARK STATUS
-
-Tests:
-${stats.tests}
-
-Average Response:
-${stats.average_time}s
-
-Fastest:
-${stats.fastest}s
-
-Slowest:
-${stats.slowest}s
-
-Evolution Score:
-${stats.average_score}/10
-`;
-
-        }
-
-
-    }
-
-
-    catch(error){
-
-
-        console.log(
-            error
-        );
-
-    }
-
-
-}
-
-
-
-
-
-function displayBenchmark(data){
-
-
-    let panel =
-        document.getElementById(
-            "benchmark-history"
-        );
-
-
-
-    if(!panel)
-        return;
-
-
-
-
-    panel.innerHTML = "";
-
-
-
-
-    data.forEach(
-        result => {
-
-
-            let div =
-                document.createElement(
-                    "div"
-                );
-
-
-
-            div.innerText =
-
-            `
-${result.test_id}
-
-Category:
-${result.category}
-
-Time:
-${result.response_time_seconds}s
-
-Words:
-${result.response_words}
-
-Score:
-${result.scores?.overall ?? "N/A"}
-
--------------------
-`;
-
-
-
-            panel.appendChild(
-                div
-            );
-
-
-        }
-    );
-
-
-}
-
-
-
-
-
-
-async function runBenchmark(){
-
-
-    try{
-
-
-        let response =
-            await fetch(
-                "/benchmark/run",
-                {
-
-                    method:"POST"
-
-                }
-            );
-
-
-
-        let data =
-            await response.json();
-
-
-
-        addMessage(
-
-            "[CYN-X BENCHMARK] "
-            +
-            data.status
-
-        );
-
-
-
-    }
-
-
-    catch(error){
-
-
-        addMessage(
-            "[BENCHMARK FAILED] "
-            +
-            error
-        );
-
-
-    }
-
-}
-
-
-
-
-
-
-// Auto refresh stats when page loads
 
 window.onload = function(){
 
 
-    loadBenchmarkStats();
+    const input =
+        document.getElementById(
+            "message"
+        );
+
+
+
+    if(input){
+
+
+        input.addEventListener(
+            "keydown",
+            function(event){
+
+
+                if(
+                    event.key === "Enter"
+                ){
+
+                    send();
+
+                }
+
+
+            }
+        );
+
+
+    }
 
 
 };
-```
+
+
+
+
+
+
+
+// ==========================
+// OPTIONAL DEBUG
+// ==========================
+
+
+console.log(
+    "CYN-X chat interface loaded"
+);
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    console.log("CYN-X DOM READY");
+
+
+    const button =
+        document.getElementById("sendButton");
+
+
+    if(button){
+
+        button.addEventListener(
+            "click",
+            send
+        );
+
+
+        console.log(
+            "SEND BUTTON CONNECTED"
+        );
+
+    }
+    else{
+
+        console.error(
+            "SEND BUTTON NOT FOUND"
+        );
+
+    }
+
+
+});
