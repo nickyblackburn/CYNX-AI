@@ -17,7 +17,8 @@ class PromptManager:
         "safety": "safety.md",
         "conversation": "conversation.md",
         "examples": "examples.md",
-        "cyn-studio": "cyn-studio.md"
+        "cyn-studio": "cyn-studio.md",
+        "projects": "projects.md",
     }
 
 
@@ -476,6 +477,29 @@ class PromptManager:
             )
 
 
+        projects = self.load_optional(
+        
+                    "projects"
+        
+                )
+        
+        
+        if projects:
+        
+        
+                    parts.append(
+        
+                        self.trim_text(
+        
+                            projects,
+        
+                            self.MAX_CONTEXT_CHARS
+        
+                        )
+        
+                    )
+
+
 
 
         # -----------------------------
@@ -712,6 +736,11 @@ class PromptManager:
         print(
             "Examples Loaded:",
             bool(examples)
+        )
+        
+        print(
+            "project Loaded:",
+            bool(projects)
         )
 
         print(
