@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 import sys
 import os
 import sqlite3
+import time
 
 
 # Allow importing CYN modules
@@ -139,18 +140,35 @@ async def home(request: Request):
     )
 
 
+
 @app.post("/chat")
 async def chat(data: dict):
 
+    start_time = time.perf_counter()
+
+
     message = data.get("message")
+
 
     response = chat_engine.handle_user_message(
         user_id="web_user",
         text=message
     )
 
+
+    end_time = time.perf_counter()
+
+
+    response_time = round(
+        end_time - start_time,
+        3
+    )
+
+
     #voice_engine.speak(response)
 
+
     return {
-        "response": response
+        "response": response,
+        "response_time": response_time
     }

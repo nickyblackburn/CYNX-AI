@@ -1,89 +1,74 @@
-# Project: PlantWater
+# CYN-X Studio Projects
 
-## Category
-IoT Automation / Smart Systems / Embedded Engineering
+## CYN-X AI Platform
 
-## Overview
-PlantWater is a smart irrigation platform created by Nicky Blackburn.
+Category:
+Artificial Intelligence / Human-AI Interaction
 
-The system combines:
-- ESP32 sensor networks
-- FastAPI backend services
-- SQLite data storage
-- Weather-aware automation
-- Discord bot integration
-- Automated decision systems
+Description:
+CYN-X is an adaptive AI assistant platform exploring personality systems, memory, local AI models, and human-centered interaction.
 
-The goal is to create an intelligent plant monitoring system that can observe conditions, make decisions, and control physical devices.
+Focus:
+- AI personalities
+- Memory systems
+- Context management
+- Human-AI collaboration
+- Creative assistants
 
-## System Architecture
 
-Sensors
-↓
-ESP32 Hardware Nodes
-↓
-WiFi Communication
-↓
-FastAPI API Server
-↓
-SQLite Database
-↓
-Decision Engine
-↓
-Irrigation Control
-↓
-User Interfaces
+## PlantWater
 
-## Engineering Skills Demonstrated
+Category:
+Embedded Systems / IoT
 
-This project demonstrates experience with:
+Description:
+Smart irrigation platform combining ESP32 sensors, FastAPI backend, databases, weather integration, and automated watering decisions.
 
-Backend Engineering:
-- FastAPI
-- REST APIs
-- Database design
-- Data modeling
-- API documentation
-
-Embedded Systems:
-- ESP32 devices
-- Sensor integration
-- Hardware communication
-- IoT architecture
-
-Automation:
-- Rule-based decision systems
+Focus:
+- Sensor networks
+- Automation
 - Environmental monitoring
-- Device control logic
+- Hardware/software integration
 
-Software Design:
-- Modular architecture
-- Simulation systems
-- Documentation
-- Testing workflows
 
-## Creator Engineering Pattern
+## PuppySat
 
-This project shows that the creator prefers:
+Category:
+Space Technology / Communication Systems
 
-- Building complete systems instead of isolated scripts
-- Combining software and hardware
-- Creating practical real-world applications
-- Documenting designs
-- Thinking about future expansion
+Description:
+Experimental educational satellite communication project exploring image transmission, protocols, and data systems.
 
-## Future Development Direction
+Focus:
+- Communication protocols
+- Signal processing
+- Data encoding
+- Space technology concepts
 
-Possible expansions:
-- Machine learning plant health prediction
-- Mobile applications
-- Advanced dashboards
-- Multi-device management
-- More intelligent automation
 
-## Relationship To CYN-X Studio
+## SecuServe
 
-PlantWater represents the Embedded Systems and Automation division of CYN-X Studio.
+Category:
+Computer Vision
 
-It demonstrates the studio philosophy:
-"Technology should understand the environment, make intelligent decisions, and improve human experiences."
+Description:
+Computer vision platform exploring machine perception and intelligent monitoring systems.
+
+Focus:
+- Image processing
+- Recognition systems
+- Computer vision
+
+
+## FoxStore
+
+Category:
+Creative Technology
+
+Description:
+Digital ecosystem project exploring organization, virtual environments, and information systems.
+
+Focus:
+- Digital experiences
+- Creative platforms
+- User interaction

@@ -15,32 +15,55 @@
 
 <h1>💜 CYN-X</h1>
 
+
 <div id="thinking" class="loading-panel" style="display:none;">
+
     <div class="loading-content">
+
         <div class="system-header">
             [CYN-X CORE]
         </div>
+
+
         <div class="diagnostic-status">
+
             <div class="diagnostic-line">
                 <span class="spinner" id="spinner">◐</span> Neural processes active
             </div>
+
             <div class="diagnostic-line">
                 ◓ Analyzing organic input
             </div>
+
             <div class="diagnostic-line">
                 ◑ Generating response
             </div>
+
             <div class="diagnostic-line">
                 ◒ Personality matrix stable
             </div>
+
         </div>
+
+
         <div class="diagnostic-footer">
             Time: <span id="timer">0.0</span> seconds
         </div>
+
+
+        <div class="diagnostic-footer">
+            Last Response: <span id="response-time">0.00</span> seconds
+        </div>
+
+
     </div>
+
 </div>
 
+
+
 <div id="chat"></div>
+
 
 
 <div class="input">
@@ -50,9 +73,16 @@ id="message"
 placeholder="Talk to Cyn..."
 />
 
+
 <button onclick="send()">
 Send
 </button>
+
+
+<button onclick="killPrompt()">
+Kill Prompt
+</button>
+
 
 </div>
 
@@ -61,6 +91,7 @@ Send
 
 
 <script src="/static/chat.js"></script>
+
 
 </body>
 
