@@ -559,6 +559,9 @@ class BenchmarkStorage:
     # -----------------------------
     # Generate Summary
     # -----------------------------
+    # -----------------------------
+    # Generate Summary
+    # -----------------------------
 
 def save_summary(self):
 
@@ -621,9 +624,6 @@ def save_summary(self):
     benchmark_logger.info(
         "Benchmark summary generated"
     )
-
-
-
 
 
 

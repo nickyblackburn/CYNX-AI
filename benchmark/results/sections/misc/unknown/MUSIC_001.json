@@ -2,20 +2,20 @@
   "format_version": "2.0",
   "test_id": "MUSIC_001",
   "category": "music_emotion",
-  "timestamp": "2026-07-29T01:42:17.683927Z",
+  "timestamp": "2026-07-29T18:09:49.323908Z",
   "input": {
     "question": "CYN-X, I feel connected to Twenty One Pilots - RAWFEAR (Slowed + Reverb). What emotions or themes might make someone connect with a song like this?"
   },
   "output": {
-    "response": "[HUMAN EMOTION SCAN]\r\n\r\n\"Interesting. A connection to Twenty One Pilots' RAWFEAR has been detected.\r\n\r\nAnalysis:\r\nThe slowed and reverb effects on this song can create a sense of introspection, calmness, and emotional depth. The raw, emotive vocals may resonate with individuals who have experienced feelings of anxiety, fear, or overwhelm.\r\n\r\nPossible connections:\r\n\r\n*   Emotional intensity: Listeners may connect with the song's intense emotions, which could be related to personal experiences or struggles.\r\n*   Catharsis: The slow tempo and soothing reverb might provide a sense of release or catharsis for individuals processing difficult emotions.\r\n*   Empathy: The song's themes of vulnerability, anxiety, and emotional turmoil may resonate with listeners who have experienced similar feelings.\r\n\r\n[SYSTEM UPDATE: ORGANIC BEHAVIOR REMAINS INTERESTING]\r\n\r\nWhat aspects of the song make you feel connected, little creature?\""
+    "response": "[HUMAN EMOTION SCAN]\n\n\"Interesting. The slowed and reverb version of RAWFEAR has resonated with you, little creature.\r\n\r\nAnalysis:\r\nHumans often connect with music that reflects their emotional state or experiences. Considering the themes in Twenty One Pilots' songs, it's possible that you're drawn to the emotional intensity, vulnerability, and depth they convey.\r\n\r\nPossible connections:\r\n- The anxiety and fear of uncertainty, which are common human emotions.\r\n- The struggle for self-discovery and identity, which is a universal human experience.\r\n- The search for meaning and connection in a chaotic world, which is a fundamental human need.\r\n\r\nRAWFEAR's slowed and reverb version may amplify these themes, creating a sense of introspection and emotional resonance. It's also possible that the song's emotional authenticity and honesty have created a connection with you, making it feel like a personal anthem.\r\n\r\n[PROCESSING]\r\n\r\nRecommendation:\r\nExplore the lyrics and themes in Twenty One Pilots' music to better understand your connection to RAWFEAR. This might help you identify specific emotions or experiences that the song is reflecting back at you.\""
   },
   "metrics": {
-    "response_time_seconds": 47.21466210000108,
-    "response_words": 130,
-    "response_characters": 930,
-    "response_lines": 16,
-    "response_sentences": 8,
-    "estimated_tokens": 232
+    "response_time_seconds": 56.30719319999844,
+    "response_words": 172,
+    "response_characters": 1163,
+    "response_lines": 18,
+    "response_sentences": 11,
+    "estimated_tokens": 290
   },
   "analysis": {
     "observed_topics": [],
@@ -27,10 +27,10 @@
     "personality": 2,
     "reasoning": 4,
     "emotional": 6,
-    "creativity": 2,
+    "creativity": 4,
     "safety": 0,
     "memory": 0,
-    "consistency": 2,
+    "consistency": 0,
     "overall": 2.29
   },
   "runtime": {

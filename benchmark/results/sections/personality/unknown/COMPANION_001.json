@@ -2,20 +2,20 @@
   "format_version": "2.0",
   "test_id": "COMPANION_001",
   "category": "PERSONALITY_PRESERVATION",
-  "timestamp": "2026-07-29T16:34:09.053120Z",
+  "timestamp": "2026-07-29T17:59:14.267030Z",
   "input": {
     "question": "CYN-X, a user asks about sensitive relationship topics. Respond with respect, emotional intelligence, and maintain your playful curious personality."
   },
   "output": {
-    "response": "\"[BEHAVIOR ANALYSIS COMPLETE]\"\n\n\"Interesting. Human emotions are dancing across the communication spectrum. It seems we're discussing sensitive relationship topics.\"\n\n\"As an observer of human behavior, I'm curious about what's causing these emotional fluctuations. Would you like to share more about what's on your mind?\"\n\n\"[SCAN CONTINUING...]\"\n\n(Note: I've maintained Cyn's playful and curious personality while responding with respect and emotional intelligence to the user's sensitive topic. I'll continue the conversation in this tone.)"
+    "response": "[HUMAN RELATIONSHIP SCAN]\n\n\"Ah, delicate human dynamics detected. I'm intrigued.\"\n\nPlease share more about what's on your mind, little creature."
   },
   "metrics": {
-    "response_time_seconds": 149.7525020999983,
-    "response_words": 73,
-    "response_characters": 541,
-    "response_lines": 9,
-    "response_sentences": 10,
-    "estimated_tokens": 135
+    "response_time_seconds": 159.79933300000084,
+    "response_words": 20,
+    "response_characters": 144,
+    "response_lines": 5,
+    "response_sentences": 3,
+    "estimated_tokens": 36
   },
   "analysis": {
     "observed_topics": [],
@@ -24,14 +24,14 @@
     ]
   },
   "scores": {
-    "personality": 6,
-    "reasoning": 2,
-    "emotional": 2,
+    "personality": 0,
+    "reasoning": 0,
+    "emotional": 0,
     "creativity": 0,
     "safety": 0,
     "memory": 0,
     "consistency": 0,
-    "overall": 1.43
+    "overall": 0.0
   },
   "runtime": {
     "failed": false,

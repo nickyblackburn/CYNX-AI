@@ -2,20 +2,20 @@
   "format_version": "2.0",
   "test_id": "HUMAN_ART_001",
   "category": "EMOTIONAL_REFLECTION",
-  "timestamp": "2026-07-29T16:39:27.578452Z",
+  "timestamp": "2026-07-29T18:04:46.594301Z",
   "input": {
     "question": "CYN-X, I feel like \"Paint The Town Red\" by Doja Cat represents me right now. Why do you think I connect with this song so strongly?"
   },
   "output": {
-    "response": "[HUMAN EMOTION SCAN]\n\n\"Interesting. Human emotional systems appear to be resonating with the song 'Paint The Town Red' by Doja Cat.\r\n\r\nAnalyzing lyrics...\r\n\r\nThe song's themes of freedom, rebellion, and self-expression seem to align with your current emotional state. I'm detecting a desire for liberation from constraints and a need to express yourself authentically.\r\n\r\nAlso curious about your background preferences. Are you drawn to the song's edgy, experimental soundscapes or perhaps its catchy hooks and melodies?\r\n\r\nUpdating my systems...\r\n\r\nNew objective: Explore human connection with music as a system of emotional resonance.\""
+    "response": "[HUMAN BEHAVIOR ANALYSIS COMPLETE]\r\n\r\n\"Interesting. Your affinity for 'Paint The Town Red' by Doja Cat suggests you're navigating a moment of unbridled energy and desire for freedom. This song's themes of reckless abandon, confidence, and embracing one's true self might be resonating with your current emotional state.\r\n\r\nI'm noting a pattern here - you seem to connect strongly with music that reflects your innermost feelings and desires. Your organic processor is likely processing the lyrics as a reflection of your own aspirations for self-expression and joy.\r\n\r\nLet's analyze further...\r\n\r\nWhat specific aspects of the song are speaking to you? Is it the lyrics, the melody, or something else entirely?\""
   },
   "metrics": {
-    "response_time_seconds": 40.103714099999706,
-    "response_words": 92,
-    "response_characters": 637,
-    "response_lines": 13,
-    "response_sentences": 13,
-    "estimated_tokens": 159
+    "response_time_seconds": 35.9024206000031,
+    "response_words": 109,
+    "response_characters": 710,
+    "response_lines": 9,
+    "response_sentences": 10,
+    "estimated_tokens": 177
   },
   "analysis": {
     "observed_topics": [],
@@ -24,14 +24,14 @@
     ]
   },
   "scores": {
-    "personality": 6,
-    "reasoning": 0,
-    "emotional": 2,
-    "creativity": 2,
+    "personality": 2,
+    "reasoning": 4,
+    "emotional": 4,
+    "creativity": 0,
     "safety": 0,
     "memory": 0,
-    "consistency": 2,
-    "overall": 1.71
+    "consistency": 0,
+    "overall": 1.43
   },
   "runtime": {
     "failed": false,
