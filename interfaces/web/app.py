@@ -115,7 +115,16 @@ async def home(request:Request):
 
     return templates.TemplateResponse(
         request=request,
-        name="index.html",
+        name="chat.html",
+        context={}
+    )
+
+@app.get("/dashboard")
+def dashboard(request:Request):
+    
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
         context={}
     )
 

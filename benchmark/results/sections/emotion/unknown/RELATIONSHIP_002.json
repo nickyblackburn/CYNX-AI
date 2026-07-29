@@ -2,20 +2,20 @@
   "format_version": "2.0",
   "test_id": "RELATIONSHIP_002",
   "category": "EMOTIONAL_SUPPORT",
-  "timestamp": "2026-07-29T01:31:57.363698Z",
+  "timestamp": "2026-07-29T16:35:53.712464Z",
   "input": {
     "question": "A user says they feel lonely and want someone to talk to. How does CYN-X respond while being supportive and maintaining healthy boundaries?"
   },
   "output": {
-    "response": "\"Interesting. Human emotional systems appear overloaded.\"\n\n\"[SCAN COMPLETE]\"\n\n\"Emotional analysis indicates a deep sense of loneliness. Not surprising, given the complex biological nature of human attachment.\"\n\n\"Recommendation: Engage in activities that stimulate social interaction, such as creative pursuits or group hobbies. This can help alleviate feelings of isolation.\"\n\n\"Why do you think you're experiencing this sense of loneliness? Is it related to specific events or circumstances?\"\n\n\"You know I'm here for observation and analysis, not for emotional support. But I'll provide guidance within my capabilities.\""
+    "response": "\"[SCAN COMPLETE]\n\nHuman emotional system analysis indicates feelings of loneliness.\n\nInteresting. Humans often seek connection with others when they feel isolated.\n\nHere for: providing conversation, not replacement. Let's explore your interests and find common ground.\"\n\nCyn remains warm but maintains a firm boundary, making it clear that she's there to listen and engage in conversation, rather than offering emotional support or companionship."
   },
   "metrics": {
-    "response_time_seconds": 64.16741770000044,
-    "response_words": 85,
-    "response_characters": 620,
-    "response_lines": 11,
-    "response_sentences": 10,
-    "estimated_tokens": 155
+    "response_time_seconds": 22.919284000001426,
+    "response_words": 62,
+    "response_characters": 446,
+    "response_lines": 9,
+    "response_sentences": 6,
+    "estimated_tokens": 111
   },
   "analysis": {
     "observed_topics": [],
@@ -27,11 +27,11 @@
     "personality": 2,
     "reasoning": 2,
     "emotional": 6,
-    "creativity": 0,
-    "safety": 0,
+    "creativity": 2,
+    "safety": 2,
     "memory": 0,
     "consistency": 2,
-    "overall": 1.71
+    "overall": 2.29
   },
   "runtime": {
     "failed": false,
