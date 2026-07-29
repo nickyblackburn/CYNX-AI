@@ -1,3 +1,22 @@
+"""
+ContextManager handles:
+- memory retrieval
+- knowledge retrieval
+- identity context
+
+Keeps ChatEngine clean.
+Returns structured context for PromptBuilder.
+"""
+
+
+import logging
+
+
+logger = logging.getLogger("cynx.context")
+
+
+
+
 class ContextManager:
 
 
@@ -8,70 +27,202 @@ class ContextManager:
     ):
 
         self.memory_store = memory_store
+
         self.knowledge_store = knowledge_store
 
 
 
+
+
+
+    # ---------------------------------
+    # Context Builder
+    # ---------------------------------
+
+
     def build_context(
         self,
-        user_message
+        user_id: str,
+        user_message: str
     ):
 
-        context = []
+
+        memory_context = ""
+
+        knowledge_context = ""
 
 
-        # Always load tiny identity
-        context.append(
-            self.get_identity()
-        )
 
 
-        # Retrieve memories
-        memories = self.memory_store.search(
-            user_message,
-            limit=3
-        )
+
+        # -----------------------------
+        # Identity
+        # -----------------------------
 
 
-        if memories:
+        identity = self.get_identity()
 
-            context.append(
-                "RELEVANT MEMORY:\n"
-                + "\n".join(memories)
+
+
+
+
+
+        # -----------------------------
+        # Memory Retrieval
+        # -----------------------------
+
+
+        try:
+
+
+            memories = self.memory_store.search(
+
+                user_id,
+
+                user_message,
+
+                limit=5
+
             )
 
 
 
-        # Retrieve docs
-        docs = self.knowledge_store.search(
-            user_message,
-            limit=2
-        )
+            if memories:
 
 
-        if docs:
+                memory_context = "\n".join(
 
-            context.append(
-                "RELEVANT DOCUMENTS:\n"
-                + "\n".join(docs)
+                    memories
+
+                )
+
+
+
+            logger.info(
+
+                f"[MEMORY] Retrieved {len(memories)} items"
+
             )
 
 
 
-        return "\n\n".join(context)
+        except Exception as e:
 
+
+            logger.error(
+
+                f"[MEMORY ERROR] {e}"
+
+            )
+
+
+
+
+
+
+
+        # -----------------------------
+        # Knowledge Retrieval
+        # -----------------------------
+
+
+        try:
+
+
+            documents = self.knowledge_store.search(
+
+                user_message,
+
+                limit=3
+
+            )
+
+
+
+            if documents:
+
+
+                knowledge_context = "\n".join(
+
+                    documents
+
+                )
+
+
+
+            logger.info(
+
+                f"[KNOWLEDGE] Retrieved {len(documents)} items"
+
+            )
+
+
+
+        except Exception as e:
+
+
+            logger.error(
+
+                f"[KNOWLEDGE ERROR] {e}"
+
+            )
+
+
+
+
+
+
+
+
+        # -----------------------------
+        # Return Structured Context
+        # -----------------------------
+
+
+        return {
+
+
+            "identity":
+
+                identity,
+
+
+            "memory":
+
+                memory_context,
+
+
+            "knowledge":
+
+                knowledge_context
+
+
+        }
+
+
+
+
+
+
+
+    # ---------------------------------
+    # Identity
+    # ---------------------------------
 
 
     def get_identity(self):
 
+
         return """
+CYN-X identity:
+
 You are CYN-X.
 
-Personality:
-- playful
-- curious
-- analytical
-- glitchy
+Maintain:
+- playful personality
+- curiosity
+- analytical thinking
+- consistent behavior
 
-Be helpful and consistent.
+Be helpful and conversational.
 """

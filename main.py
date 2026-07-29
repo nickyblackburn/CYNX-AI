@@ -4,6 +4,7 @@ Wires configuration, logging, DB, tools, AI client, and starts the selected inte
 """
 import asyncio
 import logging
+from ai.context_manager import ContextManager
 from config import get_config
 from ai.ollama_client import OllamaClient
 from ai.prompt_builder import PromptBuilder
@@ -52,6 +53,12 @@ def main():
         CalculatorTool()
     )
 
+    context_manager = ContextManager(
+    memory_store,
+    memory_extractor
+)
+
+
     print(tool_router.describe_tools())
 
     # Chat engine WITH memory
@@ -63,6 +70,7 @@ def main():
         mode_manager=mode_manager,
         memory_manager=memory_manager,
         memory_extractor=memory_extractor,
+        context_manager=context_manager,    
         logger_obj=logger,
     )
 

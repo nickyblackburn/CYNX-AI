@@ -20,6 +20,9 @@ sys.path.append(
 )
 
 
+from ai.context_manager import ContextManager
+from ai.memory_system.extractor import MemoryExtractor
+from ai.memory_system.manager import MemoryManager
 from ai.ollama_client import OllamaClient
 from ai.prompt_builder import PromptBuilder
 from ai.mode_manager import ModeManager
@@ -93,6 +96,14 @@ tool_router.register_tool(
 
 mode_manager = ModeManager()
 
+memory_manager = MemoryManager(conn)
+memory_extractor = MemoryExtractor(memory_manager)
+
+
+context_manager = ContextManager(
+    memory_store,
+    memory_extractor
+)
 
 
 chat_engine = ChatEngine(
@@ -100,7 +111,11 @@ chat_engine = ChatEngine(
     prompt_builder,
     memory_store,
     tool_router,
-    mode_manager
+    mode_manager,
+    memory_manager,
+    memory_extractor,
+    context_manager
+    
 )
 
 

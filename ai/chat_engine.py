@@ -130,6 +130,12 @@ class ChatEngine:
 
         """
 
+        print("===== CHAT ENGINE MEMORY CHECK =====")
+        print("Context Manager:", self.context_manager)
+        print("Memory Manager:", self.memory_manager)
+        print("Memory Extractor:", self.memory_extractor)
+        print("====================================")
+
 
 
         # -----------------------------
@@ -169,6 +175,12 @@ class ChatEngine:
                     MAX_MEMORY_CONTEXT
 
                 )
+
+                print(
+                    f"[MEMORY FOUND]\n{mem_summary}"
+                )
+
+                
 
 
 
@@ -547,37 +559,6 @@ class ChatEngine:
                     f"[MEMORY_SAVE] Saved {len(saved_ids)} memories"
 
                 )
-
-
-
-
-
-        # -----------------------------
-        # 7. Legacy memory storage
-        # -----------------------------
-
-
-        if self.memory_store:
-
-
-            self.memory_store.add_memory(
-
-                kind="fact",
-
-                content=(
-
-                    f"Used CYN-X personality mode: {personality}"
-
-                ),
-
-
-                metadata={
-
-                    "user_id": user_id
-
-                }
-
-            )
 
 
 

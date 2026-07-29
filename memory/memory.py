@@ -1,32 +1,336 @@
 """
-High-level MemoryStore API that uses sqlite.py under the hood.
+MemoryStore handles:
+- saving memories
+- retrieving relevant memories
+- ranking memories
+- deleting memories
+
+Uses SQLite underneath.
 """
-from typing import List, Dict, Optional
+
+
+import json
+import logging
+
+
+logger = logging.getLogger("cynx.memory")
+
+
+
 
 
 class MemoryStore:
-    def __init__(self, conn):
+
+
+    def __init__(
+        self,
+        conn
+    ):
+
         self.conn = conn
 
-    def add_memory(self, kind: str, content: str, metadata: Optional[Dict] = None):
+
+
+
+
+
+
+    # ---------------------------------
+    # Add Memory
+    # ---------------------------------
+
+
+    def add_memory(
+        self,
+        content,
+        kind="fact",
+        importance=5,
+        tags=None,
+        user_id="default",
+        metadata=None
+    ):
+
+
         cur = self.conn.cursor()
-        cur.execute('INSERT INTO memories (kind, content, metadata) VALUES (?, ?, ?)',
-                    (kind, content, (str(metadata) if metadata else None)))
+
+
+        cur.execute(
+            """
+            INSERT INTO memories
+            (
+                user_id,
+                kind,
+                content,
+                importance,
+                tags,
+                metadata
+            )
+
+            VALUES (?, ?, ?, ?, ?, ?)
+
+            """,
+
+            (
+                user_id,
+                kind,
+                content,
+                importance,
+                json.dumps(tags or []),
+                json.dumps(metadata or {})
+            )
+
+        )
+
+
         self.conn.commit()
+
+
         return cur.lastrowid
 
-    def retrieve_recent(self, limit: int = 10) -> List[Dict]:
-        cur = self.conn.cursor()
-        cur.execute('SELECT id, created_at, kind, content, metadata FROM memories ORDER BY id DESC LIMIT ?', (limit,))
-        rows = cur.fetchall()
-        return [dict(id=r[0], created_at=r[1], kind=r[2], content=r[3], metadata=r[4]) for r in rows]
 
-    def search_similar(self, query: str, top_k: int = 5):
-        # Placeholder until embeddings are available; simple substring search.
+
+
+
+
+
+    # ---------------------------------
+    # Search Memory
+    # ---------------------------------
+
+
+    def search(
+        self,
+        user_id,
+        query,
+        limit=5
+    ):
+
+
+        words = query.lower().split()
+
+
         cur = self.conn.cursor()
-        cur.execute("SELECT id, content FROM memories WHERE content LIKE ? LIMIT ?", (f"%{query}%", top_k))
+
+
+
+        cur.execute(
+            """
+            SELECT
+
+                id,
+                kind,
+                content,
+                importance,
+                tags
+
+            FROM memories
+
+            WHERE user_id=?
+
+            """,
+
+            (
+                user_id,
+            )
+
+        )
+
+
+
+        memories = []
+
+
+
+        for row in cur.fetchall():
+
+
+            memory_text = row[2].lower()
+
+
+            score = 0
+
+
+
+            # keyword matching
+
+            for word in words:
+
+
+                if word in memory_text:
+
+
+                    score += 1
+
+
+
+
+
+            # importance boost
+
+            score += row[3] * 0.1
+
+
+
+
+
+
+            if score > 0:
+
+
+                memories.append(
+
+                    {
+                        "id": row[0],
+
+                        "kind": row[1],
+
+                        "content": row[2],
+
+                        "importance": row[3],
+
+                        "score": score
+
+                    }
+
+                )
+
+
+
+
+
+
+
+        memories.sort(
+
+            key=lambda x: x["score"],
+
+            reverse=True
+
+        )
+
+
+
+
+
+        # return prompt-friendly text
+
+        return [
+
+            memory["content"]
+
+            for memory in memories[:limit]
+
+        ]
+
+
+
+
+
+
+
+
+
+    # ---------------------------------
+    # Retrieve Raw Context
+    # ---------------------------------
+
+
+    def retrieve_context(
+        self,
+        query,
+        limit=5,
+        user_id="default"
+    ):
+
+
+        results = self.search(
+
+            user_id,
+
+            query,
+
+            limit
+
+        )
+
+
+        return results
+
+
+
+
+
+
+
+    # ---------------------------------
+    # Recent Memories
+    # ---------------------------------
+
+
+    def recent(
+        self,
+        limit=10
+    ):
+
+
+        cur = self.conn.cursor()
+
+
+        cur.execute(
+            """
+            SELECT *
+
+            FROM memories
+
+            ORDER BY created_at DESC
+
+            LIMIT ?
+
+            """,
+
+            (
+                limit,
+            )
+
+        )
+
+
         return cur.fetchall()
 
-    def purge_older_than(self, days: int):
-        # Placeholder: requires timestamp arithmetic depending on SQLite build
-        pass
+
+
+
+
+
+
+
+    # ---------------------------------
+    # Delete Memory
+    # ---------------------------------
+
+
+    def delete_memory(
+        self,
+        memory_id
+    ):
+
+
+        cur = self.conn.cursor()
+
+
+        cur.execute(
+            """
+            DELETE FROM memories
+
+            WHERE id=?
+
+            """,
+
+            (
+                memory_id,
+            )
+
+        )
+
+
+        self.conn.commit()
