@@ -107,7 +107,7 @@ knowledge_store = KnowledgeStore(
 
 context_manager = ContextManager(
     memory_store,
-    knowledge_store
+    knowledge_store,
 )
 
 

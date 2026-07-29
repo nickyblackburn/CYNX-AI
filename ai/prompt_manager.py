@@ -178,6 +178,8 @@ class PromptManager:
 
     def load_core_prompts(self):
 
+       
+
         print("\n=== CORE FILE SIZES ===")
 
 
@@ -207,7 +209,6 @@ class PromptManager:
             )
 
 
-        print("=======================\n")
 
 
         parts = []
@@ -232,6 +233,15 @@ class PromptManager:
 
 
         core = "\n\n".join(parts)
+
+
+        
+        print("=======================\n")
+
+        print("\n===== CORE PREVIEW =====")
+        print(core[:500])
+        print("========================\n")
+
 
 
         return self.trim_text(
