@@ -9,6 +9,9 @@ import os
 import sqlite3
 import time
 
+from memory.sqlite import connect
+
+
 
 sys.path.append(
     os.path.abspath(
@@ -68,11 +71,7 @@ ollama_client = OllamaClient()
 prompt_builder = PromptBuilder()
 
 
-conn = sqlite3.connect(
-    "database/cyn.db",
-    check_same_thread=False
-)
-
+conn = connect()
 
 memory_store = MemoryStore(
     conn

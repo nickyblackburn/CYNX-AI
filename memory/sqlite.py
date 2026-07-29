@@ -36,7 +36,7 @@ def connect(
         root = Path(__file__).resolve().parents[1]
 
 
-        db_path = (
+        database_dir = (
 
             root
 
@@ -44,12 +44,38 @@ def connect(
 
             "database"
 
+        )
+
+
+        database_dir.mkdir(
+
+            parents=True,
+
+            exist_ok=True
+
+        )
+
+
+        db_path = (
+
+            database_dir
+
             /
 
             "cyn.db"
 
         )
 
+
+
+    db_path = str(db_path)
+
+
+
+    print(
+        "DATABASE USING:",
+        db_path
+    )
 
 
 
@@ -138,6 +164,7 @@ def ensure_schema(
 
 
 
+
     # -----------------------------
     # Conversations
     # -----------------------------
@@ -217,7 +244,37 @@ def ensure_schema(
 
 
 
+
     conn.commit()
+
+
+
+
+
+
+    # -----------------------------
+    # Verify Database
+    # -----------------------------
+
+
+    cur.execute(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type='table'
+        """
+    )
+
+
+    tables = cur.fetchall()
+
+
+    print(
+        "DATABASE TABLES:",
+        tables
+    )
+
+
 
 
 
@@ -237,7 +294,7 @@ def save_conversation(
     message
 ):
 
-
+    print("LOADED CYN SQLITE MODULE")
     cur = conn.cursor()
 
 

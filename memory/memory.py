@@ -1,8 +1,10 @@
 """
-MemoryStore handles:
-- saving memories
-- retrieving relevant memories
-- ranking memories
+MemoryStore
+
+Handles:
+- adding memories
+- searching memories
+- retrieving recent memories
 - deleting memories
 
 Uses SQLite underneath.
@@ -10,10 +12,6 @@ Uses SQLite underneath.
 
 
 import json
-import logging
-
-
-logger = logging.getLogger("cynx.memory")
 
 
 
@@ -22,12 +20,42 @@ logger = logging.getLogger("cynx.memory")
 class MemoryStore:
 
 
+
     def __init__(
         self,
         conn
     ):
 
         self.conn = conn
+
+
+
+
+
+        print("===== MEMORY STORE DATABASE CHECK =====")
+
+
+        cur = self.conn.cursor()
+
+
+        cur.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table'
+            """
+        )
+
+
+        print(
+            cur.fetchall()
+        )
+
+
+        print(
+            "======================================="
+        )
+
 
 
 
@@ -52,6 +80,7 @@ class MemoryStore:
 
 
         cur = self.conn.cursor()
+
 
 
         cur.execute(
@@ -85,6 +114,7 @@ class MemoryStore:
         self.conn.commit()
 
 
+
         return cur.lastrowid
 
 
@@ -94,7 +124,7 @@ class MemoryStore:
 
 
     # ---------------------------------
-    # Search Memory
+    # Memory Search
     # ---------------------------------
 
 
@@ -109,6 +139,7 @@ class MemoryStore:
         words = query.lower().split()
 
 
+
         cur = self.conn.cursor()
 
 
@@ -116,7 +147,6 @@ class MemoryStore:
         cur.execute(
             """
             SELECT
-
                 id,
                 kind,
                 content,
@@ -137,39 +167,37 @@ class MemoryStore:
 
 
 
-        memories = []
+        results = []
 
 
 
         for row in cur.fetchall():
 
 
-            memory_text = row[2].lower()
+            content = row[2].lower()
 
 
             score = 0
 
 
 
-            # keyword matching
-
             for word in words:
 
 
-                if word in memory_text:
-
+                if word in content:
 
                     score += 1
 
 
 
 
+            # importance bonus
 
-            # importance boost
+            score += (
 
-            score += row[3] * 0.1
+                row[3] * 0.1
 
-
+            )
 
 
 
@@ -177,9 +205,10 @@ class MemoryStore:
             if score > 0:
 
 
-                memories.append(
+                results.append(
 
                     {
+
                         "id": row[0],
 
                         "kind": row[1],
@@ -197,10 +226,7 @@ class MemoryStore:
 
 
 
-
-
-
-        memories.sort(
+        results.sort(
 
             key=lambda x: x["score"],
 
@@ -211,50 +237,15 @@ class MemoryStore:
 
 
 
-
-        # return prompt-friendly text
-
         return [
 
             memory["content"]
 
-            for memory in memories[:limit]
+            for memory in results[:limit]
 
         ]
 
 
-
-
-
-
-
-
-
-    # ---------------------------------
-    # Retrieve Raw Context
-    # ---------------------------------
-
-
-    def retrieve_context(
-        self,
-        query,
-        limit=5,
-        user_id="default"
-    ):
-
-
-        results = self.search(
-
-            user_id,
-
-            query,
-
-            limit
-
-        )
-
-
-        return results
 
 
 
@@ -276,6 +267,7 @@ class MemoryStore:
         cur = self.conn.cursor()
 
 
+
         cur.execute(
             """
             SELECT *
@@ -295,8 +287,8 @@ class MemoryStore:
         )
 
 
-        return cur.fetchall()
 
+        return cur.fetchall()
 
 
 
@@ -318,6 +310,7 @@ class MemoryStore:
         cur = self.conn.cursor()
 
 
+
         cur.execute(
             """
             DELETE FROM memories
@@ -331,6 +324,7 @@ class MemoryStore:
             )
 
         )
+
 
 
         self.conn.commit()
