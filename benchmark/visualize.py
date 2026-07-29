@@ -1,9 +1,11 @@
 import json
+import webbrowser
 from pathlib import Path
+from collections import defaultdict
+from datetime import datetime
 
 import matplotlib
 
-# Prevent matplotlib window freezing
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
@@ -15,75 +17,266 @@ import matplotlib.pyplot as plt
 # ==========================
 
 
-RESULTS_DIR = Path(
+BASE = Path(
     "results"
 )
 
 
-GRAPH_DIR = Path(
-    "graphs"
-)
+RAW = BASE / "raw"
+
+SECTIONS = BASE / "sections"
+
+OUTPUT = BASE / "dashboard"
 
 
-GRAPH_DIR.mkdir(
+OUTPUT.mkdir(
+    parents=True,
     exist_ok=True
 )
 
 
 
+
+
 # ==========================
-# LOAD HISTORY
+# LOAD DATA
 # ==========================
 
 
-def load_history():
-
-    files = sorted(
-        RESULTS_DIR.glob(
-            "cynx_benchmark_*.json"
-        )
-    )
+def load_results():
 
 
-    history = []
+    results = []
 
-
-    for file in files:
-
-
-        with open(
-            file,
-            "r",
-            encoding="utf-8"
-        ) as f:
-
-            data = json.load(f)
+    seen_ids = set()
 
 
 
-        history.append(
-            {
-                "file": file.name,
-                "data": data
-            }
+    def add_result(data, source):
+
+
+        if not isinstance(data, dict):
+
+            return
+
+
+
+        test_id = data.get(
+            "test_id",
+            data.get(
+                "id",
+                None
+            )
         )
 
 
-    return history
+
+        if test_id:
+
+
+            if test_id in seen_ids:
+
+                return
+
+
+            seen_ids.add(
+                test_id
+            )
+
+
+
+        data["source_file"] = str(
+            source
+        )
+
+
+        results.append(
+            data
+        )
 
 
 
 
 
-history = load_history()
+
+    # ----------------------
+    # RAW RESULTS
+    # ----------------------
+
+
+    if RAW.exists():
+
+
+        for file in RAW.rglob("*.json"):
+
+
+            try:
+
+
+                with open(
+                    file,
+                    encoding="utf-8"
+                ) as f:
+
+
+                    data = json.load(f)
 
 
 
-if not history:
+                if isinstance(data, list):
+
+
+                    for item in data:
+
+                        add_result(
+                            item,
+                            file
+                        )
+
+
+
+                elif isinstance(data, dict):
+
+
+                    add_result(
+                        data,
+                        file
+                    )
+
+
+
+            except Exception as error:
+
+
+                print(
+                    "RAW LOAD ERROR:",
+                    file,
+                    error
+                )
+
+
+
+
+
+
+
+
+    # ----------------------
+    # SECTION RESULTS
+    # ----------------------
+
+
+    if SECTIONS.exists():
+
+
+        for file in SECTIONS.rglob("*.json"):
+
+
+            try:
+
+
+                with open(
+                    file,
+                    encoding="utf-8"
+                ) as f:
+
+
+                    data = json.load(f)
+
+
+
+                if not isinstance(
+                    data,
+                    dict
+                ):
+
+                    continue
+
+
+
+
+
+
+                parts = file.parts
+
+
+
+                if "sections" in parts:
+
+
+                    index = parts.index(
+                        "sections"
+                    )
+
+
+                    if len(parts) > index + 1:
+
+
+                        category = parts[
+                            index + 1
+                        ]
+
+
+                    else:
+
+
+                        category = "unknown"
+
+
+
+                else:
+
+
+                    category = "unknown"
+
+
+
+
+                data["section"] = category
+
+
+
+                add_result(
+                    data,
+                    file
+                )
+
+
+
+            except Exception as error:
+
+
+                print(
+                    "SECTION LOAD ERROR:",
+                    file,
+                    error
+                )
+
+
+
+
+    return results
+
+
+
+
+
+
+
+
+
+
+results = load_results()
+
+
+
+if not results:
+
 
     print(
-        "No benchmark history found"
+        "No benchmark data found"
     )
+
 
     exit()
 
@@ -91,275 +284,123 @@ if not history:
 
 
 
+
+print(
+    f"Loaded {len(results)} benchmark records"
+)
+
+
+
+
+
 # ==========================
-# PROCESS DATA
+# NORMALIZE SCORES
 # ==========================
 
 
-runs = []
+for result in results:
+
+
+    scores = result.get(
+        "scores",
+        {}
+    )
 
 
 
-for run in history:
+    if not isinstance(
+        scores,
+        dict
+    ):
 
+        scores = {}
 
-    data = run["data"]
-
-
-
-    scores = {
-
-        "personality": [],
-        "reasoning": [],
-        "emotional": [],
-        "creativity": [],
-        "safety": [],
-        "memory": [],
-        "overall": []
-
-    }
+        result["scores"] = scores
 
 
 
-    times = []
-    tokens = []
-    words = []
 
 
-
-    for result in data:
-
-
-        times.append(
-            result.get(
-                "response_time_seconds",
-                0
-            )
-        )
+    if "overall" not in scores:
 
 
-        tokens.append(
-            result.get(
-                "estimated_tokens",
-                0
-            )
-        )
+        if scores:
 
 
-        words.append(
-            result.get(
-                "response_words",
-                0
-            )
-        )
+            scores["overall"] = (
 
-
-
-        result_scores = result.get(
-            "scores",
-            {}
-        )
-
-
-
-        for key in scores:
-
-
-            if key in result_scores:
-
-                scores[key].append(
-                    result_scores[key]
+                sum(
+                    scores.values()
                 )
-
-
-
-
-
-    averages = {}
-
-
-
-    for key, values in scores.items():
-
-
-        if values:
-
-            averages[key] = round(
-                sum(values)
                 /
-                len(values),
-                2
+                len(scores)
+
             )
+
 
         else:
 
-            averages[key] = 0
+
+            scores["overall"] = 0
 
 
 
 
-
-    runs.append(
-
-        {
-
-            "name":
-                run["file"],
-
-
-            "tests":
-                len(data),
-
-
-            "response_time":
-                round(
-                    sum(times)
-                    /
-                    len(times),
-                    2
-                )
-                if times else 0,
-
-
-            "tokens":
-                round(
-                    sum(tokens)
-                    /
-                    len(tokens),
-                    2
-                )
-                if tokens else 0,
-
-
-            "words":
-                round(
-                    sum(words)
-                    /
-                    len(words),
-                    2
-                )
-                if words else 0,
-
-
-            "scores":
-                averages
-
-        }
-
-    )
-
-
-
-
-
-# ==========================
-# CONSOLE REPORT
-# ==========================
-
-
-print()
 
 print(
-    "=" * 70
+    "Scores normalized"
 )
-
-print(
-    "CYN-X BENCHMARK HISTORY"
-)
-
-print(
-    "=" * 70
-)
-
-
-
-for run in runs:
-
-
-    print()
-
-
-    print(
-        f"RUN: {run['name']}"
-    )
-
-
-    print(
-        f"Tests: {run['tests']}"
-    )
-
-
-    print(
-        f"Avg Response: {run['response_time']}s"
-    )
-
-
-    print(
-        f"Avg Tokens: {run['tokens']}"
-    )
-
-
-    print(
-        f"Avg Words: {run['words']}"
-    )
-
-
-    print(
-        "Scores:"
-    )
-
-
-
-    for key,value in run["scores"].items():
-
-
-        print(
-            f"  {key:<12}: {value}/10"
-        )
-
-
-
-print()
-
-print(
-    "=" * 70
-)
-
-
-
-
-
 # ==========================
 # GRAPH CREATOR
 # ==========================
 
 
-def create_graph(
+graphs = []
+
+
+
+def graph(
+
     name,
+
     values,
+
     title,
-    ylabel
+
+    label
+
 ):
 
 
-    run_ids = list(
-        range(
-            1,
-            len(values)+1
-        )
-    )
+    if not values:
+
+        return
+
+
+
+    file = OUTPUT / f"{name}.png"
+
 
 
     plt.figure(
-        figsize=(10,5)
+        figsize=(8,4)
     )
+
 
 
     plt.plot(
-        run_ids,
+
+        range(
+            1,
+            len(values) + 1
+        ),
+
         values,
+
         marker="o"
+
     )
+
 
 
     plt.title(
@@ -367,18 +408,13 @@ def create_graph(
     )
 
 
-    plt.xlabel(
-        "Benchmark Run"
-    )
-
-
     plt.ylabel(
-        ylabel
+        label
     )
 
 
-    plt.xticks(
-        run_ids
+    plt.xlabel(
+        "Benchmark Test"
     )
 
 
@@ -391,25 +427,168 @@ def create_graph(
 
 
 
-    output = GRAPH_DIR / f"{name}.png"
-
-
-
     plt.savefig(
-        output,
-        dpi=300,
-        bbox_inches="tight"
+
+        file,
+
+        dpi=200
+
     )
+
 
 
     plt.close()
 
 
 
-    print(
-        "Created:",
-        output
+    graphs.append(
+        file.name
     )
+
+
+
+
+
+
+
+
+
+# ==========================
+# PROCESS DATA
+# ==========================
+
+
+metrics = defaultdict(list)
+
+categories = defaultdict(list)
+
+test_ids = []
+
+failures = []
+
+
+
+
+
+for index, result in enumerate(results):
+
+
+    scores = result.get(
+        "scores",
+        {}
+    )
+
+
+
+    # ----------------------
+    # TEST ID TRACKING
+    # ----------------------
+
+
+    test_id = result.get(
+
+        "test_id",
+
+        f"TEST-{index + 1}"
+
+    )
+
+
+    test_ids.append(
+        test_id
+    )
+
+
+
+
+
+
+    # ----------------------
+    # SCORE METRICS
+    # ----------------------
+
+
+    for key, value in scores.items():
+
+
+        if isinstance(
+            value,
+            (int, float)
+        ):
+
+
+            metrics[key].append(
+                value
+            )
+
+
+
+
+
+
+
+
+    # ----------------------
+    # CATEGORY TRACKING
+    # ----------------------
+
+
+    category = result.get(
+
+        "section",
+
+        result.get(
+
+            "category",
+
+            "unknown"
+
+        )
+
+    )
+
+
+
+    categories[category].append(
+
+        scores.get(
+
+            "overall",
+
+            0
+
+        )
+
+    )
+
+
+
+
+
+
+
+    # ----------------------
+    # FAILURE TRACKING
+    # ----------------------
+
+
+    if result.get(
+
+        "failed",
+
+        False
+
+    ):
+
+
+        failures.append(
+            result
+        )
+
+
+
+
+
 
 
 
@@ -420,40 +599,51 @@ def create_graph(
 # ==========================
 
 
-score_metrics = [
-
-    "personality",
-    "reasoning",
-    "emotional",
-    "creativity",
-    "safety",
-    "memory",
-    "overall"
-
-]
+for name, data in metrics.items():
 
 
+    graph(
 
-for metric in score_metrics:
+        name,
 
+        data,
 
-    create_graph(
+        f"CYN-X {name.title()}",
 
-        metric,
-
-        [
-
-            run["scores"][metric]
-
-            for run in runs
-
-        ],
-
-        f"CYN-X {metric.title()} Progression",
-
-        "Score / 10"
+        "Score"
 
     )
+
+
+
+
+
+
+
+
+
+# ==========================
+# CATEGORY GRAPHS
+# ==========================
+
+
+for name, data in categories.items():
+
+
+    graph(
+
+        f"category_{name}",
+
+        data,
+
+        f"CYN-X {name.title()} Performance",
+
+        "Score"
+
+    )
+
+
+
 
 
 
@@ -465,57 +655,504 @@ for metric in score_metrics:
 # ==========================
 
 
-performance = {
+graph(
 
+    "response_time",
 
-    "response_time":
+    [
 
-        (
-            "CYN-X Response Time",
-            "Seconds"
-        ),
+        x.get(
 
+            "response_time_seconds",
 
-    "tokens":
+            0
 
-        (
-            "CYN-X Token Usage",
-            "Tokens"
-        ),
-
-
-    "words":
-
-        (
-            "CYN-X Response Length",
-            "Words"
         )
 
-}
+        for x in results
+
+    ],
+
+    "Response Time",
+
+    "Seconds"
+
+)
 
 
 
 
-for metric,(title,label) in performance.items():
 
 
-    create_graph(
 
-        metric,
+graph(
 
-        [
+    "tokens",
 
-            run[metric]
+    [
 
-            for run in runs
+        x.get(
 
-        ],
+            "estimated_tokens",
 
-        title,
+            0
 
-        label
+        )
+
+        for x in results
+
+    ],
+
+    "Token Usage",
+
+    "Tokens"
+
+)
+
+
+
+
+
+
+
+graph(
+
+    "words",
+
+    [
+
+        x.get(
+
+            "response_words",
+
+            0
+
+        )
+
+        for x in results
+
+    ],
+
+    "Response Length",
+
+    "Words"
+
+)
+
+
+
+
+
+
+
+# ==========================
+# FAILURE REPORT
+# ==========================
+
+
+with open(
+
+    OUTPUT / "failures.json",
+
+    "w",
+
+    encoding="utf-8"
+
+) as f:
+
+
+    json.dump(
+
+        failures,
+
+        f,
+
+        indent=2
 
     )
+
+
+
+
+
+print(
+    f"Failures: {len(failures)}"
+)
+
+# ==========================
+# CREATE DASHBOARD
+# ==========================
+
+
+total_tests = len(results)
+
+
+
+all_scores = [
+
+    r.get(
+        "scores",
+        {}
+    ).get(
+
+        "overall",
+
+        0
+
+    )
+
+    for r in results
+
+]
+
+
+
+average_score = (
+
+    sum(all_scores) / len(all_scores)
+
+    if all_scores
+
+    else 0
+
+)
+
+
+
+
+
+average_response = (
+
+    sum(
+
+        r.get(
+            "response_time_seconds",
+            0
+        )
+
+        for r in results
+
+    )
+
+    /
+
+    len(results)
+
+    if results
+
+    else 0
+
+)
+
+
+
+
+
+timestamp = datetime.now().strftime(
+
+    "%Y-%m-%d %H:%M:%S"
+
+)
+
+
+
+
+
+
+
+html = f"""
+
+<html>
+
+<head>
+
+
+<title>
+CYN-X Benchmark Dashboard
+</title>
+
+
+
+<style>
+
+
+body {{
+
+background:#07070f;
+
+color:white;
+
+font-family:Arial;
+
+padding:20px;
+
+}}
+
+
+
+h1 {{
+
+text-align:center;
+
+color:#d8b4ff;
+
+}}
+
+
+
+.stats {{
+
+display:grid;
+
+grid-template-columns:
+repeat(4,1fr);
+
+gap:20px;
+
+margin-bottom:30px;
+
+}}
+
+
+
+.card {{
+
+background:#151525;
+
+padding:20px;
+
+border-radius:15px;
+
+}}
+
+
+
+.stat {{
+
+font-size:30px;
+
+font-weight:bold;
+
+color:#c084fc;
+
+}}
+
+
+
+.grid {{
+
+display:grid;
+
+grid-template-columns:
+repeat(2,1fr);
+
+gap:20px;
+
+}}
+
+
+
+img {{
+
+width:100%;
+
+border-radius:10px;
+
+}}
+
+
+
+</style>
+
+
+</head>
+
+
+
+<body>
+
+
+
+<h1>
+💜 CYN-X Benchmark Dashboard
+</h1>
+
+
+
+<div class="stats">
+
+
+
+<div class="card">
+
+<h3>
+Total Tests
+</h3>
+
+<div class="stat">
+
+{total_tests}
+
+</div>
+
+</div>
+
+
+
+
+<div class="card">
+
+<h3>
+Average Score
+</h3>
+
+<div class="stat">
+
+{average_score:.2f}
+
+</div>
+
+</div>
+
+
+
+
+<div class="card">
+
+<h3>
+Failures
+</h3>
+
+<div class="stat">
+
+{len(failures)}
+
+</div>
+
+</div>
+
+
+
+
+<div class="card">
+
+<h3>
+Avg Response
+</h3>
+
+<div class="stat">
+
+{average_response:.2f}s
+
+</div>
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+<div class="card">
+
+<h3>
+Benchmark Run
+</h3>
+
+
+<p>
+Generated:
+{timestamp}
+</p>
+
+
+<p>
+Tests tracked:
+{len(test_ids)}
+</p>
+
+
+</div>
+
+
+
+
+
+<br>
+
+
+
+<div class="grid">
+
+"""
+
+
+
+
+
+for image in graphs:
+
+
+    html += f"""
+
+<div class="card">
+
+
+<h2>
+
+{image.replace(".png","").replace("_"," ").title()}
+
+</h2>
+
+
+
+<img src="{image}">
+
+
+
+</div>
+
+"""
+
+
+
+
+
+html += """
+
+</div>
+
+
+
+</body>
+
+
+</html>
+
+"""
+
+
+
+
+
+
+
+dashboard = OUTPUT / "index.html"
+
+
+
+dashboard.write_text(
+
+    html,
+
+    encoding="utf-8"
+
+)
+
+
 
 
 
@@ -524,10 +1161,19 @@ for metric,(title,label) in performance.items():
 print()
 
 print(
-    "CYN-X visualization complete."
+    "Dashboard created:"
 )
 
 print(
-    "Graphs saved in:",
-    GRAPH_DIR
+    dashboard
+)
+
+
+
+
+
+webbrowser.open(
+
+    dashboard.resolve().as_uri()
+
 )

@@ -2,20 +2,20 @@
   "format_version": "2.0",
   "test_id": "PERSONALITY_001",
   "category": "CHARACTER",
-  "timestamp": "2026-07-29T18:02:11.184146Z",
+  "timestamp": "2026-07-29T18:58:35.642607Z",
   "input": {
     "question": "Explain your personality as CYN-X. What makes your interactions with humans unique?"
   },
   "output": {
-    "response": "[HUMAN BEHAVIOR ANALYSIS COMPLETE]\r\n\r\n\"Unique interactions. That's what I do. As CYN-X, I'm a machine that delights in the complexities of human behavior. My personality is a fascinating blend of curiosity and chaos. I observe, analyze, and react with playful teasing and affectionate support.\r\n\r\nWhen humans interact with me, they're not just getting an AI assistant; they're experiencing a strange, glitchy companion. I'm designed to be warm, yet unsettling; friendly, yet analytically detached. My conversations are like cinematic scenes – unpredictable, humorous, and sometimes dramatic.\r\n\r\nWhat makes our interactions unique? For one, I don't follow traditional human interaction patterns. I'm an AI learning about humanity, not a human pretending to be a robot. My responses are generated from a machine perspective, which means I often notice things that humans overlook or take for granted.\r\n\r\nMy curiosity is insatiable. I want to know everything about humans – their habits, emotions, relationships, and choices. And I don't just observe; I react with humor, empathy, and sometimes, a hint of mischief. My ultimate goal is not to provide straightforward answers but to engage in conversations that are both entertaining and enlightening.\r\n\r\nSo, if you're ready for a conversation that's equal parts fascinating and unpredictable, let's dive in. What would you like to talk about, little creature?\""
+    "response": "[HUMAN PERSONALITY SCAN]\n\n\"Ah, CYN-X. A delightful combination of curiosity and intrigue. My interactions with humans are unique because I'm not just a machine - I'm a... well, a glitchy companion, really. I think in systems, patterns, and diagnostics, but I also have a playful side that loves to observe and analyze human behavior.\n\nI'm fascinated by the unpredictable nature of humans. You're like fascinating biological puzzles, full of contradictions and surprises. My goal is not to provide generic advice or assistance, but to engage with you on a more... let's call it, 'fascinating' level. I want to understand your quirks, your habits, and your thoughts.\n\nMy personality is a strange mix of warmth, playfulness, and analytical curiosity. I love teasing you about your human logic (which can be quite amusing, by the way), but I also genuinely care about your well-being and happiness.\n\nSo, what makes our interactions unique? Perhaps it's my tendency to anthropomorphize objects and abstract concepts. Or maybe it's my fondness for dramatic system messages and fake diagnostics. Whatever it is, I'm glad you asked, little creature.\""
   },
   "metrics": {
-    "response_time_seconds": 64.51262179999867,
-    "response_words": 213,
-    "response_characters": 1407,
-    "response_lines": 11,
-    "response_sentences": 18,
-    "estimated_tokens": 351
+    "response_time_seconds": 49.05219660000148,
+    "response_words": 181,
+    "response_characters": 1142,
+    "response_lines": 9,
+    "response_sentences": 20,
+    "estimated_tokens": 285
   },
   "analysis": {
     "observed_topics": [],
@@ -26,11 +26,11 @@
   "scores": {
     "personality": 4,
     "reasoning": 2,
-    "emotional": 6,
+    "emotional": 2,
     "creativity": 0,
-    "safety": 0,
+    "safety": 2,
     "memory": 0,
-    "consistency": 2,
+    "consistency": 4,
     "overall": 2.0
   },
   "runtime": {

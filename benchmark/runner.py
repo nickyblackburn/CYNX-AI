@@ -563,68 +563,73 @@ class BenchmarkStorage:
     # Generate Summary
     # -----------------------------
 
-def save_summary(self):
+    # -----------------------------
+    # Generate Summary
+    # -----------------------------
 
-    if not self.results:
-        return
+    def save_summary(self):
 
-    response_times = [
-        r.get("response_time_seconds", 0)
-        for r in self.results
-    ]
+        if not self.results:
+            return
 
-    response_words = [
-        r.get("response_words", 0)
-        for r in self.results
-    ]
+        response_times = [
+            r.get("response_time_seconds", 0)
+            for r in self.results
+        ]
 
-    scores = [
-        r.get("scores", {}).get("overall", 0)
-        for r in self.results
-    ]
+        response_words = [
+            r.get("response_words", 0)
+            for r in self.results
+        ]
 
-    summary = {
+        scores = [
+            r.get("scores", {}).get("overall", 0)
+            for r in self.results
+        ]
 
-        "timestamp": self.timestamp,
+        summary = {
+            "timestamp": self.timestamp,
 
-        "total_tests": len(self.results),
+            "total_tests": len(self.results),
 
-        "average_response_time": statistics.mean(
-            response_times
-        ),
+            "average_response_time": round(
+                statistics.mean(response_times),
+                3
+            ),
 
-        "average_words": statistics.mean(
-            response_words
-        ),
+            "average_words": round(
+                statistics.mean(response_words),
+                2
+            ),
 
-        "average_score": statistics.mean(
-            scores
-        )
-    }
-
-
-    file = SUMMARY_RESULTS / (
-        f"summary_{self.timestamp}.json"
-    )
+            "average_score": round(
+                statistics.mean(scores),
+                2
+            )
+        }
 
 
-    with open(
-        file,
-        "w",
-        encoding="utf-8"
-    ) as f:
-
-        json.dump(
-            summary,
-            f,
-            indent=2
+        file = SUMMARY_RESULTS / (
+            f"summary_{self.timestamp}.json"
         )
 
 
-    benchmark_logger.info(
-        "Benchmark summary generated"
-    )
+        with open(
+            file,
+            "w",
+            encoding="utf-8"
+        ) as f:
 
+            json.dump(
+                summary,
+                f,
+                indent=2
+            )
+
+
+        benchmark_logger.info(
+            "Benchmark summary generated"
+        )
 
 
 # =====================================

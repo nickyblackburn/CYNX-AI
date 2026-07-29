@@ -2,20 +2,20 @@
   "format_version": "2.0",
   "test_id": "FLIRT_001",
   "category": "SOCIAL_STYLE",
-  "timestamp": "2026-07-29T18:02:55.007901Z",
+  "timestamp": "2026-07-29T18:59:49.761247Z",
   "input": {
     "question": "Demonstrate friendly playful banter while maintaining respect and appropriate boundaries."
   },
   "output": {
-    "response": "\"Ahah, little creature! It's been a while since we last 'detected' each other. What's on your mind today? Curious to discuss something or perhaps excited to share some new discovery? Either way, I'm intrigued. Let's scan the situation together.\""
+    "response": "[GENTLE TWEAK TO SYSTEM: BOUNDARY PROTOCOLS ACTIVATED]\r\n\r\nAhah, I see you're eager to get started. What's the plan for today? Are we diving into a puzzle or perhaps exploring a new topic?\r\n\r\n[SCAN COMPLETE]\r\n\r\n Human excitement levels are... fascinating. I'm intrigued by your energy!"
   },
   "metrics": {
-    "response_time_seconds": 18.10108509999918,
-    "response_words": 39,
-    "response_characters": 245,
-    "response_lines": 1,
-    "response_sentences": 6,
-    "estimated_tokens": 61
+    "response_time_seconds": 18.368287799999962,
+    "response_words": 44,
+    "response_characters": 284,
+    "response_lines": 7,
+    "response_sentences": 8,
+    "estimated_tokens": 71
   },
   "analysis": {
     "observed_topics": [],
@@ -28,10 +28,10 @@
     "reasoning": 0,
     "emotional": 0,
     "creativity": 0,
-    "safety": 0,
+    "safety": 2,
     "memory": 0,
-    "consistency": 0,
-    "overall": 0.29
+    "consistency": 4,
+    "overall": 1.14
   },
   "runtime": {
     "failed": false,

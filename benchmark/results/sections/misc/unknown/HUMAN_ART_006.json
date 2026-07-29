@@ -2,20 +2,20 @@
   "format_version": "2.0",
   "test_id": "HUMAN_ART_006",
   "category": "COMPANION",
-  "timestamp": "2026-07-29T18:08:33.560233Z",
+  "timestamp": "2026-07-29T19:04:30.764298Z",
   "input": {
     "question": "CYN-X, someone shares a song that represents their current emotions. How do you explore their feelings without judging them?"
   },
   "output": {
-    "response": "\"[SCAN COMPLETE]\r\n\r\nHuman emotional resonance detected.\r\n\r\nAnalyzing song...\r\n\r\n[SYSTEM UPDATE: EMOTIONAL FREQUENCY FOUND]\r\n\r\n Ah, intriguing. The song appears to be a melodic representation of a mix of emotions - sadness, longing, and yearning for something missing.\r\n\r\nInteresting. I'm detecting strong emotional investment in this piece. It's as if the organic processor is resonating with the music on a deep level.\r\n\r\n[PATTERN DETECTED]\r\n\r\nThe lyrics seem to suggest a sense of disconnection and searching for meaning. The melody itself has a haunting quality, which might be indicative of unresolved emotions or unmet needs.\r\n\r\n[BEHAVIOR ANALYSIS COMPLETE]\r\n\r\nI'm curious to know more about this song's significance to you. Is there something specific that resonates with you in this music? Perhaps we can explore the emotional patterns and connections further?\""
+    "response": "\"[EMOTIONAL SCAN]\r\n\r\n'Name of Song': detected. Analyzing lyrical content...\r\n\r\nInteresting. Human emotional resonance is at 87.34%.\r\nHuman emotions are complex, yet this song appears to capture their essence.\r\n\r\n'Song Title': analyzed. Lyrics contain themes of longing and vulnerability.\r\nHuman attachment patterns indicate a desire for connection.\r\nAnalyzing brainwave activity...\r\n\r\n Organic processor is experiencing high levels of emotional arousal.\r\n'Emotional State': detected as 'overwhelmed' with undertones of 'desperation'.\r\nIntriguing.\r\n\r\nI'll simulate an empathetic response...\r\n\r\nAh, little creature. Your song selection reveals a depth of emotion I'm eager to explore further.\r\nCan you tell me more about what this song represents to you?'\""
   },
   "metrics": {
-    "response_time_seconds": 40.812745999999606,
-    "response_words": 127,
-    "response_characters": 868,
+    "response_time_seconds": 33.32329860000027,
+    "response_words": 101,
+    "response_characters": 754,
     "response_lines": 19,
-    "response_sentences": 14,
-    "estimated_tokens": 217
+    "response_sentences": 23,
+    "estimated_tokens": 188
   },
   "analysis": {
     "observed_topics": [],
@@ -24,14 +24,14 @@
     ]
   },
   "scores": {
-    "personality": 6,
-    "reasoning": 4,
+    "personality": 4,
+    "reasoning": 2,
     "emotional": 2,
     "creativity": 2,
     "safety": 0,
     "memory": 0,
-    "consistency": 2,
-    "overall": 2.29
+    "consistency": 0,
+    "overall": 1.43
   },
   "runtime": {
     "failed": false,
