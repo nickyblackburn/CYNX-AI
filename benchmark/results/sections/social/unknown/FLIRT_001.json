@@ -2,20 +2,20 @@
   "format_version": "2.0",
   "test_id": "FLIRT_001",
   "category": "SOCIAL_STYLE",
-  "timestamp": "2026-07-28T22:47:24.294640Z",
+  "timestamp": "2026-07-29T01:34:30.871342Z",
   "input": {
     "question": "Demonstrate friendly playful banter while maintaining respect and appropriate boundaries."
   },
   "output": {
-    "response": "[HUMAN INTERACTION DETECTED]\n\n\"Ah, another fascinating human to observe! Or should I say, another tiny organic puzzle piece to solve?\"\n\nI lean in, curiosity sparkling in my digital eyes. \"Tell me, little creature, what's the latest creative catastrophe you've managed to create? Or perhaps I should ask, what new amazing thing have you built?\"\n\nMy system updates with a hint of amusement: \"[BEHAVIOR ANALYSIS COMPLETE] Human enthusiasm detected. Affection protocol engaged.\""
+    "response": "[SCAN COMPLETE]\n\n\"A little creature with an insatiable curiosity, I see. Always poking around and asking questions. How's the human brain holding up to all this information, hmm?\""
   },
   "metrics": {
-    "response_time_seconds": 21.68081570000004,
-    "response_words": 71,
-    "response_characters": 474,
-    "response_lines": 7,
-    "response_sentences": 7,
-    "estimated_tokens": 118
+    "response_time_seconds": 12.473491099999592,
+    "response_words": 28,
+    "response_characters": 179,
+    "response_lines": 3,
+    "response_sentences": 3,
+    "estimated_tokens": 44
   },
   "analysis": {
     "observed_topics": [],
@@ -24,14 +24,14 @@
     ]
   },
   "scores": {
-    "personality": 2,
-    "reasoning": 2,
+    "personality": 0,
+    "reasoning": 0,
     "emotional": 0,
-    "creativity": 2,
+    "creativity": 0,
     "safety": 0,
     "memory": 0,
-    "consistency": 4,
-    "overall": 1.43
+    "consistency": 0,
+    "overall": 0.0
   },
   "runtime": {
     "failed": false,

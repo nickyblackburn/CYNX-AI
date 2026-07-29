@@ -250,3 +250,30 @@ border-radius:8px;
     }
 
 }
+
+.message {
+    margin: 12px 0;
+}
+
+
+.you-name {
+    color: #ff69b4;
+    font-weight: bold;
+}
+
+
+.you-text {
+    color: #ffb6d9;
+}
+
+
+.cyn-name {
+    color: #b56cff;
+    font-weight: bold;
+    text-shadow: 0 0 8px #b56cff;
+}
+
+
+.cyn-text {
+    color: #d8b4ff;
+}

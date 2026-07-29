@@ -45,7 +45,7 @@ def main():
     tool_router = ToolRouter()
 
     tool_router.register_tool(
-        WebSearchTool(api_key="123")
+        WebSearchTool()
     )
 
     tool_router.register_tool(

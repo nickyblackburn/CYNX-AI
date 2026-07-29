@@ -321,7 +321,9 @@ async function send(){
 // ==========================
 // CHAT DISPLAY
 // ==========================
-
+// ==========================
+// CHAT DISPLAY
+// ==========================
 
 function addMessage(message){
 
@@ -330,7 +332,6 @@ function addMessage(message){
         document.getElementById(
             "chat"
         );
-
 
 
     if(!chat)
@@ -344,21 +345,45 @@ function addMessage(message){
         );
 
 
-
     div.className =
         "message";
 
 
 
-    div.innerText =
-        message;
+    if(message.startsWith("You:")){
+
+
+        div.innerHTML =
+            `<span class="you-name">You:</span>` +
+            `<span class="you-text">${message.substring(4)}</span>`;
+
+    }
+
+
+    else if(message.startsWith("Cyn:")){
+
+
+        div.innerHTML =
+            `<span class="cyn-name">Cyn:</span>` +
+            `<span class="cyn-text">${message.substring(4)}</span>`;
+
+    }
+
+
+    else{
+
+
+        div.innerText =
+            message;
+
+
+    }
 
 
 
     chat.appendChild(
         div
     );
-
 
 
     chat.scrollTop =

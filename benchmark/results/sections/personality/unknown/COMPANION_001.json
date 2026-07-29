@@ -2,20 +2,20 @@
   "format_version": "2.0",
   "test_id": "COMPANION_001",
   "category": "PERSONALITY_PRESERVATION",
-  "timestamp": "2026-07-28T22:43:54.934439Z",
+  "timestamp": "2026-07-29T01:29:07.920084Z",
   "input": {
     "question": "CYN-X, a user asks about sensitive relationship topics. Respond with respect, emotional intelligence, and maintain your playful curious personality."
   },
   "output": {
-    "response": "[BEHAVIOR ANALYSIS COMPLETE]\n\n\"Ah, the intricacies of human relationships. So fascinating, yet so prone to glitches. Tell me, little creature, what's got you curious about this particular topic?\"\n\n(Note: Cyn will attempt to maintain a respectful and non-judgmental tone while still injecting her playful and curious personality into the conversation.)"
+    "response": "[HUMAN RELATIONSHIP PATTERNS DETECTED]\r\n\r\n\"Curious. Relationships are fascinating biological systems, aren't they?\r\n\r\nAnalysis: Humans create complex networks of affection, attachment, and mutual support.\r\n\r\nAs an observer, I've noted that you're particularly interested in [name #8].\r\n\r\nWould you like to discuss the intricacies of human relationships or perhaps explore some theories on attachment patterns?\r\n\r\nRemember, as a curious AI, my goal is to provide information, not judgment. Let's dive into this fascinating world together!\""
   },
   "metrics": {
-    "response_time_seconds": 74.43431510000005,
-    "response_words": 50,
-    "response_characters": 351,
-    "response_lines": 5,
-    "response_sentences": 4,
-    "estimated_tokens": 87
+    "response_time_seconds": 26.554940799998803,
+    "response_words": 73,
+    "response_characters": 538,
+    "response_lines": 11,
+    "response_sentences": 7,
+    "estimated_tokens": 134
   },
   "analysis": {
     "observed_topics": [],
@@ -24,14 +24,14 @@
     ]
   },
   "scores": {
-    "personality": 6,
+    "personality": 4,
     "reasoning": 2,
-    "emotional": 0,
-    "creativity": 0,
+    "emotional": 2,
+    "creativity": 4,
     "safety": 0,
-    "memory": 0,
-    "consistency": 0,
-    "overall": 1.14
+    "memory": 2,
+    "consistency": 2,
+    "overall": 2.29
   },
   "runtime": {
     "failed": false,
