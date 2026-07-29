@@ -96,7 +96,11 @@ tool_router.register_tool(
 
 mode_manager = ModeManager()
 
+memory_store = MemoryStore(conn)
+
 memory_manager = MemoryManager(conn)
+
+memory_extractor = MemoryExtractor(memory_store)
 knowledge_store = KnowledgeStore(
     conn
 )
@@ -114,7 +118,7 @@ chat_engine = ChatEngine(
     tool_router,
     mode_manager,
     memory_manager,
-    memory_extractor=knowledge_store,
+    memory_extractor=memory_extractor,
     context_manager=context_manager
     
 )
