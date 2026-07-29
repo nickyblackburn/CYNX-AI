@@ -388,6 +388,12 @@ class PromptManager:
 
 
         if core:
+          
+
+            parts.append(
+                "[CORE IDENTITY - ALWAYS FOLLOW]\n"
+                + core
+            )   
 
             parts.append(core)
 
