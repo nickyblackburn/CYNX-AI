@@ -159,6 +159,42 @@ def ensure_schema(
         """
     )
 
+        # -----------------------------
+        # Knowledge
+        # -----------------------------
+
+    cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS knowledge (
+
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                category TEXT DEFAULT 'general',
+
+                title TEXT,
+
+                content TEXT NOT NULL,
+
+                importance INTEGER DEFAULT 5,
+
+                tags TEXT DEFAULT '[]',
+
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+            )
+            """
+            )
+
+
+    cur.execute(
+    """
+    CREATE INDEX IF NOT EXISTS idx_knowledge_category
+
+    ON knowledge(category)
+    """
+    )
+    
+
 
 
 

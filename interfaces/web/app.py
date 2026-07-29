@@ -9,6 +9,7 @@ import os
 import sqlite3
 import time
 
+from ai.knowledge.store import KnowledgeStore
 from memory.sqlite import connect
 
 
@@ -96,12 +97,13 @@ tool_router.register_tool(
 mode_manager = ModeManager()
 
 memory_manager = MemoryManager(conn)
-memory_extractor = MemoryExtractor(memory_manager)
-
+knowledge_store = KnowledgeStore(
+    conn
+)
 
 context_manager = ContextManager(
     memory_store,
-    memory_extractor
+    knowledge_store
 )
 
 
@@ -112,8 +114,8 @@ chat_engine = ChatEngine(
     tool_router,
     mode_manager,
     memory_manager,
-    memory_extractor,
-    context_manager
+    memory_extractor=knowledge_store,
+    context_manager=context_manager
     
 )
 
