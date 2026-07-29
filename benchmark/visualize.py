@@ -1,14 +1,18 @@
 import json
 import webbrowser
+
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
+
 
 import matplotlib
 
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
+
+
 
 
 
@@ -38,6 +42,8 @@ OUTPUT.mkdir(
 
 
 
+
+
 # ==========================
 # LOAD DATA
 # ==========================
@@ -61,13 +67,21 @@ def load_results():
 
 
 
+
         test_id = data.get(
+
             "test_id",
+
             data.get(
+
                 "id",
+
                 None
+
             )
+
         )
+
 
 
 
@@ -79,20 +93,32 @@ def load_results():
                 return
 
 
+
             seen_ids.add(
+
                 test_id
+
             )
 
 
 
+
+
         data["source_file"] = str(
+
             source
+
         )
+
 
 
         results.append(
+
             data
+
         )
+
+
 
 
 
@@ -114,12 +140,16 @@ def load_results():
 
 
                 with open(
+
                     file,
+
                     encoding="utf-8"
+
                 ) as f:
 
 
                     data = json.load(f)
+
 
 
 
@@ -128,10 +158,15 @@ def load_results():
 
                     for item in data:
 
+
                         add_result(
+
                             item,
+
                             file
+
                         )
+
 
 
 
@@ -139,9 +174,13 @@ def load_results():
 
 
                     add_result(
+
                         data,
+
                         file
+
                     )
+
 
 
 
@@ -149,10 +188,15 @@ def load_results():
 
 
                 print(
+
                     "RAW LOAD ERROR:",
+
                     file,
+
                     error
+
                 )
+
 
 
 
@@ -176,8 +220,11 @@ def load_results():
 
 
                 with open(
+
                     file,
+
                     encoding="utf-8"
+
                 ) as f:
 
 
@@ -185,10 +232,15 @@ def load_results():
 
 
 
+
                 if not isinstance(
+
                     data,
+
                     dict
+
                 ):
+
 
                     continue
 
@@ -201,26 +253,34 @@ def load_results():
 
 
 
+
                 if "sections" in parts:
 
 
                     index = parts.index(
+
                         "sections"
+
                     )
+
 
 
                     if len(parts) > index + 1:
 
 
                         category = parts[
+
                             index + 1
+
                         ]
+
 
 
                     else:
 
 
                         category = "unknown"
+
 
 
 
@@ -232,14 +292,23 @@ def load_results():
 
 
 
+
+
                 data["section"] = category
 
 
 
+
+
                 add_result(
+
                     data,
+
                     file
+
                 )
+
+
 
 
 
@@ -247,9 +316,13 @@ def load_results():
 
 
                 print(
+
                     "SECTION LOAD ERROR:",
+
                     file,
+
                     error
+
                 )
 
 
@@ -266,7 +339,11 @@ def load_results():
 
 
 
+
+
 results = load_results()
+
+
 
 
 
@@ -274,7 +351,9 @@ if not results:
 
 
     print(
+
         "No benchmark data found"
+
     )
 
 
@@ -285,9 +364,15 @@ if not results:
 
 
 
+
 print(
+
     f"Loaded {len(results)} benchmark records"
+
 )
+
+
+
 
 
 
@@ -302,20 +387,29 @@ for result in results:
 
 
     scores = result.get(
+
         "scores",
+
         {}
+
     )
 
 
 
+
     if not isinstance(
+
         scores,
+
         dict
+
     ):
+
 
         scores = {}
 
         result["scores"] = scores
+
 
 
 
@@ -330,12 +424,17 @@ for result in results:
             scores["overall"] = (
 
                 sum(
+
                     scores.values()
+
                 )
+
                 /
+
                 len(scores)
 
             )
+
 
 
         else:
@@ -347,15 +446,25 @@ for result in results:
 
 
 
+
 print(
+
     "Scores normalized"
+
 )
+
+
+
+
+
+
 # ==========================
 # GRAPH CREATOR
 # ==========================
 
 
 graphs = []
+
 
 
 
@@ -378,21 +487,31 @@ def graph(
 
 
 
+
     file = OUTPUT / f"{name}.png"
 
 
 
+
+
     plt.figure(
+
         figsize=(8,4)
+
     )
+
+
 
 
 
     plt.plot(
 
         range(
+
             1,
+
             len(values) + 1
+
         ),
 
         values,
@@ -403,27 +522,43 @@ def graph(
 
 
 
+
+
     plt.title(
+
         title
+
     )
+
 
 
     plt.ylabel(
+
         label
+
     )
+
 
 
     plt.xlabel(
+
         "Benchmark Test"
+
     )
+
 
 
     plt.grid(
+
         True
+
     )
 
 
+
     plt.tight_layout()
+
+
 
 
 
@@ -437,23 +572,17 @@ def graph(
 
 
 
+
     plt.close()
 
 
 
+
     graphs.append(
+
         file.name
-    )
 
-
-
-
-
-
-
-
-
-# ==========================
+    )# ==========================
 # PROCESS DATA
 # ==========================
 
@@ -474,9 +603,14 @@ for index, result in enumerate(results):
 
 
     scores = result.get(
+
         "scores",
+
         {}
+
     )
+
+
 
 
 
@@ -495,8 +629,11 @@ for index, result in enumerate(results):
 
 
     test_ids.append(
+
         test_id
+
     )
+
 
 
 
@@ -512,14 +649,20 @@ for index, result in enumerate(results):
 
 
         if isinstance(
+
             value,
+
             (int, float)
+
         ):
 
 
             metrics[key].append(
+
                 value
+
             )
+
 
 
 
@@ -567,6 +710,8 @@ for index, result in enumerate(results):
 
 
 
+
+
     # ----------------------
     # FAILURE TRACKING
     # ----------------------
@@ -582,9 +727,64 @@ for index, result in enumerate(results):
 
 
         failures.append(
+
             result
+
         )
 
+
+
+
+
+
+
+
+
+
+
+
+# ==========================
+# CATEGORY LEADERBOARD DATA
+# ==========================
+
+
+leaderboard = []
+
+
+
+for category, scores in categories.items():
+
+
+    if scores:
+
+
+        average = sum(scores) / len(scores)
+
+
+        leaderboard.append(
+
+            (
+
+                category,
+
+                average
+
+            )
+
+        )
+
+
+
+
+
+
+leaderboard.sort(
+
+    key=lambda x: x[1],
+
+    reverse=True
+
+)
 
 
 
@@ -739,46 +939,6 @@ graph(
 
 )
 
-
-
-
-
-
-
-# ==========================
-# FAILURE REPORT
-# ==========================
-
-
-with open(
-
-    OUTPUT / "failures.json",
-
-    "w",
-
-    encoding="utf-8"
-
-) as f:
-
-
-    json.dump(
-
-        failures,
-
-        f,
-
-        indent=2
-
-    )
-
-
-
-
-
-print(
-    f"Failures: {len(failures)}"
-)
-
 # ==========================
 # CREATE DASHBOARD
 # ==========================
@@ -826,8 +986,11 @@ average_response = (
     sum(
 
         r.get(
+
             "response_time_seconds",
+
             0
+
         )
 
         for r in results
@@ -843,6 +1006,7 @@ average_response = (
     else 0
 
 )
+
 
 
 
@@ -864,11 +1028,14 @@ html = f"""
 
 <html>
 
+
 <head>
 
 
 <title>
+
 CYN-X Benchmark Dashboard
+
 </title>
 
 
@@ -905,6 +1072,7 @@ color:#d8b4ff;
 display:grid;
 
 grid-template-columns:
+
 repeat(4,1fr);
 
 gap:20px;
@@ -944,6 +1112,7 @@ color:#c084fc;
 display:grid;
 
 grid-template-columns:
+
 repeat(2,1fr);
 
 gap:20px;
@@ -973,9 +1142,14 @@ border-radius:10px;
 
 
 
+
 <h1>
+
 💜 CYN-X Benchmark Dashboard
+
 </h1>
+
+
 
 
 
@@ -986,7 +1160,9 @@ border-radius:10px;
 <div class="card">
 
 <h3>
+
 Total Tests
+
 </h3>
 
 <div class="stat">
@@ -1000,10 +1176,13 @@ Total Tests
 
 
 
+
 <div class="card">
 
 <h3>
+
 Average Score
+
 </h3>
 
 <div class="stat">
@@ -1017,10 +1196,13 @@ Average Score
 
 
 
+
 <div class="card">
 
 <h3>
+
 Failures
+
 </h3>
 
 <div class="stat">
@@ -1034,10 +1216,13 @@ Failures
 
 
 
+
 <div class="card">
 
 <h3>
+
 Avg Response
+
 </h3>
 
 <div class="stat">
@@ -1056,28 +1241,167 @@ Avg Response
 
 
 
+"""
+
+
+
+
+
+# ==========================
+# CATEGORY LEADERBOARD CARD
+# ==========================
+
+
+html += """
+
 <div class="card">
 
-<h3>
-Benchmark Run
-</h3>
+
+<h2>
+
+🏆 Category Leaderboard
+
+</h2>
 
 
-<p>
-Generated:
-{timestamp}
-</p>
+
+<table style="
+
+width:100%;
+
+font-size:18px;
+
+border-collapse:collapse;
+
+">
 
 
-<p>
-Tests tracked:
-{len(test_ids)}
-</p>
+
+<tr>
+
+
+<th align="left">
+
+Rank
+
+</th>
+
+
+
+<th align="left">
+
+Category
+
+</th>
+
+
+
+<th align="left">
+
+Average Score
+
+</th>
+
+
+</tr>
+
+
+"""
+
+
+
+
+
+for rank, (category, score) in enumerate(
+
+    leaderboard,
+
+    start=1
+
+):
+
+
+    html += f"""
+
+<tr>
+
+
+<td>
+
+#{rank}
+
+</td>
+
+
+
+<td>
+
+{category.title()}
+
+</td>
+
+
+
+<td>
+
+{score:.2f}
+
+</td>
+
+
+
+</tr>
+
+
+"""
+
+
+
+
+
+html += """
+
+</table>
 
 
 </div>
 
 
+<br>
+
+
+
+<div class="card">
+
+
+<h3>
+
+Benchmark Run
+
+</h3>
+
+
+
+<p>
+
+Generated:
+
+{timestamp}
+
+</p>
+
+
+<p>
+
+Tests tracked:
+
+{len(test_ids)}
+
+</p>
+
+
+
+</div>
 
 
 
@@ -1087,7 +1411,10 @@ Tests tracked:
 
 <div class="grid">
 
+
 """
+
+
 
 
 
@@ -1115,7 +1442,9 @@ for image in graphs:
 
 </div>
 
+
 """
+
 
 
 
@@ -1132,7 +1461,9 @@ html += """
 
 </html>
 
+
 """
+
 
 
 
@@ -1157,16 +1488,21 @@ dashboard.write_text(
 
 
 
-
 print()
 
 print(
+
     "Dashboard created:"
+
 )
 
+
 print(
+
     dashboard
+
 )
+
 
 
 
