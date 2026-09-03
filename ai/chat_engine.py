@@ -163,18 +163,6 @@ class ChatEngine:
 
                 )
 
-                identity_context = self.trim_context(
-                    context.get(
-                        "identity",
-                        ""
-                    ),
-                    4000
-                )
-
-                print(
-                    f"[IDENTITY FOUND]\n{identity_context}"
-                )
-
 
 
                 mem_summary = self.trim_context(

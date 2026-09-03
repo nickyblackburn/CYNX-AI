@@ -1,2 +1,2 @@
 ollama create cyn-x -f Modelfile
-ollama run cyn-x                
+uvicorn interfaces.web.app:app              

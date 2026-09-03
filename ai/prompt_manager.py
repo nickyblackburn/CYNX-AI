@@ -243,6 +243,18 @@ class PromptManager:
         print("========================\n")
 
 
+        print("===== CORE CONTAINS PIPER =====")
+
+        if "Piper" in core or "piper" in core:
+            print("YES - Piper exists in core")
+        else:
+            print("NO - Piper missing")
+
+        print(core[:1000])
+
+        print("===============================")
+
+
 
         return self.trim_text(
 
