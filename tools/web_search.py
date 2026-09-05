@@ -8,7 +8,6 @@ from typing import Iterable
 from ddgs import DDGS
 from tools.base import BaseTool, ToolResult
 
-
 # ============================================================
 # Output Types
 # ============================================================
@@ -1387,7 +1386,6 @@ class WebSearchTool(BaseTool):
     # Result Formatter
     # ============================================================
 
-    @staticmethod
     @staticmethod
     def format_result(
         title: str,
