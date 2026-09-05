@@ -18,6 +18,7 @@ from tools.calculator import CalculatorTool
 from tools.tool_router import ToolRouter
 from interfaces.terminal import TerminalAdapter
 from tools.web_search import WebSearchTool
+from tools.SmokeCounterTool import smoke_counter
 
 
 def main():
@@ -51,6 +52,11 @@ def main():
 
     tool_router.register_tool(
         CalculatorTool()
+    )
+
+    # Register the smoke counter instance (do not create a second tracker)
+    tool_router.register_tool(
+        smoke_counter
     )
 
     context_manager = ContextManager(

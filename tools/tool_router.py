@@ -82,6 +82,124 @@ class ToolRouter:
 
         text_lower = text.lower()
 
+        # First: detect smoke-counter intents
+        smoke_words = [
+            "smoke",
+            "smoked",
+            "smoking",
+            "cigarette",
+            "cigarettes",
+            "cig",
+            "hit",
+            "hits",
+            "vape",
+            "vaped",
+            "weed",
+            "joint",
+            "puff",
+            "nicotine",
+            "quit",
+            "reset"
+        ]
+
+        def parse_number(text: str):
+            # crude number parsing: digits first, then simple words
+            import re
+            m = re.search(r"\b(\d+)\b", text)
+            if m:
+                try:
+                    return int(m.group(1))
+                except Exception:
+                    pass
+            words = {
+                'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+                'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+                'a': 1, 'an': 1
+            }
+            for w, n in words.items():
+                if f" {w} " in f" {text} ":
+                    return n
+            return None
+
+        def parse_smoke_request(text: str):
+            # return dict with tool and parsed args if smoking intent detected
+            import re
+            tl = text.lower()
+            if not any(w in tl for w in smoke_words):
+                return None
+
+            # reset explicit
+            if re.search(r"\breset (my )?(smoke|smoking|smoke counter|tracker)\b", tl):
+                return {"tool": "smoke_counter", "action": "reset"}
+
+            # last
+            if re.search(r"\blast (hit|smoke|session)\b", tl) or "what was my last" in tl:
+                return {"tool": "smoke_counter", "action": "last"}
+
+            # recent
+            if re.search(r"\b(recent|show my recent|recent hits|recent smoking)\b", tl):
+                # optional limit
+                limit = parse_number(tl) or 10
+                return {"tool": "smoke_counter", "action": "recent", "limit": limit}
+
+            # stats
+            if re.search(r"\b(how many|how often|how many times|show my smoking stats|how many hits|how many times did)\b", tl):
+                return {"tool": "smoke_counter", "action": "stats"}
+
+            # log patterns
+            # e.g. "log 2 cigarettes", "add one cigarette", "i just smoked", "i took 3 hits"
+            amount = parse_number(tl) or None
+            # smoke type detection
+            types = ['cigarette', 'cigarettes', 'cig', 'weed', 'vape', 'joint']
+            smoke_type = None
+            for t in types:
+                if t in tl:
+                    # normalize
+                    if t.endswith('s'):
+                        smoke_type = t[:-1]
+                    else:
+                        smoke_type = t
+                    break
+
+            # 'hit' or 'hits' indicates number of events
+            if 'hit' in tl and amount is None:
+                amount = 1
+            if amount is None and re.search(r"\b(i just smoked|i just had|i just took|i smoked|log|add|i just)\b", tl):
+                amount = 1
+
+            if smoke_type is None and 'hit' in tl:
+                smoke_type = 'unknown'
+
+            if smoke_type is None:
+                # default to unknown when logging
+                # but do not assume logging intent for ambiguous statements that mention smoking
+                # If verbs indicate logging, proceed
+                if re.search(r"\b(i just smoked|i just had|log|add|i smoked|i took)\b", tl):
+                    smoke_type = 'unknown'
+
+            if smoke_type is not None and amount is not None:
+                return {
+                    "tool": "smoke_counter",
+                    "action": "log",
+                    "smoke_type": smoke_type,
+                    "amount": amount
+                }
+
+            # fallback: if user explicitly asks about smoking counts
+            if re.search(r"\b(how many|show my|how often|stats|count|total)\b", tl):
+                return {"tool": "smoke_counter", "action": "stats"}
+
+            # If still ambiguous but smoking words present and a verb indicating recent action, log unknown
+            if re.search(r"\b(i just|i just smoked|i smoked|i took)\b", tl):
+                return {"tool": "smoke_counter", "action": "log", "smoke_type": "unknown", "amount": 1}
+
+            return None
+
+        smoke_req = parse_smoke_request(text_lower)
+        if smoke_req:
+            return smoke_req
+
+        # Fallback: search detection
         search_words = [
             "search",
             "find",
