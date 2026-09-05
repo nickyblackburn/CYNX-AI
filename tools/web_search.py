@@ -1133,6 +1133,9 @@ Answer the user's question using the search results.
 Rules:
 - Extract useful information.
 - Ignore unrelated results.
+- Keep the answer focused on the user's actual request.
+- Do not automatically redirect a direct question into an unrelated topic.
+- Do not invent a creative scenario unless the user asked for one.
 - Do not mention searching unless needed.
 
 """,
@@ -1287,7 +1290,7 @@ class WebSearchTool(BaseTool):
 
                             "score": score,
 
-                            "text": format_result(
+                            "text": self.format_result(
 
                                 title,
 
@@ -1384,6 +1387,8 @@ class WebSearchTool(BaseTool):
     # Result Formatter
     # ============================================================
 
+    @staticmethod
+    @staticmethod
     def format_result(
         title: str,
         body: str,
