@@ -114,10 +114,33 @@ class ChatEngine:
         )
 
 
-    def _ollama_tools(self):
+    def _ollama_tools(self, user_text: str = ""):
         if not self.tool_router:
             return None
-        return self.tool_router.as_ollama_tools()
+
+        tools = self.tool_router.as_ollama_tools()
+
+        # Python decides whether web_search is allowed for this turn.
+        # The LLM should NOT autonomously research casual conversation.
+        detected = None
+        if hasattr(self.tool_router, "detect"):
+            try:
+                detected = self.tool_router.detect(user_text)
+            except Exception:
+                detected = None
+
+        web_search_allowed = (
+            detected is not None
+            and detected.get("tool") == "web_search"
+        )
+
+        if not web_search_allowed:
+            tools = [
+                tool for tool in tools
+                if tool.get("function", {}).get("name") != "web_search"
+            ]
+
+        return tools
 
 
     def handle_user_message(        self,
@@ -344,7 +367,7 @@ class ChatEngine:
         # -----------------------------
         # 3. Tool-aware chat loop
         # -----------------------------
-        tool_specs = self._ollama_tools()
+        tool_specs = self._ollama_tools(text)
         if tool_specs:
             terminal.available_tools([t.get('function', {}).get('name') for t in tool_specs])
 
@@ -622,6 +645,9 @@ class ChatEngine:
         )
         terminal.model("FINAL MODEL RESPONSE")
         terminal.dim(assistant_text)
+
+        print("[CHAT ENGINE MODULE]", __file__)
+        print("[CHAT ENGINE METHODS]", [x for x in dir(ChatEngine) if "message" in x.lower()])
         return assistant_text
 
 
