@@ -14,6 +14,7 @@ expand with async handling and retries later.
 import json
 import logging
 import os
+import time
 from typing import Optional
 
 from ai.memory_system import MemoryManager, MemoryExtractor
@@ -114,7 +115,8 @@ class ChatEngine:
         user_id: str,
         text: str,
         mode: str = "normal",
-        personality: str = "normal"
+        personality: str = "normal",
+        request_id: Optional[str] = None
     ) -> str:
 
 
@@ -332,13 +334,22 @@ class ChatEngine:
 
 
 
-
         # -----------------------------
         # 3. Tool-aware chat loop
         # -----------------------------
         tool_specs = self._ollama_tools()
         if tool_specs:
             print("[AVAILABLE TOOLS]", [t.get('function', {}).get('name') for t in tool_specs])
+
+        smoke_intent = None
+        if self.tool_router and hasattr(self.tool_router, 'detect'):
+            smoke_intent = self.tool_router.detect(text)
+        if smoke_intent and smoke_intent.get('tool') == 'smoke_counter':
+            read_only = bool(self.tool_router and hasattr(self.tool_router, 'is_read_only_smoke_query') and self.tool_router.is_read_only_smoke_query(text))
+            print("[SMOKE INTENT]", "read_only" if read_only else "log")
+            print("[SMOKE ACTION]", smoke_intent.get('action'))
+            print("[SMOKE TYPE]", smoke_intent.get('smoke_type', 'n/a'))
+            print("[SMOKE SCOPE]", smoke_intent.get('scope', 'all'))
 
         messages = [
             {"role": "system", "content": prompt},
@@ -347,6 +358,9 @@ class ChatEngine:
 
         print("[USER]", text)
 
+        if request_id:
+            print(f"[OLLAMA CALL] id={request_id} phase=first")
+
         if os.environ.get("CYN_DEBUG_PROMPT") == "1":
             print("===== ACTUAL SYSTEM PROMPT =====")
             print(messages[0]["content"])
@@ -354,10 +368,11 @@ class ChatEngine:
 
         # Call Ollama with a real chat tool schema. If the model issues a tool call,
         # execute it in Python and then send the tool result back to Ollama.
+        start = time.perf_counter()
         response = self.ollama.chat(messages=messages, tools=tool_specs or None)
+        print(f"[FIRST OLLAMA TIME] {time.perf_counter() - start:.2f}s")
         message = response.get("message", {})
         tool_calls = message.get("tool_calls") or []
-
         if tool_calls:
             print("[MODEL RESPONSE]")
             print(json.dumps(message, ensure_ascii=False, indent=2)[:2000])
@@ -377,7 +392,10 @@ class ChatEngine:
                     except Exception:
                         arguments = {}
 
-                print("[TOOL CALL]")
+                if request_id:
+                    print(f"[TOOL CALL] id={request_id} tool={name}")
+                else:
+                    print("[TOOL CALL]")
                 print("name=", name)
                 print("[TOOL ARGUMENTS]")
                 print(json.dumps(arguments, ensure_ascii=False, indent=2))
@@ -385,7 +403,6 @@ class ChatEngine:
                 # Additional smoke-query tracing and augmentation to ensure the tool call contains
                 # explicit smoke_type when the user requested a type (e.g., 'vape', 'pen').
                 if name == 'smoke_counter' and isinstance(arguments, dict):
-                    # 1) If model omitted smoke_type, try to infer from the original user text using the router.
                     parsed_from_text = None
                     try:
                         if self.tool_router and hasattr(self.tool_router, 'detect'):
@@ -397,7 +414,16 @@ class ChatEngine:
                     parsed_smoke_type = arguments.get('smoke_type') or (parsed_from_text or {}).get('smoke_type')
                     parsed_scope = arguments.get('scope') or (parsed_from_text or {}).get('scope')
 
-                    # Print smoke query debug info (user requested)
+                    if self.tool_router and hasattr(self.tool_router, 'is_read_only_smoke_query') and self.tool_router.is_read_only_smoke_query(text):
+                        if str(arguments.get('action', '')).lower() == 'log':
+                            arguments['action'] = 'stats'
+                            if 'today' in text.lower() and not arguments.get('scope'):
+                                arguments['scope'] = 'today'
+                            print('[SMOKE INTENT] read_only')
+                            print('[SMOKE ACTION] stats')
+                            print('[SMOKE TYPE]', arguments.get('smoke_type', parsed_smoke_type or 'n/a'))
+                            print('[SMOKE SCOPE]', arguments.get('scope') or parsed_scope or ('today' if 'today' in text.lower() else 'all'))
+                    
                     print('[SMOKE QUERY]')
                     print(text)
                     print('[PARSED ACTION]')
@@ -407,8 +433,6 @@ class ChatEngine:
                     print('[PARSED DATE/SCOPE]')
                     print(parsed_scope)
 
-                    # If the model did not include a smoke_type but the router detected one from text,
-                    # augment the arguments before executing the tool so the authoritative tool gets the right filter.
                     if not arguments.get('smoke_type') and parsed_smoke_type:
                         try:
                             arguments['smoke_type'] = parsed_smoke_type
@@ -416,7 +440,6 @@ class ChatEngine:
                         except Exception:
                             pass
 
-                    # Normalize smoke_type if present
                     st = arguments.get('smoke_type')
                     if st and hasattr(self.tool_router, 'normalize_smoke_type'):
                         try:
@@ -424,7 +447,6 @@ class ChatEngine:
                         except Exception:
                             pass
 
-                    # coerce numeric strings to numbers for amount
                     amt = arguments.get('amount')
                     if isinstance(amt, str):
                         try:
@@ -438,7 +460,10 @@ class ChatEngine:
                             except Exception:
                                 pass
 
-                print("[EXECUTING TOOL]")
+                if request_id:
+                    print(f"[EXECUTING TOOL] id={request_id} tool={name}")
+                else:
+                    print("[EXECUTING TOOL]")
 
                 if not self.tool_router or name not in self.tool_router.tools:
                     tool_result_payload = {"success": False, "error": f"Tool '{name}' not found."}
@@ -453,11 +478,8 @@ class ChatEngine:
                     tool_result_payload.setdefault("output", tool_result.output)
 
                     if name == "smoke_counter":
-                        # Preserve all keys returned by the smoke_counter tool, but guarantee
-                        # canonical fields exist for both filtered and unfiltered queries.
                         raw_result = {} if not isinstance(tool_result_payload, dict) else dict(tool_result_payload)
                         merged = dict(raw_result)
-                        # Canonical fallbacks
                         merged.setdefault("success", raw_result.get("success", tool_result.success))
                         merged.setdefault("total_units", raw_result.get("total_units"))
                         merged.setdefault("total_cigarettes", raw_result.get("total_cigarettes"))
@@ -465,20 +487,19 @@ class ChatEngine:
                         merged.setdefault("today_sessions", raw_result.get("today_sessions"))
                         merged.setdefault("today_units", raw_result.get("today_units"))
                         merged.setdefault("last_session", raw_result.get("last_session"))
-                        # Filtered-query canonical names
                         merged.setdefault("units", raw_result.get("units"))
                         merged.setdefault("sessions", raw_result.get("sessions"))
                         merged.setdefault("smoke_type", raw_result.get("smoke_type"))
                         merged.setdefault("scope", raw_result.get("scope", "all"))
-
+                        merged["authoritative_source"] = "current_tool_result"
                         tool_result_payload = merged
 
-                    print("[TOOL RESULT]")
+                    if request_id:
+                        print(f"[TOOL RESULT] id={request_id}")
+                    else:
+                        print("[TOOL RESULT]")
                     print(json.dumps(tool_result_payload, ensure_ascii=False, indent=2))
 
-                # For generic (unfiltered) stats queries, provide a simple display string using the
-                # aggregate totals and label them as "smoking units" so the model does not infer a
-                # specific type (vape/pen/cigarette) from the aggregate.
                 display_override = None
                 if name == 'smoke_counter':
                     user_specified_type = None
@@ -488,14 +509,12 @@ class ChatEngine:
                     except Exception:
                         user_specified_type = arguments.get('smoke_type') or tool_result_payload.get('smoke_type')
 
-                    # If no explicit smoke_type was specified by the user, create a smoking-units display
                     if not user_specified_type:
                         scope_val = arguments.get('scope') or tool_result_payload.get('scope') or 'all'
                         if str(scope_val).lower() == 'today':
                             display_units = tool_result_payload.get('today_units') if tool_result_payload.get('today_units') is not None else tool_result_payload.get('units') or tool_result_payload.get('total_units')
                         else:
                             display_units = tool_result_payload.get('total_units') if tool_result_payload.get('total_units') is not None else tool_result_payload.get('units') or tool_result_payload.get('today_units')
-                        # Fallback to zero if missing
                         try:
                             display_units = 0 if display_units is None else display_units
                         except Exception:
@@ -506,7 +525,7 @@ class ChatEngine:
                 tool_message_content = {
                     "tool_name": name,
                     "result": tool_result_payload,
-                    "instruction": "Use total_units exactly as returned by the smoke_counter tool. Do not recalculate it. Do not substitute session count for total_units."
+                    "instruction": "Use the current tool result as the authoritative source for this request. Prefer it over memory and over the current user message. For smoke_counter, use its result exactly; do not claim you lack the information if the tool already returned it."
                 }
                 tool_message = {
                     "role": "tool",
@@ -516,16 +535,16 @@ class ChatEngine:
                 }
                 messages.append(tool_message)
 
+            if request_id:
+                print(f"[OLLAMA CALL] id={request_id} phase=final")
             print("[RETURNING TOOL RESULT TO MODEL]")
+            final_start = time.perf_counter()
             final_response = self.ollama.chat(messages=messages, tools=None)
+            print(f"[FINAL OLLAMA TIME] {time.perf_counter() - final_start:.2f}s")
             assistant_text = (final_response.get("message") or {}).get("content") or str(final_response)
 
             print("[FINAL MESSAGES]")
             print(messages)
-            print("[RETURNING TOOL RESULT TO MODEL]")
-
-            final_response = self.ollama.chat(messages=messages, tools=None)
-
             print("[FINAL MODEL RESPONSE]")
             print(assistant_text)
             return assistant_text

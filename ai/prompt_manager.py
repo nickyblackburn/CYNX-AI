@@ -400,14 +400,10 @@ class PromptManager:
 
 
         if core:
-          
-
             parts.append(
                 "[CORE IDENTITY - ALWAYS FOLLOW]\n"
                 + core
-            )   
-
-            parts.append(core)
+            )
 
 
 
@@ -701,86 +697,20 @@ class PromptManager:
         )
 
 
+        def section_label(name, text):
+            return f"[PROMPT SECTION] {name}: {len(text or '')} chars"
 
 
-        # Debug
-
-        print(
-            "\n===== CYN PROMPT DEBUG ====="
-        )
-
-
-        print(
-            "Characters:",
-            len(prompt)
-        )
-
-
-        print(
-            "Words:",
-            len(prompt.split())
-        )
-
-
-        print(
-            "Estimated tokens:",
-            int(len(prompt.split()) * 1.3)
-        )
-
-
-        print(
-            "Active modes:",
-            active_modes
-        )
-
-
-        print(
-            "Active options:",
-            active_options
-        )
-
-
-        print(
-            "CYN Studio Loaded:",
-            bool(cyn_studio)
-        )
-
-
-        print(
-            "Safety Loaded:",
-            bool(safety)
-        )
-
-
-        print(
-            "Conversation Loaded:",
-            bool(conversation)
-        )
-
-
-        print(
-            "Examples Loaded:",
-            bool(examples)
-        )
-
-
-        print(
-            "Projects Loaded:",
-            bool(projects)
-        )
-
-
-        print(
-            "Reasoning Loaded:",
-            bool(reasoning)
-        )
-
-
-        print(
-            "============================\n"
-        )
-
-
+        print(section_label("core", core))
+        print(section_label("studio", cyn_studio))
+        print(section_label("conversation", conversation))
+        print(section_label("examples", examples))
+        print(section_label("reasoning", reasoning))
+        print(section_label("projects", projects))
+        print(section_label("safety", safety))
+        print(section_label("memory", memory_summary))
+        print(section_label("additional_context", additional_context))
+        print(f"[FINAL SYSTEM PROMPT] {len(prompt)} chars / {len(prompt.split())} words")
 
 
         return prompt

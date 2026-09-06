@@ -157,34 +157,39 @@ def dashboard(request:Request):
 
 
 
+chat_request_count = 0
+
+
 @app.post("/chat")
 async def chat(data:dict):
 
+    global chat_request_count
+
+    chat_request_count += 1
+
+    request_id = str(chat_request_count)
 
     start=time.perf_counter()
-
-
 
     message=data.get(
         "message",
         ""
     )
 
-
+    print(f"[CHAT REQUEST] id={request_id} count={chat_request_count} message_preview={message[:120]}")
 
     response = chat_engine.handle_user_message(
         user_id="web_user",
-        text=message
+        text=message,
+        request_id=request_id
     )
-
-
 
     elapsed = round(
         time.perf_counter()-start,
         3
     )
 
-
+    print(f"[CHAT COMPLETE] id={request_id} elapsed={elapsed}s")
 
     return {
 
