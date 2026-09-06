@@ -15,6 +15,8 @@ from rich.logging import RichHandler
 # CYN-X Benchmark Imports
 # =====================================
 
+from ai.context_manager import ContextManager
+from ai.knowledge.store import KnowledgeStore
 from benchmark.analyzer import analyze_results
 from benchmark.cli import get_benchmark_command
 from benchmark.formatter import format_benchmark_result
@@ -1753,6 +1755,15 @@ def create_cynx_engine():
 
     )
 
+    knowledge_store = KnowledgeStore(
+        conn
+    )
+
+    context_manager = ContextManager(
+        memory_store,
+        knowledge_store,
+    )
+
     # -----------------------------
     # Ollama Model
     # -----------------------------
@@ -1822,6 +1833,8 @@ def create_cynx_engine():
         memory_manager=memory_manager,
 
         memory_extractor=memory_extractor,
+
+        context_manager=context_manager,
 
         logger_obj=logger
 
