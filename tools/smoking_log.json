@@ -1,6 +1,6 @@
 {
-    "total_units": 13.0,
-    "total_cigarettes": 4.0,
+    "total_units": 14.5,
+    "total_cigarettes": 7.0,
     "sessions": [
         {
             "time": "2026-09-05 20:09:41",
@@ -9,7 +9,7 @@
         },
         {
             "time": "2026-09-05 20:14:11",
-            "type": "pen",
+            "type": "vape",
             "units": 1.0
         },
         {
@@ -50,6 +50,12 @@
             "type": "cigarette",
             "cigarettes": 1.0,
             "units": 0.5
+        },
+        {
+            "time": "2026-09-05 20:49:35",
+            "type": "cigarette",
+            "cigarettes": 3.0,
+            "units": 1.5
         }
     ]
 }
