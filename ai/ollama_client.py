@@ -174,8 +174,43 @@ class OllamaClient:
 
         print("[OLLAMA CHAT REQUEST]")
         print(json.dumps({"model": self.model, "messages": messages, "tools": tools}, ensure_ascii=False, indent=2)[:2000])
+        start = __import__('time').perf_counter()
         response = requests.post(url, json=payload, stream=stream, timeout=self.timeout)
+        elapsed = __import__('time').perf_counter() - start
         print("[OLLAMA CHAT STATUS]", response.status_code)
+        if response.status_code >= 400:
+            # Log helpful debug info before raising
+            try:
+                body = response.text
+            except Exception:
+                body = '<unable to read response body>'
+            print("[OLLAMA ERROR STATUS]", response.status_code)
+            print("[OLLAMA ERROR BODY]")
+            try:
+                # Print a reasonable amount of the body
+                print(body[:8000])
+            except Exception:
+                print('<failed to print body>')
+            # Log model name, number of messages, system prompt char count, number of tools, request elapsed time
+            try:
+                num_messages = len(messages) if messages else 0
+            except Exception:
+                num_messages = 'unknown'
+            try:
+                sys_prompt_len = 0
+                if messages:
+                    for m in messages:
+                        if m.get('role') == 'system' and isinstance(m.get('content'), str):
+                            sys_prompt_len = len(m.get('content'))
+                            break
+            except Exception:
+                sys_prompt_len = 'unknown'
+            try:
+                num_tools = len(tools) if tools else 0
+            except Exception:
+                num_tools = 'unknown'
+            print(f"[OLLAMA DIAG] model={self.model} messages={num_messages} system_prompt_chars={sys_prompt_len} tools={num_tools} elapsed_s={elapsed:.2f}")
+            # Now raise to keep existing behavior
         response.raise_for_status()
         return response.json()
 
