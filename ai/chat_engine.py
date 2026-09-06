@@ -538,13 +538,47 @@ class ChatEngine:
             if request_id:
                 print(f"[OLLAMA CALL] id={request_id} phase=final")
             print("[RETURNING TOOL RESULT TO MODEL]")
+
+            # Optimize final Ollama call for deterministic tools (small prompt)
+            # Deterministic tools should not require re-sending the full system prompt.
+            deterministic_tools = {"smoke_counter"}
+            tool_messages = [m for m in messages if m.get("role") == "tool"]
+            tool_names = [m.get("name") for m in tool_messages]
+            use_minimal = False
+            if tool_messages and all((n in deterministic_tools) for n in tool_names):
+                use_minimal = True
+
             final_start = time.perf_counter()
-            final_response = self.ollama.chat(messages=messages, tools=None)
+            if use_minimal:
+                # Build a minimal response prompt containing: brief identity/style, original user message,
+                # and the tool result messages. Instruct the model to answer using the tool result.
+                small_identity = (
+                    "CYN-X identity: You are Cyn, a playful, curious AI companion. "
+                    "Answer in Cyn's voice and style. Use the provided tool result as the authoritative source for this reply. "
+                    "Do not call any tools, do not request external information, and do not consult memory for this response."
+                )
+                final_messages = [
+                    {"role": "system", "content": small_identity},
+                    {"role": "user", "content": text},
+                ]
+                # include the tool messages (they contain result + instruction)
+                final_messages.extend(tool_messages)
+
+                if request_id:
+                    print(f"[OLLAMA CALL] id={request_id} phase=final (minimal prompt)")
+
+                final_response = self.ollama.chat(messages=final_messages, tools=None)
+            else:
+                final_response = self.ollama.chat(messages=messages, tools=None)
+
             print(f"[FINAL OLLAMA TIME] {time.perf_counter() - final_start:.2f}s")
             assistant_text = (final_response.get("message") or {}).get("content") or str(final_response)
 
             print("[FINAL MESSAGES]")
-            print(messages)
+            if use_minimal:
+                print(final_messages)
+            else:
+                print(messages)
             print("[FINAL MODEL RESPONSE]")
             print(assistant_text)
             return assistant_text
