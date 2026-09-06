@@ -37,6 +37,66 @@ class ToolRouter:
         ]
 
 
+    def as_ollama_tools(self):
+        """Convert the registered tools into Ollama function-calling schemas."""
+        tools = []
+        for tool in self.tools.values():
+            if getattr(tool, "name", None) == "smoke_counter":
+                schema = {
+                    "type": "function",
+                    "function": {
+                        "name": "smoke_counter",
+                        "description": "Track smoking sessions and retrieve smoking statistics.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "action": {
+                                    "type": "string",
+                                    "enum": ["log", "stats", "recent", "last", "reset"]
+                                },
+                                "smoke_type": {
+                                    "type": "string",
+                                    "enum": ["cigarette", "weed", "vape", "joint", "bong", "unknown"]
+                                },
+                                "amount": {"type": "number"},
+                                "limit": {"type": "integer"}
+                            },
+                            "required": []
+                        }
+                    }
+                }
+            elif getattr(tool, "name", None) == "web_search":
+                schema = {
+                    "type": "function",
+                    "function": {
+                        "name": "web_search",
+                        "description": "Search the internet for current information.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "query": {"type": "string"}
+                            },
+                            "required": ["query"]
+                        }
+                    }
+                }
+            else:
+                schema = {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": {
+                            "type": "object",
+                            "properties": {},
+                            "required": []
+                        }
+                    }
+                }
+            tools.append(schema)
+        return tools
+
+
     def call_tool(
         self,
         name: str,
@@ -92,6 +152,9 @@ class ToolRouter:
             "cig",
             "hit",
             "hits",
+            "rip",
+            "bong",
+            "bongs",
             "vape",
             "vaped",
             "weed",
@@ -150,7 +213,7 @@ class ToolRouter:
             # e.g. "log 2 cigarettes", "add one cigarette", "i just smoked", "i took 3 hits"
             amount = parse_number(tl) or None
             # smoke type detection
-            types = ['cigarette', 'cigarettes', 'cig', 'weed', 'vape', 'joint']
+            types = ['cigarette', 'cigarettes', 'cig', 'weed', 'vape', 'joint', 'bong', 'bongs']
             smoke_type = None
             for t in types:
                 if t in tl:
@@ -161,14 +224,14 @@ class ToolRouter:
                         smoke_type = t
                     break
 
-            # 'hit' or 'hits' indicates number of events
-            if 'hit' in tl and amount is None:
-                amount = 1
-            if amount is None and re.search(r"\b(i just smoked|i just had|i just took|i smoked|log|add|i just)\b", tl):
+            # treat bong hit / bong rip / hit / rip as one default session when no explicit amount exists
+            if amount is None and (
+                'hit' in tl or 'rip' in tl or re.search(r"\b(i just smoked|i just had|i just took|i smoked|log|add|i just)\b", tl)
+            ):
                 amount = 1
 
-            if smoke_type is None and 'hit' in tl:
-                smoke_type = 'unknown'
+            if smoke_type is None and ('bong' in tl or 'hit' in tl or 'rip' in tl):
+                smoke_type = 'bong' if 'bong' in tl else 'unknown'
 
             if smoke_type is None:
                 # default to unknown when logging

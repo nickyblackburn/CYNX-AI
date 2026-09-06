@@ -5,7 +5,7 @@ Provides a small, swappable interface for generating text from the local Ollama 
 
 import requests
 import json
-from typing import Dict, Any, Generator
+from typing import Dict, Any, Generator, List, Optional
 
 
 class OllamaClient:
@@ -153,6 +153,31 @@ class OllamaClient:
 
         }
 
+
+    def chat(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        stream: bool = False,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """Call Ollama's chat endpoint with optional tools."""
+        url = f"{self.base_url}/api/chat"
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "stream": stream,
+            **kwargs
+        }
+        if tools is not None:
+            payload["tools"] = tools
+
+        print("[OLLAMA CHAT REQUEST]")
+        print(json.dumps({"model": self.model, "messages": messages, "tools": tools}, ensure_ascii=False, indent=2)[:2000])
+        response = requests.post(url, json=payload, stream=stream, timeout=self.timeout)
+        print("[OLLAMA CHAT STATUS]", response.status_code)
+        response.raise_for_status()
+        return response.json()
 
 
     def generate_stream(

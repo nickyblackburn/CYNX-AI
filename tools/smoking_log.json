@@ -1,5 +1,16 @@
 {
-    "total_units": 0,
+    "total_units": 5.0,
     "total_cigarettes": 0,
-    "sessions": []
+    "sessions": [
+        {
+            "time": "2026-09-05 20:09:41",
+            "type": "bong",
+            "units": 1.0
+        },
+        {
+            "time": "2026-09-05 20:14:11",
+            "type": "unknown",
+            "units": 1.0
+        }
+    ]
 }

@@ -11,6 +11,7 @@ Keep this class thin for now;
 expand with async handling and retries later.
 """
 
+import json
 import logging
 from typing import Optional
 
@@ -94,19 +95,21 @@ class ChatEngine:
         return (
 
             text[:limit]
-
+ 
             +
-
+ 
             "\n\n[Context shortened]"
-
+ 
         )
 
 
+    def _ollama_tools(self):
+        if not self.tool_router:
+            return None
+        return self.tool_router.as_ollama_tools()
 
 
-
-    def handle_user_message(
-        self,
+    def handle_user_message(        self,
         user_id: str,
         text: str,
         mode: str = "normal",
@@ -329,205 +332,89 @@ class ChatEngine:
 
 
         # -----------------------------
-        # 3. Tool detection
+        # 3. Tool-aware chat loop
         # -----------------------------
-
-
-        tool_result = None
-
-        tool_request = None
-
-
-
-        if self.tool_router:
-
-
-            try:
-
-
-                tool_request = self.tool_router.detect(
-
-                    text
-
-                )
-
-
-
-                if tool_request:
-
-
-                    self.logger.info(
-
-                        f"[TOOL] Requested: {tool_request}"
-
-                    )
-
-
-
-                    tool_result = self.tool_router.call_tool(
-
-                        tool_request["tool"],
-
-                        tool_request
-
-                    )
-
-
-
-                    print(
-                        "!!!!! TOOL RETURNED !!!!!"
-                    )
-
-
-                    print(
-
-                        repr(tool_result)
-
-                    )
-
-
-
-            except Exception as e:
-
-
-                self.logger.error(
-
-                    f"[TOOL ERROR] {e}"
-
-                )
-
-
-
-
-
-        # -----------------------------
-        # 4. Add tool results
-        # -----------------------------
-
-
-        full_prompt = prompt
-
-
-
-        if tool_result:
-
-
-            if hasattr(
-
-                tool_result,
-
-                "output"
-
-            ):
-
-
-                tool_text = tool_result.output
-
-
-            else:
-
-
-                tool_text = str(
-
-                    tool_result
-
-                )
-
-
-
-            tool_text = self.trim_context(
-
-                tool_text,
-
-                MAX_TOOL_CONTEXT
-
-            )
-
-
-
-            full_prompt += (
-
-                "\n\n"
-
-                "[TOOL RESULTS]\n"
-
-                +
-
-                tool_text
-
-                +
-
-                "\n\n"
-
-                "Respond as Cyn.\n"
-
-                "Use the information provided.\n"
-
-                "Present lists clearly when requested.\n"
-
-                "Do not mention internal tools.\n"
-
-                "Do not explain the search process.\n"
-
-                "Keep Cyn's personality.\n"
-
-            )
-
-
-
-
-
-        full_prompt += "\n\nCyn:"
-
-
-
-        self.logger.debug(
-
-            "====== CYN-X PROMPT ======"
-
-        )
-
-
-        self.logger.debug(
-
-            full_prompt[:500]
-
-        )
-
-
-        self.logger.debug(
-
-            "=========================="
-
-        )
-
-
-
-
-
-        # -----------------------------
-        # 5. Ollama generation
-        # -----------------------------
-
-
-        resp = self.ollama.generate(
-
-            full_prompt
-
-        )
-
-
-
+        tool_specs = self._ollama_tools()
+        if tool_specs:
+            print("[AVAILABLE TOOLS]", [t.get('function', {}).get('name') for t in tool_specs])
+
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": text}
+        ]
+
+        print("[USER]", text)
+
+        # Call Ollama with a real chat tool schema. If the model issues a tool call,
+        # execute it in Python and then send the tool result back to Ollama.
+        response = self.ollama.chat(messages=messages, tools=tool_specs or None)
+        message = response.get("message", {})
+        tool_calls = message.get("tool_calls") or []
+
+        if tool_calls:
+            print("[MODEL RESPONSE]")
+            print(json.dumps(message, ensure_ascii=False, indent=2)[:2000])
+
+            messages.append({
+                "role": "assistant",
+                "content": message.get("content", ""),
+                "tool_calls": tool_calls,
+            })
+
+            for tool_call in tool_calls:
+                name = (tool_call.get("function") or {}).get("name") or tool_call.get("name")
+                arguments = (tool_call.get("function") or {}).get("arguments") or tool_call.get("arguments") or {}
+                if isinstance(arguments, str):
+                    try:
+                        arguments = json.loads(arguments)
+                    except Exception:
+                        arguments = {}
+
+                print("[TOOL CALL]")
+                print("name=", name)
+                print("[TOOL ARGUMENTS]")
+                print(json.dumps(arguments, ensure_ascii=False, indent=2))
+                print("[EXECUTING TOOL]")
+
+                if not self.tool_router or name not in self.tool_router.tools:
+                    tool_result_payload = {"success": False, "error": f"Tool '{name}' not found."}
+                else:
+                    tool_result = self.tool_router.call_tool(name, arguments)
+                    tool_result_payload = tool_result.metadata if tool_result.metadata is not None else {
+                        "success": tool_result.success,
+                        "output": tool_result.output,
+                    }
+                    tool_result_payload = dict(tool_result_payload)
+                    tool_result_payload.setdefault("success", tool_result.success)
+                    tool_result_payload.setdefault("output", tool_result.output)
+                    print("[TOOL RESULT]")
+                    print(json.dumps(tool_result_payload, ensure_ascii=False, indent=2))
+
+                tool_message = {
+                    "role": "tool",
+                    "tool_call_id": tool_call.get("id", "call_1"),
+                    "name": name,
+                    "content": json.dumps(tool_result_payload, ensure_ascii=False)
+                }
+                messages.append(tool_message)
+
+            print("[RETURNING TOOL RESULT TO MODEL]")
+            final_response = self.ollama.chat(messages=messages, tools=None)
+            assistant_text = (final_response.get("message") or {}).get("content") or str(final_response)
+            print("[FINAL MODEL RESPONSE]")
+            print(assistant_text)
+            return assistant_text
+
+        # No tool call was requested by the model; fall back to the original generation flow.
         assistant_text = (
-
-            resp.get("response")
-
-            or resp.get("text")
-
-            or str(resp)
-
+            (response.get("message") or {}).get("content")
+            or response.get("response")
+            or response.get("text")
+            or str(response)
         )
-
+        print("[FINAL MODEL RESPONSE]")
+        print(assistant_text)
+        return assistant_text
 
 
 
