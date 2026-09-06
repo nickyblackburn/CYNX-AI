@@ -7,6 +7,9 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from rich.console import Console
+from rich.logging import RichHandler
+
 
 # =====================================
 # CYN-X Benchmark Imports
@@ -148,6 +151,70 @@ def get_result_section(category):
 # Logging System
 # =====================================
 
+console = Console(
+    highlight=False,
+    soft_wrap=True,
+    stderr=False
+)
+
+
+def _colorized_message(message, style):
+    return f"[{style}]{message}[/]"
+
+
+def bench_info(message):
+    console.print(
+        _colorized_message(
+            message,
+            "cyan"
+        )
+    )
+
+
+def bench_warning(message):
+    console.print(
+        _colorized_message(
+            message,
+            "yellow"
+        )
+    )
+
+
+def bench_error(message):
+    console.print(
+        _colorized_message(
+            message,
+            "bold red"
+        )
+    )
+
+
+def bench_pass(message):
+    console.print(
+        f"[bold green]PASS[/bold green] {message}"
+    )
+
+
+def bench_fail(message):
+    console.print(
+        f"[bold red]FAIL[/bold red] {message}"
+    )
+
+
+def bench_header(message):
+    console.rule(
+        f"[bold cyan]{message}[/bold cyan]"
+    )
+
+
+def bench_suite(name):
+    return f"[bold blue]{name}[/bold blue]"
+
+
+def bench_test_id(test_id):
+    return f"[bold magenta]{test_id}[/bold magenta]"
+
+
 def setup_logging():
 
     logger = logging.getLogger(
@@ -157,6 +224,8 @@ def setup_logging():
     logger.setLevel(
         logging.INFO
     )
+
+    logger.propagate = False
 
     formatter = logging.Formatter(
 
@@ -194,12 +263,33 @@ def setup_logging():
         formatter
     )
 
+
+    console_handler = RichHandler(
+        console=console,
+        show_time=True,
+        show_path=False,
+        markup=True,
+        rich_tracebacks=True,
+        omit_repeated_times=True
+    )
+
+    console_handler.setFormatter(
+        logging.Formatter(
+            "%(message)s"
+        )
+    )
+
+
     logger.addHandler(
         log_file
     )
 
     logger.addHandler(
         error_file
+    )
+
+    logger.addHandler(
+        console_handler
     )
 
     return logger
@@ -218,6 +308,7 @@ RUN_TIMESTAMP = datetime.utcnow().strftime(
 
 )
 
+
 RUN_FILE = RAW_RESULTS / (
 
     f"cynx_benchmark_{RUN_TIMESTAMP}.json"
@@ -233,15 +324,15 @@ def load_questions(suites=None):
 
     tests = []
 
-    print()
+    console.print()
 
-    print(
+    bench_info(
         "Loading CYN-X benchmark suites..."
     )
 
     if not SUITES.exists():
 
-        print(
+        bench_warning(
             "No benchmark suites found."
         )
 
@@ -285,9 +376,8 @@ def load_questions(suites=None):
 
             if not file.exists():
 
-                print(
-                    f" WARNING: Suite not found: "
-                    f"{file.name}"
+                bench_warning(
+                    f"Suite not found: {file.name}"
                 )
 
                 benchmark_logger.warning(
@@ -315,7 +405,7 @@ def load_questions(suites=None):
 
     if not files:
 
-        print(
+        bench_warning(
             "No benchmark suite files selected."
         )
 
@@ -327,8 +417,8 @@ def load_questions(suites=None):
 
     for file in files:
 
-        print(
-            f" Loading: {file.name}"
+        bench_info(
+            f"Loading: {bench_suite(file.name)}"
         )
 
         try:
@@ -356,8 +446,8 @@ def load_questions(suites=None):
 
             )
 
-            print(
-                f" ERROR loading {file.name}"
+            bench_error(
+                f"Error loading {file.name}"
             )
 
             continue
@@ -367,11 +457,8 @@ def load_questions(suites=None):
             list
         ):
 
-            print(
-
-                f" WARNING: {file.name} "
-                f"does not contain a JSON list."
-
+            bench_warning(
+                f"{file.name} does not contain a JSON list."
             )
 
             continue
@@ -422,31 +509,29 @@ def load_questions(suites=None):
                 test
             )
 
-    print()
+    console.print()
 
-    print(
+    bench_info(
         f"Loaded {len(tests)} tests"
     )
 
     if suites:
 
-        print(
-            "Selected suites:"
-        )
+        bench_info("Selected suites:")
 
         for suite_name in suites:
 
-            print(
-                f"  - {suite_name}"
+            bench_info(
+                f"  - {bench_suite(suite_name)}"
             )
 
     else:
 
-        print(
+        bench_info(
             "Selected suites: ALL"
         )
 
-    print()
+    console.print()
 
     return tests
 
@@ -605,9 +690,13 @@ class BenchmarkStorage:
             while True:
 
                 candidate = (
+
                     output
+
                     /
+
                     f"{safe_name}_{i}.json"
+
                 )
 
                 if not candidate.exists():
@@ -643,8 +732,11 @@ class BenchmarkStorage:
         benchmark_logger.info(
 
             f"Saved {test_id} -> "
+
             f"{section} "
+
             f"(suite={suite}) "
+
             f"(path: {file})"
 
         )
@@ -900,7 +992,7 @@ class BenchmarkStorage:
 
         )
 
-        print(
+        bench_info(
             f"Summary saved: {file}"
         )
 
@@ -1107,11 +1199,11 @@ def run_single_test(chat_engine, test):
         "normal"
     )
 
-    print(
+    console.print(
         f"Question: {question}"
     )
 
-    print()
+    console.print()
 
     benchmark_logger.info(
 
@@ -1225,32 +1317,29 @@ def run_single_test(chat_engine, test):
 
     )
 
-    print(
-        "[BENCHMARK RESPONSE]"
+    console.print(
+        "[bold cyan][BENCHMARK RESPONSE][/bold cyan]"
     )
 
-    print(
+    console.print(
         response_text
     )
 
-    print()
+    console.print()
 
-    print(
-        f"Response time: "
-        f"{elapsed:.3f}s"
+    console.print(
+        f"Response time: [cyan]{elapsed:.3f}s[/cyan]"
     )
 
-    print(
-        f"Response words: "
-        f"{response_words}"
+    console.print(
+        f"Response words: [cyan]{response_words}[/cyan]"
     )
 
-    print(
-        f"Overall score: "
-        f"{scores['overall']}"
+    console.print(
+        f"Overall score: [cyan]{scores['overall']}[/cyan]"
     )
 
-    print()
+    console.print()
 
     benchmark_logger.info(
 
@@ -1315,16 +1404,15 @@ def run_benchmark(
 
     if limit is None and not categories:
 
-        print(
-            "No benchmark limit or "
-            "category filter."
+        bench_info(
+            "No benchmark limit or category filter."
         )
 
-        print(
+        bench_info(
             "Running all selected suite tests."
         )
 
-        print()
+        console.print()
 
     else:
 
@@ -1340,18 +1428,17 @@ def run_benchmark(
 
     if not tests:
 
-        print(
+        bench_warning(
             "No benchmark tests found."
         )
 
         return []
 
-    print(
-        f"Running {len(tests)} "
-        f"benchmark test(s)..."
+    bench_info(
+        f"Running {len(tests)} benchmark test(s)..."
     )
 
-    print()
+    console.print()
 
     results = []
 
@@ -1363,28 +1450,23 @@ def run_benchmark(
 
     ):
 
-        print("=" * 60)
-
-        print(
+        bench_header(
             f"TEST {index}/{len(tests)}"
         )
 
-        print(
-            f"ID: "
-            f"{test.get('test_id', 'unknown')}"
+        console.print(
+            f"ID: {bench_test_id(test.get('test_id', 'unknown'))}"
         )
 
-        print(
-            f"Suite: "
-            f"{test.get('suite', 'unknown')}"
+        console.print(
+            f"Suite: {bench_suite(test.get('suite', 'unknown'))}"
         )
 
-        print(
-            f"Category: "
-            f"{test.get('category', 'unknown')}"
+        console.print(
+            f"Category: [cyan]{test.get('category', 'unknown')}[/cyan]"
         )
 
-        print("=" * 60)
+        console.print()
 
         behavior_tags = test.get(
 
@@ -1428,13 +1510,73 @@ def run_benchmark(
 
             )
 
+            # ---------------------------------
+            # Format benchmark result
+            # ---------------------------------
+
             formatted_result = format_benchmark_result(
 
-                test=test,
+                test_id=test.get(
+                    "test_id",
+                    "unknown"
+                ),
 
-                result=result,
+                category=test.get(
+                    "category",
+                    "unknown"
+                ),
 
-                behavior_tags=behavior_tags
+                question=test.get(
+                    "question",
+                    ""
+                ),
+
+                response=result.get(
+                    "response",
+                    ""
+                ),
+
+                response_time_seconds=result.get(
+                    "response_time_seconds",
+                    0.0
+                ),
+
+                observed_topics=test.get(
+                    "observed_topics",
+                    []
+                ),
+
+                behavior_tags=behavior_tags,
+
+                response_words=result.get(
+                    "response_words",
+                    0
+                ),
+
+                response_characters=result.get(
+                    "response_characters",
+                    0
+                ),
+
+                response_lines=result.get(
+                    "response_lines",
+                    0
+                ),
+
+                response_sentences=result.get(
+                    "response_sentences",
+                    0
+                ),
+
+                estimated_tokens=result.get(
+                    "estimated_tokens",
+                    0
+                ),
+
+                scores=result.get(
+                    "scores",
+                    {}
+                )
 
             )
 
@@ -1444,8 +1586,11 @@ def run_benchmark(
             # ---------------------------------
 
             if isinstance(
+
                 formatted_result,
+
                 dict
+
             ):
 
                 formatted_result.setdefault(
@@ -1471,20 +1616,71 @@ def run_benchmark(
 
             )
 
+            result_score = (
+
+                formatted_result
+
+                .get(
+                    "scores",
+                    {}
+                )
+
+                .get(
+
+                    "overall",
+
+                    formatted_result
+
+                    .get(
+                        "metrics",
+                        {}
+                    )
+
+                    .get(
+                        "scores",
+                        {}
+                    )
+
+                    .get(
+                        "overall",
+                        0
+                    )
+
+                )
+
+            )
+
+            bench_pass(
+
+                f"{bench_test_id(test.get('test_id', 'unknown'))} | "
+
+                f"suite={bench_suite(test.get('suite', 'unknown'))} | "
+
+                f"score={result_score}"
+
+            )
+
         except Exception as e:
 
             benchmark_logger.exception(
 
                 "Benchmark test failed: "
+
                 f"{test.get('test_id', 'unknown')}"
 
             )
 
-            print(
-                f"ERROR: {e}"
+            bench_fail(
+
+                f"{bench_test_id(test.get('test_id', 'unknown'))} | "
+
+                f"suite={bench_suite(test.get('suite', 'unknown'))} | "
+
+                f"error={e}"
+
             )
 
-        print()
+        console.print()
 
     # ---------------------------------
     # Generate final summary
@@ -1492,24 +1688,19 @@ def run_benchmark(
 
     storage.save_summary()
 
-    print("=" * 60)
-
-    print(
+    bench_header(
         "BENCHMARK COMPLETE"
     )
 
-    print("=" * 60)
-
-    print(
+    bench_info(
         f"Tests run: {len(results)}"
     )
 
-    print(
-        f"Raw results: "
-        f"{storage.run_file}"
+    bench_info(
+        f"Raw results: {storage.run_file}"
     )
 
-    print()
+    console.print()
 
     return results
 
@@ -1520,17 +1711,13 @@ def run_benchmark(
 
 def create_cynx_engine():
 
-    print()
+    console.print()
 
-    print("=" * 60)
-
-    print(
+    bench_header(
         "INITIALIZING CYN-X"
     )
 
-    print("=" * 60)
-
-    print()
+    console.print()
 
     cfg = get_config()
 
@@ -1612,10 +1799,8 @@ def create_cynx_engine():
 
     )
 
-    print(
-
+    console.print(
         tool_router.describe_tools()
-
     )
 
     # -----------------------------
@@ -1642,13 +1827,13 @@ def create_cynx_engine():
 
     )
 
-    print()
+    console.print()
 
-    print(
+    bench_pass(
         "CYN-X READY"
     )
 
-    print()
+    console.print()
 
     return engine
 
@@ -1666,8 +1851,11 @@ def run_command(engine):
     # ---------------------------------
 
     if not isinstance(
+
         command,
+
         dict
+
     ):
 
         # Backwards compatibility with
@@ -1676,7 +1864,9 @@ def run_command(engine):
         mode = command
 
         settings = get_benchmark_mode(
+
             mode
+
         )
 
         suites = None
@@ -1684,12 +1874,17 @@ def run_command(engine):
     else:
 
         mode = command.get(
+
             "mode",
+
             "all"
+
         )
 
         suites = command.get(
+
             "suites"
+
         )
 
         # ---------------------------------
@@ -1697,8 +1892,11 @@ def run_command(engine):
         # ---------------------------------
 
         if mode in (
+
             "help",
+
             "error"
+
         ):
 
             return []
@@ -1752,11 +1950,15 @@ def run_command(engine):
             )
 
             if command.get(
+
                 "limit"
+
             ) is not None:
 
                 settings["limit"] = (
+
                     command["limit"]
+
                 )
 
     # ---------------------------------
@@ -1776,38 +1978,31 @@ def run_command(engine):
     # Display configuration
     # ---------------------------------
 
-    print()
+    console.print()
 
-    print("=" * 60)
-
-    print(
+    bench_header(
         "BENCHMARK MODE"
     )
 
-    print("=" * 60)
-
-    print(
-        f"Mode: {mode}"
+    console.print(
+        f"Mode: [cyan]{mode}[/cyan]"
     )
 
-    print(
+    console.print(
         f"Suites: "
-        f"{', '.join(suites) if suites else 'ALL'}"
+        f"{bench_suite(', '.join(suites) if suites else 'ALL')}"
     )
 
-    print(
-        f"Limit: "
-        f"{settings.get('limit')}"
+    console.print(
+        f"Limit: [cyan]{settings.get('limit')}[/cyan]"
     )
 
-    print(
+    console.print(
         f"Categories: "
-        f"{settings.get('categories')}"
+        f"[cyan]{settings.get('categories')}[/cyan]"
     )
 
-    print("=" * 60)
-
-    print()
+    console.print()
 
     return run_benchmark(
 
@@ -1844,9 +2039,9 @@ def main():
 
     except KeyboardInterrupt:
 
-        print()
+        console.print()
 
-        print(
+        bench_warning(
             "Benchmark cancelled."
         )
 
@@ -1858,14 +2053,14 @@ def main():
 
         )
 
-        print()
+        console.print()
 
-        print(
+        bench_error(
             "Fatal error:"
         )
 
-        print(
-            error
+        bench_error(
+            str(error)
         )
 
 
