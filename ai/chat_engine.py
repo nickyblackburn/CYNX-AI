@@ -373,6 +373,34 @@ class ChatEngine:
         print(f"[FIRST OLLAMA TIME] {time.perf_counter() - start:.2f}s")
         message = response.get("message", {})
         tool_calls = message.get("tool_calls") or []
+
+        # Validate tool_calls before proceeding. If the model returned any tool name
+        # that is not registered in the tool router, log and treat as if no tool was requested
+        # so the flow falls back to a normal assistant response without executing tools.
+        invalid_tool_names = []
+        validated_tool_calls = []
+        for tc in tool_calls:
+            name = (tc.get("function") or {}).get("name") or tc.get("name")
+            if name and self.tool_router and hasattr(self.tool_router, 'tools'):
+                if name in self.tool_router.tools:
+                    validated_tool_calls.append(tc)
+                else:
+                    invalid_tool_names.append(name)
+            else:
+                # If tool router missing or name absent, treat as invalid to be safe
+                if name:
+                    invalid_tool_names.append(name)
+
+        if invalid_tool_names:
+            print('[MODEL RESPONSE] Invalid tool names detected from model:', invalid_tool_names)
+            print('[MODEL RESPONSE] Falling back to a normal assistant response without executing tools.')
+            # Proceed as if there were no tool calls
+            tool_calls = []
+            message = {"role": "assistant", "content": message.get("content", "")}
+        else:
+            # Use the validated tool_calls (could be empty)
+            tool_calls = validated_tool_calls
+
         if tool_calls:
             print("[MODEL RESPONSE]")
             print(json.dumps(message, ensure_ascii=False, indent=2)[:2000])

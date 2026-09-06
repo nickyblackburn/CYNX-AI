@@ -214,7 +214,20 @@ class OllamaClient:
             except Exception:
                 num_tools = 'unknown'
             print(f"[OLLAMA DIAG] model={self.model} messages={num_messages} system_prompt_chars={sys_prompt_len} tools={num_tools} elapsed_s={elapsed:.2f}")
-            # Now raise to keep existing behavior
+            # If the server returned a peg-native parse error for tool-calling, handle gracefully by
+            # returning a synthetic assistant message with no tool_calls so the caller can fallback.
+            if isinstance(body, str) and 'peg-native' in body or 'does not match the expected peg-native' in body:
+                print('[OLLAMA CLIENT] Detected peg-native parse error; returning empty assistant message to allow graceful fallback')
+                return {
+                    'message': {
+                        'role': 'assistant',
+                        'content': '',
+                        'tool_calls': []
+                    },
+                    'error': body,
+                    'status_code': response.status_code
+                }
+            # Otherwise raise to keep existing behavior
         response.raise_for_status()
         return response.json()
 
