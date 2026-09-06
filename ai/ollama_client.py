@@ -12,6 +12,8 @@ from typing import Any, Dict, Generator, List, Optional
 
 import requests
 
+from ai.terminal_ui import terminal
+
 
 class OllamaClient:
 
@@ -47,10 +49,8 @@ class OllamaClient:
             **kwargs
         }
 
-        print("\n[CYN-X REQUEST]")
-        print("Model:", self.model)
-        print("Streaming:", stream)
-        print("Prompt tokens may be large...\n")
+        terminal.ollama("CYN-X REQUEST", f"Model={self.model} Streaming={stream}")
+        terminal.dim("Prompt tokens may be large...")
 
         response = requests.post(
             url,
@@ -59,7 +59,7 @@ class OllamaClient:
             timeout=self.timeout
         )
 
-        print("Ollama:", response.status_code)
+        terminal.dim(f"Ollama: {response.status_code}")
 
         response.raise_for_status()
 
@@ -92,7 +92,7 @@ class OllamaClient:
             if data.get("done"):
                 break
 
-        print("\n\n[CYN-X COMPLETE]")
+        terminal.result("CYN-X COMPLETE")
 
         return {
             "response": output,
@@ -131,12 +131,7 @@ class OllamaClient:
         if tools:
             payload["tools"] = tools
 
-        print("\n[OLLAMA CHAT REQUEST]")
-        print("Model:", self.model)
-        print("Messages:", len(messages))
-        print("Tools:", len(tools) if tools else 0)
-        print("Context:", num_ctx)
-        print("Streaming:", stream)
+        terminal.ollama("OLLAMA CHAT REQUEST", f"Model={self.model} Messages={len(messages)} Tools={len(tools) if tools else 0} Context={num_ctx} Streaming={stream}")
 
         # Print a shortened debugging version of the request.
         try:
@@ -146,16 +141,10 @@ class OllamaClient:
                 "tools": tools
             }
 
-            print(
-                json.dumps(
-                    debug_payload,
-                    ensure_ascii=False,
-                    indent=2
-                )[:2000]
-            )
+            terminal.json(debug_payload)
 
         except Exception as exc:
-            print("[OLLAMA DEBUG ERROR]", exc)
+            terminal.error(f"[OLLAMA DEBUG ERROR] {exc}")
 
         start = time.perf_counter()
 
@@ -170,16 +159,16 @@ class OllamaClient:
         except requests.RequestException as exc:
             elapsed = time.perf_counter() - start
 
-            print("[OLLAMA CONNECTION ERROR]")
-            print(exc)
-            print(f"[OLLAMA DIAG] elapsed_s={elapsed:.2f}")
+            terminal.error("OLLAMA CONNECTION ERROR")
+            terminal.error(str(exc))
+            terminal.timing(f"[OLLAMA DIAG] elapsed_s={elapsed:.2f}")
 
             raise
 
         elapsed = time.perf_counter() - start
 
-        print("[OLLAMA CHAT STATUS]", response.status_code)
-        print(f"[OLLAMA CHAT TIME] {elapsed:.2f}s")
+        terminal.ollama("OLLAMA CHAT STATUS", str(response.status_code))
+        terminal.timing(f"[OLLAMA CHAT TIME] {elapsed:.2f}s")
 
         # Handle server errors with useful diagnostics.
         if response.status_code >= 400:
@@ -189,9 +178,9 @@ class OllamaClient:
             except Exception:
                 body = "<unable to read response body>"
 
-            print("[OLLAMA ERROR STATUS]", response.status_code)
-            print("[OLLAMA ERROR BODY]")
-            print(body[:8000])
+            terminal.error(f"[OLLAMA ERROR STATUS] {response.status_code}")
+            terminal.error("[OLLAMA ERROR BODY]")
+            terminal.error(body[:8000])
 
             # Diagnostic information.
             try:
@@ -223,7 +212,7 @@ class OllamaClient:
             except Exception:
                 num_tools = "unknown"
 
-            print(
+            terminal.timing(
                 "[OLLAMA DIAG] "
                 f"model={self.model} "
                 f"messages={num_messages} "
@@ -244,11 +233,8 @@ class OllamaClient:
 
             if is_peg_native_error:
 
-                print(
-                    "[OLLAMA CLIENT] "
-                    "Detected peg-native parse error; "
-                    "returning empty assistant message "
-                    "to allow graceful fallback."
+                terminal.warning(
+                    "[OLLAMA CLIENT] Detected peg-native parse error; returning empty assistant message to allow graceful fallback."
                 )
 
                 return {
@@ -293,12 +279,7 @@ class OllamaClient:
             )
 
             if token:
-                print(
-                    token,
-                    end="",
-                    flush=True
-                )
-
+                terminal.dim(token)
                 output += token
 
             if message.get("tool_calls"):
@@ -309,7 +290,7 @@ class OllamaClient:
             if data.get("done"):
                 break
 
-        print("\n\n[CYN-X CHAT COMPLETE]")
+        terminal.result("CYN-X CHAT COMPLETE")
 
         return {
             "message": {

@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Optional
 
+from ai.terminal_ui import terminal
+
 
 class PromptManager:
 
@@ -236,23 +238,16 @@ class PromptManager:
 
 
         
-        print("=======================\n")
+        terminal.section("CORE PREVIEW")
+        terminal.dim(core[:500])
 
-        print("\n===== CORE PREVIEW =====")
-        print(core[:500])
-        print("========================\n")
-
-
-        print("===== CORE CONTAINS PIPER =====")
-
+        terminal.info("CORE CONTAINS PIPER")
         if "Piper" in core or "piper" in core:
-            print("YES - Piper exists in core")
+            terminal.info("YES - Piper exists in core")
         else:
-            print("NO - Piper missing")
+            terminal.warning("NO - Piper missing")
 
-        print(core[:1000])
-
-        print("===============================")
+        terminal.dim(core[:1000])
 
 
 

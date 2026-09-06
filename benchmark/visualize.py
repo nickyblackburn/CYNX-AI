@@ -17,7 +17,13 @@ import matplotlib.pyplot as plt
 # PATHS
 # ==========================
 
-BASE = Path("results")
+# Resolve results relative to this dashboard.py file.
+#
+# This keeps the dashboard working when launched with:
+#
+# python -m benchmark.dashboard
+
+BASE = Path(__file__).resolve().parent / "results"
 
 RAW = BASE / "raw"
 
@@ -45,7 +51,9 @@ def load_results():
     def add_result(data, source):
 
         if not isinstance(data, dict):
+
             return
+
 
         test_id = data.get(
             "test_id",
@@ -55,16 +63,22 @@ def load_results():
             )
         )
 
+
         if test_id:
 
             if test_id in seen_ids:
+
                 return
 
-            seen_ids.add(test_id)
+            seen_ids.add(
+                test_id
+            )
+
 
         data["source_file"] = str(
             source
         )
+
 
         results.append(
             data
@@ -88,7 +102,11 @@ def load_results():
 
                     data = json.load(f)
 
-                if isinstance(data, list):
+
+                if isinstance(
+                    data,
+                    list
+                ):
 
                     for item in data:
 
@@ -97,12 +115,17 @@ def load_results():
                             file
                         )
 
-                elif isinstance(data, dict):
+
+                elif isinstance(
+                    data,
+                    dict
+                ):
 
                     add_result(
                         data,
                         file
                     )
+
 
             except Exception as error:
 
@@ -130,6 +153,7 @@ def load_results():
 
                     data = json.load(f)
 
+
                 if not isinstance(
                     data,
                     dict
@@ -137,13 +161,16 @@ def load_results():
 
                     continue
 
+
                 parts = file.parts
+
 
                 if "sections" in parts:
 
                     index = parts.index(
                         "sections"
                     )
+
 
                     if len(parts) > index + 1:
 
@@ -155,16 +182,20 @@ def load_results():
 
                         category = "unknown"
 
+
                 else:
 
                     category = "unknown"
 
+
                 data["section"] = category
+
 
                 add_result(
                     data,
                     file
                 )
+
 
             except Exception as error:
 
@@ -173,6 +204,7 @@ def load_results():
                     file,
                     error
                 )
+
 
     return results
 
@@ -183,8 +215,19 @@ results = load_results()
 if not results:
 
     print(
-        "No benchmark data found"
+        "No benchmark data found."
     )
+
+
+    print(
+        f"Checked RAW: {RAW.resolve()}"
+    )
+
+
+    print(
+        f"Checked SECTIONS: {SECTIONS.resolve()}"
+    )
+
 
     exit()
 
@@ -192,6 +235,59 @@ if not results:
 print(
     f"Loaded {len(results)} benchmark records"
 )
+
+
+# ==========================
+# SCORE INTERPRETATION
+# ==========================
+
+def score_rating(score):
+
+    if score is None:
+
+        return "Not Scored"
+
+
+    if score >= 3.0:
+
+        return "Excellent"
+
+
+    if score >= 2.0:
+
+        return "Strong"
+
+
+    if score >= 1.5:
+
+        return "Good"
+
+
+    if score >= 1.0:
+
+        return "Developing"
+
+
+    if score > 0:
+
+        return "Needs Work"
+
+
+    return "Needs Attention"
+
+
+def human_category_name(name):
+
+    if not name:
+
+        return "Unknown"
+
+
+    return (
+        str(name)
+        .replace("_", " ")
+        .title()
+    )
 
 
 # ==========================
@@ -205,6 +301,7 @@ for result in results:
         {}
     )
 
+
     if not isinstance(
         scores,
         dict
@@ -214,31 +311,40 @@ for result in results:
 
         result["scores"] = scores
 
+
+    # Only calculate an overall score when
+    # there are actual numeric component scores.
+    #
+    # Missing scores remain missing instead of
+    # becoming a fake 0.00.
+
     if "overall" not in scores:
 
-        if scores:
+        numeric_scores = [
 
-            numeric_scores = [
-                value
-                for value in scores.values()
-                if isinstance(value, (int, float))
-            ]
+            value
 
-            if numeric_scores:
+            for value in scores.values()
 
-                scores["overall"] = (
-                    sum(numeric_scores)
-                    /
-                    len(numeric_scores)
-                )
+            if isinstance(
+                value,
+                (int, float)
+            )
 
-            else:
+        ]
 
-                scores["overall"] = 0
 
-        else:
+        if numeric_scores:
 
-            scores["overall"] = 0
+            scores["overall"] = (
+
+                sum(numeric_scores)
+
+                /
+
+                len(numeric_scores)
+
+            )
 
 
 print(
@@ -261,13 +367,17 @@ def graph(
 ):
 
     if not values:
+
         return
 
+
     file = OUTPUT / f"{name}.png"
+
 
     plt.figure(
         figsize=(8, 4)
     )
+
 
     plt.plot(
         range(
@@ -278,30 +388,38 @@ def graph(
         marker="o"
     )
 
+
     plt.title(
         title
     )
+
 
     plt.ylabel(
         label
     )
 
+
     plt.xlabel(
         "Benchmark Test"
     )
+
 
     plt.grid(
         True
     )
 
+
     plt.tight_layout()
+
 
     plt.savefig(
         file,
         dpi=200
     )
 
+
     plt.close()
+
 
     graphs.append(
         file.name
@@ -328,6 +446,15 @@ for index, result in enumerate(results):
         {}
     )
 
+
+    if not isinstance(
+        scores,
+        dict
+    ):
+
+        scores = {}
+
+
     # ----------------------
     # METRICS
     # ----------------------
@@ -336,6 +463,7 @@ for index, result in enumerate(results):
         "metrics",
         {}
     )
+
 
     if not isinstance(
         result_metrics,
@@ -353,6 +481,7 @@ for index, result in enumerate(results):
         "test_id",
         f"TEST-{index + 1}"
     )
+
 
     test_ids.append(
         test_id
@@ -387,12 +516,24 @@ for index, result in enumerate(results):
         )
     )
 
-    categories[category].append(
-        scores.get(
-            "overall",
-            0
-        )
+
+    overall_score = scores.get(
+        "overall",
+        None
     )
+
+
+    # Only put genuinely scored tests
+    # into the category leaderboard.
+
+    if isinstance(
+        overall_score,
+        (int, float)
+    ):
+
+        categories[category].append(
+            overall_score
+        )
 
 
     # ----------------------
@@ -403,6 +544,7 @@ for index, result in enumerate(results):
         "runtime",
         {}
     )
+
 
     if not isinstance(
         runtime,
@@ -439,7 +581,16 @@ for category, scores in categories.items():
 
     if scores:
 
-        average = sum(scores) / len(scores)
+        average = (
+
+            sum(scores)
+
+            /
+
+            len(scores)
+
+        )
+
 
         leaderboard.append(
             (
@@ -490,10 +641,7 @@ for name, data in categories.items():
 # Response time is stored inside:
 #
 # result["metrics"]["response_time_seconds"]
-#
-# rather than:
-#
-# result["response_time_seconds"]
+
 
 graph(
     "response_time",
@@ -505,6 +653,7 @@ graph(
             "response_time_seconds",
             0
         )
+
         for result in results
     ],
     "Response Time",
@@ -524,6 +673,7 @@ graph(
             "estimated_tokens",
             0
         )
+
         for result in results
     ],
     "Token Usage",
@@ -543,6 +693,7 @@ graph(
             "response_words",
             0
         )
+
         for result in results
     ],
     "Response Length",
@@ -557,6 +708,9 @@ graph(
 total_tests = len(results)
 
 
+# Only include tests that actually
+# have a numeric overall score.
+
 all_scores = [
 
     result.get(
@@ -564,7 +718,7 @@ all_scores = [
         {}
     ).get(
         "overall",
-        0
+        None
     )
 
     for result in results
@@ -572,11 +726,55 @@ all_scores = [
 ]
 
 
+all_scores = [
+
+    value
+
+    for value in all_scores
+
+    if isinstance(
+        value,
+        (int, float)
+    )
+
+]
+
+
 average_score = (
 
-    sum(all_scores) / len(all_scores)
+    sum(all_scores)
+
+    /
+
+    len(all_scores)
 
     if all_scores
+
+    else 0
+
+)
+
+
+# ==========================
+# ERROR RATE
+# ==========================
+
+failure_count = len(
+    failures
+)
+
+
+error_rate = (
+
+    (
+        failure_count
+        /
+        total_tests
+    )
+    *
+    100
+
+    if total_tests
 
     else 0
 
@@ -594,7 +792,7 @@ response_times = [
         {}
     ).get(
         "response_time_seconds",
-        0
+        None
     )
 
     for result in results
@@ -621,7 +819,9 @@ response_times = [
 average_response = (
 
     sum(response_times)
+
     /
+
     len(response_times)
 
     if response_times
@@ -683,7 +883,7 @@ display:grid;
 
 grid-template-columns:
 
-repeat(4,1fr);
+repeat(5,1fr);
 
 gap:20px;
 
@@ -714,6 +914,19 @@ color:#c084fc;
 }}
 
 
+.rating {{
+
+font-size:16px;
+
+font-weight:bold;
+
+margin-top:8px;
+
+color:#d8b4ff;
+
+}}
+
+
 .grid {{
 
 display:grid;
@@ -734,6 +947,43 @@ width:100%;
 border-radius:10px;
 
 }}
+
+
+table {{
+
+width:100%;
+
+font-size:18px;
+
+border-collapse:collapse;
+
+}}
+
+
+th, td {{
+
+padding:12px;
+
+border-bottom:1px solid #292940;
+
+}}
+
+
+th {{
+
+color:#d8b4ff;
+
+}}
+
+
+.score {{
+
+font-weight:bold;
+
+color:#c084fc;
+
+}}
+
 
 </style>
 
@@ -784,6 +1034,12 @@ Average Score
 
 </div>
 
+<div class="rating">
+
+{score_rating(average_score)}
+
+</div>
+
 </div>
 
 
@@ -797,7 +1053,36 @@ Failures
 
 <div class="stat">
 
-{len(failures)}
+{failure_count}
+
+</div>
+
+<div class="rating">
+
+{"No Failures" if failure_count == 0 else "Failures Detected"}
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h3>
+
+Error Rate
+
+</h3>
+
+<div class="stat">
+
+{error_rate:.1f}%
+
+</div>
+
+<div class="rating">
+
+{"Excellent" if error_rate == 0 else "Needs Attention" if error_rate >= 10 else "Healthy"}
 
 </div>
 
@@ -842,15 +1127,7 @@ html += """
 </h2>
 
 
-<table style="
-
-width:100%;
-
-font-size:18px;
-
-border-collapse:collapse;
-
-">
+<table>
 
 
 <tr>
@@ -875,6 +1152,13 @@ Average Score
 
 </th>
 
+
+<th align="left">
+
+Assessment
+
+</th>
+
 </tr>
 
 """
@@ -887,6 +1171,16 @@ for rank, (category, score) in enumerate(
     start=1
 
 ):
+
+    rating = score_rating(
+        score
+    )
+
+
+    display_category = human_category_name(
+        category
+    )
+
 
     html += f"""
 
@@ -901,14 +1195,21 @@ for rank, (category, score) in enumerate(
 
 <td>
 
-{category.title()}
+{display_category}
+
+</td>
+
+
+<td class="score">
+
+{score:.2f}
 
 </td>
 
 
 <td>
 
-{score:.2f}
+{rating}
 
 </td>
 
@@ -950,6 +1251,33 @@ Generated:
 Tests tracked:
 
 {len(test_ids)}
+
+</p>
+
+
+<p>
+
+Tests with scores:
+
+{len(all_scores)}
+
+</p>
+
+
+<p>
+
+Failures:
+
+{failure_count}
+
+</p>
+
+
+<p>
+
+Error Rate:
+
+{error_rate:.2f}%
 
 </p>
 
@@ -1022,6 +1350,7 @@ dashboard.write_text(
 
 print()
 
+
 print(
     "Dashboard created:"
 )
@@ -1029,6 +1358,31 @@ print(
 
 print(
     dashboard
+)
+
+
+print(
+    f"Total tests: {total_tests}"
+)
+
+
+print(
+    f"Failures: {failure_count}"
+)
+
+
+print(
+    f"Error rate: {error_rate:.2f}%"
+)
+
+
+print(
+    f"Average score: {average_score:.2f}"
+)
+
+
+print(
+    f"Average response time: {average_response:.2f}s"
 )
 
 

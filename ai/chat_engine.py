@@ -18,6 +18,7 @@ import time
 from typing import Optional
 
 from ai.memory_system import MemoryManager, MemoryExtractor
+from ai.terminal_ui import terminal
 
 
 logger = logging.getLogger("cynx.chat")
@@ -66,6 +67,14 @@ class ChatEngine:
         self.memory_extractor = memory_extractor
 
         self.context_manager = context_manager
+
+        if self.context_manager is None:
+            
+                print("[CORE WARNING] ChatEngine received context_manager=None")
+            
+        else:
+          
+                print(f"[CORE] ContextManager attached: {type(self.context_manager).__name__}")
 
         self.logger = logger_obj or logger
 
@@ -136,11 +145,10 @@ class ChatEngine:
 
         """
 
-        print("===== CHAT ENGINE MEMORY CHECK =====")
-        print("Context Manager:", self.context_manager)
-        print("Memory Manager:", self.memory_manager)
-        print("Memory Extractor:", self.memory_extractor)
-        print("====================================")
+        terminal.section("CHAT ENGINE MEMORY CHECK")
+        terminal.dim(f"Context Manager: {self.context_manager}")
+        terminal.dim(f"Memory Manager: {self.memory_manager}")
+        terminal.dim(f"Memory Extractor: {self.memory_extractor}")
 
 
 
@@ -182,9 +190,8 @@ class ChatEngine:
 
                 )
 
-                print(
-                    f"[MEMORY FOUND]\n{mem_summary}"
-                )
+                terminal.memory("MEMORY FOUND")
+                terminal.dim(mem_summary)
 
                 
 
@@ -339,38 +346,37 @@ class ChatEngine:
         # -----------------------------
         tool_specs = self._ollama_tools()
         if tool_specs:
-            print("[AVAILABLE TOOLS]", [t.get('function', {}).get('name') for t in tool_specs])
+            terminal.available_tools([t.get('function', {}).get('name') for t in tool_specs])
 
         smoke_intent = None
         if self.tool_router and hasattr(self.tool_router, 'detect'):
             smoke_intent = self.tool_router.detect(text)
         if smoke_intent and smoke_intent.get('tool') == 'smoke_counter':
             read_only = bool(self.tool_router and hasattr(self.tool_router, 'is_read_only_smoke_query') and self.tool_router.is_read_only_smoke_query(text))
-            print("[SMOKE INTENT]", "read_only" if read_only else "log")
-            print("[SMOKE ACTION]", smoke_intent.get('action'))
-            print("[SMOKE TYPE]", smoke_intent.get('smoke_type', 'n/a'))
-            print("[SMOKE SCOPE]", smoke_intent.get('scope', 'all'))
+            terminal.info(f"[SMOKE INTENT] {'read_only' if read_only else 'log'}")
+            terminal.info(f"[SMOKE ACTION] {smoke_intent.get('action')}")
+            terminal.info(f"[SMOKE TYPE] {smoke_intent.get('smoke_type', 'n/a')}")
+            terminal.info(f"[SMOKE SCOPE] {smoke_intent.get('scope', 'all')}")
 
         messages = [
             {"role": "system", "content": prompt},
             {"role": "user", "content": text}
         ]
 
-        print("[USER]", text)
+        terminal.user(text)
 
         if request_id:
-            print(f"[OLLAMA CALL] id={request_id} phase=first")
+            terminal.ollama("OLLAMA CALL", f"id={request_id} phase=first")
 
         if os.environ.get("CYN_DEBUG_PROMPT") == "1":
-            print("===== ACTUAL SYSTEM PROMPT =====")
-            print(messages[0]["content"])
-            print("================================")
+            terminal.section("ACTUAL SYSTEM PROMPT")
+            terminal.dim(messages[0]["content"])
 
         # Call Ollama with a real chat tool schema. If the model issues a tool call,
         # execute it in Python and then send the tool result back to Ollama.
         start = time.perf_counter()
         response = self.ollama.chat(messages=messages, tools=tool_specs or None)
-        print(f"[FIRST OLLAMA TIME] {time.perf_counter() - start:.2f}s")
+        terminal.timing(f"[FIRST OLLAMA TIME] {time.perf_counter() - start:.2f}s")
         message = response.get("message", {})
         tool_calls = message.get("tool_calls") or []
 
@@ -392,8 +398,8 @@ class ChatEngine:
                     invalid_tool_names.append(name)
 
         if invalid_tool_names:
-            print('[MODEL RESPONSE] Invalid tool names detected from model:', invalid_tool_names)
-            print('[MODEL RESPONSE] Falling back to a normal assistant response without executing tools.')
+            terminal.model("MODEL RESPONSE", f"Invalid tool names detected from model: {invalid_tool_names}")
+            terminal.warning("Falling back to a normal assistant response without executing tools.")
             # Proceed as if there were no tool calls
             tool_calls = []
             message = {"role": "assistant", "content": message.get("content", "")}
@@ -402,8 +408,8 @@ class ChatEngine:
             tool_calls = validated_tool_calls
 
         if tool_calls:
-            print("[MODEL RESPONSE]")
-            print(json.dumps(message, ensure_ascii=False, indent=2)[:2000])
+            terminal.model("MODEL RESPONSE")
+            terminal.json(dict(message) if isinstance(message, dict) else message)
 
             messages.append({
                 "role": "assistant",
@@ -421,12 +427,11 @@ class ChatEngine:
                         arguments = {}
 
                 if request_id:
-                    print(f"[TOOL CALL] id={request_id} tool={name}")
+                    terminal.tool("TOOL CALL", f"id={request_id} tool={name}")
                 else:
-                    print("[TOOL CALL]")
-                print("name=", name)
-                print("[TOOL ARGUMENTS]")
-                print(json.dumps(arguments, ensure_ascii=False, indent=2))
+                    terminal.tool("TOOL CALL", f"name={name}")
+                terminal.tool_args("TOOL ARGUMENTS")
+                terminal.json(arguments)
 
                 # Additional smoke-query tracing and augmentation to ensure the tool call contains
                 # explicit smoke_type when the user requested a type (e.g., 'vape', 'pen').
@@ -447,24 +452,21 @@ class ChatEngine:
                             arguments['action'] = 'stats'
                             if 'today' in text.lower() and not arguments.get('scope'):
                                 arguments['scope'] = 'today'
-                            print('[SMOKE INTENT] read_only')
-                            print('[SMOKE ACTION] stats')
-                            print('[SMOKE TYPE]', arguments.get('smoke_type', parsed_smoke_type or 'n/a'))
-                            print('[SMOKE SCOPE]', arguments.get('scope') or parsed_scope or ('today' if 'today' in text.lower() else 'all'))
-                    
-                    print('[SMOKE QUERY]')
-                    print(text)
-                    print('[PARSED ACTION]')
-                    print(parsed_action)
-                    print('[PARSED SMOKE TYPE]')
-                    print(parsed_smoke_type)
-                    print('[PARSED DATE/SCOPE]')
-                    print(parsed_scope)
+                            terminal.info("[SMOKE INTENT] read_only")
+                            terminal.info(f"[SMOKE ACTION] stats")
+                            terminal.info(f"[SMOKE TYPE] {arguments.get('smoke_type', parsed_smoke_type or 'n/a')}")
+                            terminal.info(f"[SMOKE SCOPE] {arguments.get('scope') or parsed_scope or ('today' if 'today' in text.lower() else 'all')}")
+                     
+                    terminal.info("[SMOKE QUERY]")
+                    terminal.dim(text)
+                    terminal.info(f"[PARSED ACTION] {parsed_action}")
+                    terminal.info(f"[PARSED SMOKE TYPE] {parsed_smoke_type}")
+                    terminal.info(f"[PARSED DATE/SCOPE] {parsed_scope}")
 
                     if not arguments.get('smoke_type') and parsed_smoke_type:
                         try:
                             arguments['smoke_type'] = parsed_smoke_type
-                            print('[INFO] Augmented tool arguments with smoke_type from router.detect()')
+                            terminal.info('Augmented tool arguments with smoke_type from router.detect()')
                         except Exception:
                             pass
 
@@ -489,9 +491,9 @@ class ChatEngine:
                                 pass
 
                 if request_id:
-                    print(f"[EXECUTING TOOL] id={request_id} tool={name}")
+                    terminal.execute("EXECUTING TOOL", f"id={request_id} tool={name}")
                 else:
-                    print("[EXECUTING TOOL]")
+                    terminal.execute("EXECUTING TOOL", f"tool={name}")
 
                 if not self.tool_router or name not in self.tool_router.tools:
                     tool_result_payload = {"success": False, "error": f"Tool '{name}' not found."}
@@ -523,10 +525,10 @@ class ChatEngine:
                         tool_result_payload = merged
 
                     if request_id:
-                        print(f"[TOOL RESULT] id={request_id}")
+                        terminal.result("TOOL RESULT", f"id={request_id}")
                     else:
-                        print("[TOOL RESULT]")
-                    print(json.dumps(tool_result_payload, ensure_ascii=False, indent=2))
+                        terminal.result("TOOL RESULT")
+                    terminal.json(tool_result_payload)
 
                 display_override = None
                 if name == 'smoke_counter':
@@ -564,8 +566,8 @@ class ChatEngine:
                 messages.append(tool_message)
 
             if request_id:
-                print(f"[OLLAMA CALL] id={request_id} phase=final")
-            print("[RETURNING TOOL RESULT TO MODEL]")
+                terminal.ollama("OLLAMA CALL", f"id={request_id} phase=final")
+            terminal.info("[RETURNING TOOL RESULT TO MODEL]")
 
             # Optimize final Ollama call for deterministic tools (small prompt)
             # Deterministic tools should not require re-sending the full system prompt.
@@ -593,22 +595,22 @@ class ChatEngine:
                 final_messages.extend(tool_messages)
 
                 if request_id:
-                    print(f"[OLLAMA CALL] id={request_id} phase=final (minimal prompt)")
+                    terminal.ollama("OLLAMA CALL", f"id={request_id} phase=final (minimal prompt)")
 
                 final_response = self.ollama.chat(messages=final_messages, tools=None)
             else:
                 final_response = self.ollama.chat(messages=messages, tools=None)
 
-            print(f"[FINAL OLLAMA TIME] {time.perf_counter() - final_start:.2f}s")
+            terminal.timing(f"[FINAL OLLAMA TIME] {time.perf_counter() - final_start:.2f}s")
             assistant_text = (final_response.get("message") or {}).get("content") or str(final_response)
 
-            print("[FINAL MESSAGES]")
+            terminal.model("FINAL MESSAGES")
             if use_minimal:
-                print(final_messages)
+                terminal.json(final_messages)
             else:
-                print(messages)
-            print("[FINAL MODEL RESPONSE]")
-            print(assistant_text)
+                terminal.json(messages)
+            terminal.model("FINAL MODEL RESPONSE")
+            terminal.dim(assistant_text)
             return assistant_text
 
         # No tool call was requested by the model; fall back to the original generation flow.
@@ -618,8 +620,8 @@ class ChatEngine:
             or response.get("text")
             or str(response)
         )
-        print("[FINAL MODEL RESPONSE]")
-        print(assistant_text)
+        terminal.model("FINAL MODEL RESPONSE")
+        terminal.dim(assistant_text)
         return assistant_text
 
 
