@@ -513,6 +513,13 @@ class ChatEngine:
             print("[RETURNING TOOL RESULT TO MODEL]")
             final_response = self.ollama.chat(messages=messages, tools=None)
             assistant_text = (final_response.get("message") or {}).get("content") or str(final_response)
+
+            print("[FINAL MESSAGES]")
+            print(messages)
+            print("[RETURNING TOOL RESULT TO MODEL]")
+
+            final_response = self.ollama.chat(messages=messages, tools=None)
+
             print("[FINAL MODEL RESPONSE]")
             print(assistant_text)
             return assistant_text
