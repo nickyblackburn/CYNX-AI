@@ -51,6 +51,14 @@ def empty_data() -> Dict[str, Any]:
     }
 
 
+def reconcile_totals(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Keep cumulative totals derived from the session list so they can't drift."""
+    sessions = data.get("sessions", [])
+    data["total_units"] = sum(float(s.get("units", 0) or 0) for s in sessions)
+    data["total_cigarettes"] = sum(float(s.get("cigarettes", 0) or 0) for s in sessions)
+    return data
+
+
 def load_data() -> Dict[str, Any]:
     """
     Load smoking data from disk.
@@ -131,11 +139,13 @@ def load_data() -> Dict[str, Any]:
     data.setdefault("total_cigarettes", 0)
     data.setdefault("sessions", [])
 
-    return data
+    return reconcile_totals(data)
 
 
 def save_data(data: Dict[str, Any]) -> None:
     """Save tracker data safely."""
+
+    data = reconcile_totals(data)
 
     with open(FILE, "w", encoding="utf-8") as f:
         json.dump(
@@ -197,8 +207,6 @@ def log_smoke(
         # 1 cigarette = 0.5 units
         units = cigarettes * 0.5
 
-        data["total_cigarettes"] += cigarettes
-
         session = {
             "time": datetime.now().strftime(
                 "%Y-%m-%d %H:%M:%S"
@@ -228,9 +236,8 @@ def log_smoke(
     # Save
     # --------------------------------------------------------
 
-    data["total_units"] += units
     data["sessions"].append(session)
-
+    data = reconcile_totals(data)
     save_data(data)
 
     return {

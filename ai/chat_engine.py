@@ -300,6 +300,7 @@ class ChatEngine:
                 tools_list.append(f"{t['name']}: {t['description']}")
         tools_spec_str = "Available tools:\n" + "\n".join(tools_list)
         tools_spec_str += "\n\nTool-use instruction: When the user asks for information or an action that one of your available tools can perform, use the appropriate tool. Execute the tool and use its result in your response. PRIORITY: Direct response first. Personality second. Do not redirect mundane requests into unrelated topics."
+        tools_spec_str += "\nSpecial rule for smoke_counter: if the user asks for smoking totals or session counts, use the tool result exactly as returned. Do not recalculate totals. Do not substitute session count for total_units. Use total_units exactly as returned by smoke_counter."
 
         prompt = self.prompt_builder.build_prompt(
 
@@ -387,14 +388,32 @@ class ChatEngine:
                     tool_result_payload = dict(tool_result_payload)
                     tool_result_payload.setdefault("success", tool_result.success)
                     tool_result_payload.setdefault("output", tool_result.output)
+
+                    if name == "smoke_counter":
+                        raw_result = {} if not isinstance(tool_result_payload, dict) else dict(tool_result_payload)
+                        tool_result_payload = {
+                            "success": raw_result.get("success", tool_result.success),
+                            "total_units": raw_result.get("total_units"),
+                            "total_cigarettes": raw_result.get("total_cigarettes"),
+                            "total_sessions": raw_result.get("total_sessions"),
+                            "today_sessions": raw_result.get("today_sessions"),
+                            "today_units": raw_result.get("today_units"),
+                            "last_session": raw_result.get("last_session"),
+                        }
+
                     print("[TOOL RESULT]")
                     print(json.dumps(tool_result_payload, ensure_ascii=False, indent=2))
 
+                tool_message_content = {
+                    "tool_name": name,
+                    "result": tool_result_payload,
+                    "instruction": "Use total_units exactly as returned by the smoke_counter tool. Do not recalculate it. Do not substitute session count for total_units."
+                }
                 tool_message = {
                     "role": "tool",
                     "tool_call_id": tool_call.get("id", "call_1"),
                     "name": name,
-                    "content": json.dumps(tool_result_payload, ensure_ascii=False)
+                    "content": json.dumps(tool_message_content, ensure_ascii=False)
                 }
                 messages.append(tool_message)
 
