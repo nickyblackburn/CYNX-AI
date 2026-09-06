@@ -240,16 +240,22 @@ def log_smoke(
     data = reconcile_totals(data)
     save_data(data)
 
-    return {
+    # Merge stats so callers always receive the full up-to-date statistics
+    stats = get_stats()
+
+    result = {
         "success": True,
         "message": "Smoking session logged.",
         "type": smoke_type,
         "amount": amount,
         "added_units": units,
-        "total_units": data["total_units"],
-        "total_cigarettes": data["total_cigarettes"],
         "time": session["time"]
     }
+    # copy numeric/stat fields from stats
+    for k in ("total_units", "total_cigarettes", "total_sessions", "today_sessions", "today_units", "last_session"):
+        result[k] = stats.get(k)
+
+    return result
 
 
 # ============================================================
@@ -529,7 +535,21 @@ def smoke_counter_call(
 
 
 # ============================================================
-# Test
+# Utilities
+# ============================================================
+
+def repair_aggregates() -> Dict[str, Any]:
+    """Force-recompute and persist aggregate fields from sessions without changing sessions.
+
+    Returns the reconciled data dict.
+    """
+    data = load_data()
+    save_data(data)
+    return data
+
+
+# ============================================================
+# Test / CLI
 # ============================================================
 
 if __name__ == "__main__":

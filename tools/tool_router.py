@@ -135,6 +135,19 @@ class ToolRouter:
             )
 
 
+    def normalize_smoke_type(self, text: str):
+        """Normalize a freeform smoke_type string into a canonical type (pen, vape, cigarette, bong, weed, joint, unknown)."""
+        if not text:
+            return None
+        tl = str(text).lower()
+        # canonical types in priority order
+        for t in ['cigarette', 'cig', 'bong', 'vape', 'pen', 'weed', 'joint']:
+            if t in tl:
+                if t == 'cig':
+                    return 'cigarette'
+                return t
+        return tl.strip()
+
     def detect(self, text: str):
         """
         Detect whether a message requires a tool.
@@ -157,6 +170,8 @@ class ToolRouter:
             "bongs",
             "vape",
             "vaped",
+            "pen",
+            "pens",
             "weed",
             "joint",
             "puff",
@@ -212,8 +227,8 @@ class ToolRouter:
             # log patterns
             # e.g. "log 2 cigarettes", "add one cigarette", "i just smoked", "i took 3 hits"
             amount = parse_number(tl) or None
-            # smoke type detection
-            types = ['cigarette', 'cigarettes', 'cig', 'weed', 'vape', 'joint', 'bong', 'bongs']
+            # smoke type detection — include pen and prefer exact matches to avoid misclassifying 'pen' as 'vape'
+            types = ['cigarette', 'cigarettes', 'cig', 'weed', 'vape', 'vaped', 'pen', 'pens', 'joint', 'bong', 'bongs']
             smoke_type = None
             for t in types:
                 if t in tl:
@@ -222,6 +237,13 @@ class ToolRouter:
                         smoke_type = t[:-1]
                     else:
                         smoke_type = t
+                    # Normalize common aliases
+                    if smoke_type in ('cig', 'cigarette'):
+                        smoke_type = 'cigarette'
+                    elif smoke_type == 'vaped':
+                        smoke_type = 'vape'
+                    elif smoke_type in ('pens', 'pen'):
+                        smoke_type = 'pen'
                     break
 
             # treat bong hit / bong rip / hit / rip as one default session when no explicit amount exists

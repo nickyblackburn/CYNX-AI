@@ -380,6 +380,28 @@ class ChatEngine:
                 if not self.tool_router or name not in self.tool_router.tools:
                     tool_result_payload = {"success": False, "error": f"Tool '{name}' not found."}
                 else:
+                    # sanitize smoke_counter arguments coming from the model
+                    if name == 'smoke_counter' and isinstance(arguments, dict):
+                        st = arguments.get('smoke_type')
+                        if st and hasattr(self.tool_router, 'normalize_smoke_type'):
+                            try:
+                                arguments['smoke_type'] = self.tool_router.normalize_smoke_type(st)
+                            except Exception:
+                                pass
+                        # coerce numeric strings to numbers for amount
+                        amt = arguments.get('amount')
+                        if isinstance(amt, str):
+                            try:
+                                if '.' in amt:
+                                    arguments['amount'] = float(amt)
+                                else:
+                                    arguments['amount'] = int(amt)
+                            except Exception:
+                                try:
+                                    arguments['amount'] = float(amt)
+                                except Exception:
+                                    pass
+
                     tool_result = self.tool_router.call_tool(name, arguments)
                     tool_result_payload = tool_result.metadata if tool_result.metadata is not None else {
                         "success": tool_result.success,
