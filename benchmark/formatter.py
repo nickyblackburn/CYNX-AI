@@ -1,10 +1,10 @@
+
 # benchmark/formatter.py
 
 from datetime import datetime
 
 
 FORMAT_VERSION = "2.0"
-
 
 
 def format_benchmark_result(
@@ -23,9 +23,7 @@ def format_benchmark_result(
     scores: dict | None = None,
 ) -> dict:
 
-
     return {
-
 
         # ==========================
         # Metadata
@@ -41,7 +39,6 @@ def format_benchmark_result(
             datetime.utcnow().isoformat() + "Z",
 
 
-
         # ==========================
         # Benchmark Input
         # ==========================
@@ -53,7 +50,6 @@ def format_benchmark_result(
         },
 
 
-
         # ==========================
         # CYN-X Output
         # ==========================
@@ -63,7 +59,6 @@ def format_benchmark_result(
             "response": response
 
         },
-
 
 
         # ==========================
@@ -93,7 +88,6 @@ def format_benchmark_result(
         },
 
 
-
         # ==========================
         # Behavior Analysis
         # ==========================
@@ -109,14 +103,12 @@ def format_benchmark_result(
         },
 
 
-
         # ==========================
         # Scoring
         # ==========================
 
         "scores":
             scores or {},
-
 
 
         # ==========================

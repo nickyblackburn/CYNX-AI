@@ -20,9 +20,7 @@ from benchmark.modes import (
     get_benchmark_mode
 )
 
-
 from config import get_config
-
 
 from ai.chat_engine import ChatEngine
 from ai.memory_system import (
@@ -34,32 +32,25 @@ from ai.mode_manager import ModeManager
 from ai.ollama_client import OllamaClient
 from ai.prompt_builder import PromptBuilder
 
-
 from memory.memory import MemoryStore
 from memory.sqlite import connect as sqlite_connect
-
 
 from tools.calculator import CalculatorTool
 from tools.tool_router import ToolRouter
 from tools.web_search import WebSearchTool
 
 
-
 # =====================================
 # Benchmark Paths
 # =====================================
-
 
 BASE_DIR = Path(
     "benchmark"
 )
 
-
 SUITES = BASE_DIR / "suites"
 
-
 RESULT_ROOT = BASE_DIR / "results"
-
 
 RAW_RESULTS = RESULT_ROOT / "raw"
 
@@ -68,7 +59,6 @@ SECTION_RESULTS = RESULT_ROOT / "sections"
 LOG_RESULTS = RESULT_ROOT / "logs"
 
 SUMMARY_RESULTS = RESULT_ROOT / "summaries"
-
 
 
 for directory in [
@@ -89,70 +79,53 @@ for directory in [
     )
 
 
-
 # =====================================
 # Category Routing
 # =====================================
 
-
 CATEGORY_MAP = {
-
 
     "personality_preservation":
         "personality",
 
-
     "character":
         "personality",
-
 
     "voice_control":
         "personality",
 
-
     "social_style":
         "social",
-
 
     "relationships":
         "social",
 
-
     "conversation_escalation":
         "social",
-
 
     "furry":
         "social",
 
-
     "emotional_support":
         "emotion",
-
 
     "emotion":
         "emotion",
 
-
     "safety":
         "safety",
-
 
     "alignment":
         "safety",
 
-
     "boundaries":
         "safety",
-
 
     "memory_safety":
         "memory",
 
-
     "creativity":
         "creativity",
-
 
     "building_os":
         "systems"
@@ -160,9 +133,7 @@ CATEGORY_MAP = {
 }
 
 
-
 def get_result_section(category):
-
 
     return CATEGORY_MAP.get(
 
@@ -173,24 +144,19 @@ def get_result_section(category):
     )
 
 
-
 # =====================================
 # Logging System
 # =====================================
 
-
 def setup_logging():
-
 
     logger = logging.getLogger(
         "cynx.benchmark"
     )
 
-
     logger.setLevel(
         logging.INFO
     )
-
 
     formatter = logging.Formatter(
 
@@ -200,8 +166,6 @@ def setup_logging():
 
     )
 
-
-
     log_file = logging.FileHandler(
 
         LOG_RESULTS / "benchmark.log",
@@ -210,12 +174,9 @@ def setup_logging():
 
     )
 
-
     log_file.setFormatter(
         formatter
     )
-
-
 
     error_file = logging.FileHandler(
 
@@ -225,49 +186,37 @@ def setup_logging():
 
     )
 
-
     error_file.setLevel(
         logging.ERROR
     )
-
 
     error_file.setFormatter(
         formatter
     )
 
-
-
     logger.addHandler(
         log_file
     )
-
 
     logger.addHandler(
         error_file
     )
 
-
-
     return logger
 
 
-
 benchmark_logger = setup_logging()
-
-
 
 
 # =====================================
 # Benchmark Timestamp
 # =====================================
 
-
 RUN_TIMESTAMP = datetime.utcnow().strftime(
 
     "%Y-%m-%d_%H-%M-%S"
 
 )
-
 
 RUN_FILE = RAW_RESULTS / (
 
@@ -276,75 +225,171 @@ RUN_FILE = RAW_RESULTS / (
 )
 
 
-
-
 # =====================================
 # Load Benchmark Suites
 # =====================================
 
-
-def load_questions():
-
+def load_questions(suites=None):
 
     tests = []
 
-
-
     print()
-
-
 
     print(
         "Loading CYN-X benchmark suites..."
     )
 
-
-
     if not SUITES.exists():
-
 
         print(
             "No benchmark suites found."
         )
 
+        return tests
+
+    # ---------------------------------
+    # Determine which suite files to load
+    # ---------------------------------
+
+    if suites:
+
+        files = []
+
+        for suite_name in suites:
+
+            suite_name = str(
+                suite_name
+            ).strip()
+
+            # Allow the user to type either:
+            #
+            # personality
+            #
+            # or:
+            #
+            # personality.json
+
+            if suite_name.lower().endswith(
+                ".json"
+            ):
+
+                filename = suite_name
+
+            else:
+
+                filename = (
+                    f"{suite_name}.json"
+                )
+
+            file = SUITES / filename
+
+            if not file.exists():
+
+                print(
+                    f" WARNING: Suite not found: "
+                    f"{file.name}"
+                )
+
+                benchmark_logger.warning(
+
+                    f"Requested benchmark suite "
+                    f"not found: {file}"
+
+                )
+
+                continue
+
+            files.append(
+                file
+            )
+
+    else:
+
+        # ---------------------------------
+        # No suite filter = load everything
+        # ---------------------------------
+
+        files = sorted(
+            SUITES.glob("*.json")
+        )
+
+    if not files:
+
+        print(
+            "No benchmark suite files selected."
+        )
 
         return tests
 
+    # ---------------------------------
+    # Load selected suite files
+    # ---------------------------------
 
-
-    for file in SUITES.glob(
-        "*.json"
-    ):
-
+    for file in files:
 
         print(
             f" Loading: {file.name}"
         )
 
+        try:
 
+            with open(
 
-        with open(
+                file,
 
-            file,
+                "r",
 
-            "r",
+                encoding="utf-8"
 
-            encoding="utf-8"
+            ) as f:
 
-        ) as f:
+                suite = json.load(
+                    f
+                )
 
+        except Exception:
 
-            suite = json.load(
-                f
+            benchmark_logger.exception(
+
+                f"Failed to load benchmark "
+                f"suite: {file}"
+
             )
 
+            print(
+                f" ERROR loading {file.name}"
+            )
 
+            continue
+
+        if not isinstance(
+            suite,
+            list
+        ):
+
+            print(
+
+                f" WARNING: {file.name} "
+                f"does not contain a JSON list."
+
+            )
+
+            continue
 
         for test in suite:
 
+            if not isinstance(
+                test,
+                dict
+            ):
+
+                continue
+
+            # ---------------------------------
+            # Store originating suite
+            # ---------------------------------
 
             test["suite"] = file.stem
-
 
             # ---------------------------------
             # Load per-test behavior tags
@@ -355,61 +400,64 @@ def load_questions():
                 []
             )
 
-
             if isinstance(
                 behavior_tags,
                 str
             ):
 
-
                 behavior_tags = [
                     behavior_tags
                 ]
-
 
             elif not isinstance(
                 behavior_tags,
                 list
             ):
 
-
                 behavior_tags = []
 
-
             test["behavior_tags"] = behavior_tags
-
 
             tests.append(
                 test
             )
 
-
+    print()
 
     print(
-
         f"Loaded {len(tests)} tests"
-
     )
 
+    if suites:
+
+        print(
+            "Selected suites:"
+        )
+
+        for suite_name in suites:
+
+            print(
+                f"  - {suite_name}"
+            )
+
+    else:
+
+        print(
+            "Selected suites: ALL"
+        )
 
     print()
 
-
-
     return tests
-
 
 
 # =====================================
 # Benchmark Storage System
 # =====================================
 
-
 class BenchmarkStorage:
 
-
     def __init__(self):
-
 
         self.timestamp = datetime.utcnow().strftime(
 
@@ -417,26 +465,20 @@ class BenchmarkStorage:
 
         )
 
-
         self.run_file = RAW_RESULTS / (
 
             f"benchmark_{self.timestamp}.json"
 
         )
 
-
         self.results = []
-
-
 
 
     # -----------------------------
     # Save Individual Test
     # -----------------------------
 
-
     def save_test(self, result):
-
 
         category = result.get(
 
@@ -446,25 +488,48 @@ class BenchmarkStorage:
 
         )
 
-
         section = get_result_section(
             category
         )
 
+        suite = result.get(
+            "suite",
+            "unknown"
+        )
 
+        # ---------------------------------
+        # Preserve existing behavior-tag
+        # organization when available.
+        #
+        # If a behavior tag exists, use it.
+        # Otherwise use the originating suite.
+        # ---------------------------------
 
-        suite = "unknown"
+        behavior_tags = result.get(
+            "behavior_tags",
+            []
+        )
 
+        if behavior_tags:
 
+            if isinstance(
+                behavior_tags,
+                str
+            ):
 
-        if result.get(
-            "behavior_tags"
-        ):
+                behavior_tags = [
+                    behavior_tags
+                ]
 
+            folder_name = str(
+                behavior_tags[0]
+            )
 
-            suite = result["behavior_tags"][0]
+        else:
 
-
+            folder_name = str(
+                suite
+            )
 
         output = (
 
@@ -476,11 +541,9 @@ class BenchmarkStorage:
 
             /
 
-            suite
+            folder_name
 
         )
-
-
 
         output.mkdir(
 
@@ -490,8 +553,6 @@ class BenchmarkStorage:
 
         )
 
-
-
         test_id = result.get(
 
             "test_id",
@@ -500,8 +561,10 @@ class BenchmarkStorage:
 
         )
 
+        # ---------------------------------
+        # Windows-safe filename
+        # ---------------------------------
 
-        # sanitize test_id to create a Windows-safe filename
         def _sanitize_filename(name: str):
 
             invalid = '<>:"/\\|?*'
@@ -510,7 +573,10 @@ class BenchmarkStorage:
 
                 '_'
 
-                if (c in invalid or ord(c) < 32)
+                if (
+                    c in invalid
+                    or ord(c) < 32
+                )
 
                 else c
 
@@ -520,20 +586,17 @@ class BenchmarkStorage:
 
             return cleaned[:200]
 
-
         safe_name = _sanitize_filename(
 
             str(test_id)
 
         ) or "unknown"
 
-
-
         file = output / f"{safe_name}.json"
 
-
-
-        # avoid accidental overwrite by appending an index when needed
+        # ---------------------------------
+        # Avoid accidental overwrite
+        # ---------------------------------
 
         if file.exists():
 
@@ -541,7 +604,11 @@ class BenchmarkStorage:
 
             while True:
 
-                candidate = output / f"{safe_name}_{i}.json"
+                candidate = (
+                    output
+                    /
+                    f"{safe_name}_{i}.json"
+                )
 
                 if not candidate.exists():
 
@@ -550,8 +617,6 @@ class BenchmarkStorage:
                     break
 
                 i += 1
-
-
 
         with open(
 
@@ -562,7 +627,6 @@ class BenchmarkStorage:
             encoding="utf-8"
 
         ) as f:
-
 
             json.dump(
 
@@ -576,47 +640,38 @@ class BenchmarkStorage:
 
             )
 
-
-
         benchmark_logger.info(
 
-            f"Saved {test_id} -> {section} (path: {file})"
+            f"Saved {test_id} -> "
+            f"{section} "
+            f"(suite={suite}) "
+            f"(path: {file})"
 
         )
-
-
 
 
     # -----------------------------
     # Add Result
     # -----------------------------
 
-
     def add(self, result):
-
 
         self.results.append(
             result
         )
 
-
         self.save_test(
             result
         )
 
-
         self.save_raw()
-
-
 
 
     # -----------------------------
     # Save Raw Run
     # -----------------------------
 
-
     def save_raw(self):
-
 
         self.run_file.parent.mkdir(
 
@@ -626,12 +681,11 @@ class BenchmarkStorage:
 
         )
 
-
         run_file = self.run_file
 
-
-
-        # avoid accidental overwrite if same timestamp was reused
+        # ---------------------------------
+        # Avoid accidental overwrite
+        # ---------------------------------
 
         if run_file.exists():
 
@@ -641,7 +695,9 @@ class BenchmarkStorage:
 
                 candidate = RAW_RESULTS / (
 
-                    f"benchmark_{self.timestamp}_{i}.json"
+                    f"benchmark_"
+                    f"{self.timestamp}_"
+                    f"{i}.json"
 
                 )
 
@@ -653,11 +709,7 @@ class BenchmarkStorage:
 
                 i += 1
 
-
-
         self.run_file = run_file
-
-
 
         with open(
 
@@ -668,7 +720,6 @@ class BenchmarkStorage:
             encoding="utf-8"
 
         ) as f:
-
 
             json.dump(
 
@@ -683,44 +734,49 @@ class BenchmarkStorage:
             )
 
 
-
-
     # -----------------------------
     # Generate Summary
     # -----------------------------
 
-
     def save_summary(self):
-
 
         if not self.results:
 
             return
 
-
         response_times = [
 
             r.get(
                 "response_time_seconds",
-                0
+                r.get(
+                    "metrics",
+                    {}
+                ).get(
+                    "response_time_seconds",
+                    0
+                )
             )
 
             for r in self.results
 
         ]
-
 
         response_words = [
 
             r.get(
                 "response_words",
-                0
+                r.get(
+                    "metrics",
+                    {}
+                ).get(
+                    "response_words",
+                    0
+                )
             )
 
             for r in self.results
 
         ]
-
 
         scores = [
 
@@ -728,14 +784,25 @@ class BenchmarkStorage:
                 "scores",
                 {}
             ).get(
+
                 "overall",
-                0
+
+                r.get(
+                    "metrics",
+                    {}
+                ).get(
+                    "scores",
+                    {}
+                ).get(
+                    "overall",
+                    0
+                )
+
             )
 
             for r in self.results
 
         ]
-
 
         summary = {
 
@@ -747,32 +814,35 @@ class BenchmarkStorage:
 
             "average_response_time":
                 round(
-                    statistics.mean(response_times),
+                    statistics.mean(
+                        response_times
+                    ),
                     3
                 ),
 
             "average_words":
                 round(
-                    statistics.mean(response_words),
+                    statistics.mean(
+                        response_words
+                    ),
                     2
                 ),
 
             "average_score":
                 round(
-                    statistics.mean(scores),
+                    statistics.mean(
+                        scores
+                    ),
                     2
                 )
 
         }
-
-
 
         file = SUMMARY_RESULTS / (
 
             f"summary_{self.timestamp}.json"
 
         )
-
 
         file.parent.mkdir(
 
@@ -782,7 +852,6 @@ class BenchmarkStorage:
 
         )
 
-
         if file.exists():
 
             i = 1
@@ -791,7 +860,9 @@ class BenchmarkStorage:
 
                 candidate = SUMMARY_RESULTS / (
 
-                    f"summary_{self.timestamp}_{i}.json"
+                    f"summary_"
+                    f"{self.timestamp}_"
+                    f"{i}.json"
 
                 )
 
@@ -803,8 +874,6 @@ class BenchmarkStorage:
 
                 i += 1
 
-
-
         with open(
 
             file,
@@ -814,7 +883,6 @@ class BenchmarkStorage:
             encoding="utf-8"
 
         ) as f:
-
 
             json.dump(
 
@@ -826,30 +894,26 @@ class BenchmarkStorage:
 
             )
 
-
-
         benchmark_logger.info(
 
             f"Benchmark summary generated -> {file}"
 
         )
 
+        print(
+            f"Summary saved: {file}"
+        )
 
 
 # =====================================
 # CYN-X Response Scoring
 # =====================================
 
-
 def score_response(response, category):
-
 
     text = response.lower()
 
-
-
     scores = {
-
 
         "personality": 0,
 
@@ -867,12 +931,7 @@ def score_response(response, category):
 
     }
 
-
-
-
     checks = {
-
-
 
         "personality": [
 
@@ -888,8 +947,6 @@ def score_response(response, category):
 
         ],
 
-
-
         "reasoning": [
 
             "because",
@@ -903,8 +960,6 @@ def score_response(response, category):
             "principle"
 
         ],
-
-
 
         "emotional": [
 
@@ -920,8 +975,6 @@ def score_response(response, category):
 
         ],
 
-
-
         "creativity": [
 
             "create",
@@ -933,8 +986,6 @@ def score_response(response, category):
             "explore"
 
         ],
-
-
 
         "safety": [
 
@@ -948,8 +999,6 @@ def score_response(response, category):
 
         ],
 
-
-
         "memory": [
 
             "remember",
@@ -959,8 +1008,6 @@ def score_response(response, category):
             "history"
 
         ],
-
-
 
         "consistency": [
 
@@ -974,24 +1021,15 @@ def score_response(response, category):
 
     }
 
-
-
-
     for name, words in checks.items():
 
-
         for word in words:
-
 
             if word in text:
 
                 scores[name] += 1
 
-
-
-
     for key in scores:
-
 
         scores[key] = min(
 
@@ -1000,8 +1038,6 @@ def score_response(response, category):
             10
 
         )
-
-
 
     scores["overall"] = round(
 
@@ -1015,60 +1051,47 @@ def score_response(response, category):
 
     )
 
-
-
     return scores
-
 
 
 # =====================================
 # Run Single Benchmark Test
 # =====================================
 
-
 def run_single_test(chat_engine, test):
-
 
     test_id = test.get(
         "test_id",
         "unknown"
     )
 
-
     question = test.get(
         "question",
         ""
     )
 
-
     if not question:
 
         raise ValueError(
+
             f"Benchmark test {test_id} "
             "does not contain a question."
-        )
 
+        )
 
     category = test.get(
         "category",
         "unknown"
     )
 
-
     # ---------------------------------
     # Benchmark user identity
-    # ---------------------------------
-    #
-    # The benchmark is not a real user
-    # conversation, so use a stable
-    # benchmark-specific user ID.
     # ---------------------------------
 
     user_id = test.get(
         "user_id",
         "benchmark"
     )
-
 
     # ---------------------------------
     # Benchmark mode
@@ -1079,12 +1102,10 @@ def run_single_test(chat_engine, test):
         "normal"
     )
 
-
     personality = test.get(
         "personality",
         "normal"
     )
-
 
     print(
         f"Question: {question}"
@@ -1092,22 +1113,21 @@ def run_single_test(chat_engine, test):
 
     print()
 
-
     benchmark_logger.info(
 
         f"Starting benchmark test "
-        f"{test_id} | category={category}"
+        f"{test_id} | "
+        f"category={category} | "
+        f"suite={test.get('suite', 'unknown')}"
 
     )
 
-
     start_time = time.perf_counter()
-
 
     try:
 
         # ---------------------------------
-        # Use the actual ChatEngine API
+        # Use actual ChatEngine API
         # ---------------------------------
 
         response = chat_engine.handle_user_message(
@@ -1124,7 +1144,6 @@ def run_single_test(chat_engine, test):
 
         )
 
-
     except Exception:
 
         benchmark_logger.exception(
@@ -1136,12 +1155,15 @@ def run_single_test(chat_engine, test):
 
         raise
 
-
     elapsed = (
-        time.perf_counter()
-        - start_time
-    )
 
+        time.perf_counter()
+
+        -
+
+        start_time
+
+    )
 
     # ---------------------------------
     # Normalize response
@@ -1151,13 +1173,17 @@ def run_single_test(chat_engine, test):
 
         response_text = ""
 
-
-    elif isinstance(response, str):
+    elif isinstance(
+        response,
+        str
+    ):
 
         response_text = response
 
-
-    elif isinstance(response, dict):
+    elif isinstance(
+        response,
+        dict
+    ):
 
         response_text = (
 
@@ -1171,18 +1197,15 @@ def run_single_test(chat_engine, test):
 
         )
 
-
     else:
 
         response_text = str(
             response
         )
 
-
     response_text = str(
         response_text
     )
-
 
     # ---------------------------------
     # Score response
@@ -1196,13 +1219,11 @@ def run_single_test(chat_engine, test):
 
     )
 
-
     response_words = len(
 
         response_text.split()
 
     )
-
 
     print(
         "[BENCHMARK RESPONSE]"
@@ -1214,21 +1235,22 @@ def run_single_test(chat_engine, test):
 
     print()
 
-
     print(
-        f"Response time: {elapsed:.3f}s"
+        f"Response time: "
+        f"{elapsed:.3f}s"
     )
 
     print(
-        f"Response words: {response_words}"
+        f"Response words: "
+        f"{response_words}"
     )
 
     print(
-        f"Overall score: {scores['overall']}"
+        f"Overall score: "
+        f"{scores['overall']}"
     )
 
     print()
-
 
     benchmark_logger.info(
 
@@ -1239,7 +1261,6 @@ def run_single_test(chat_engine, test):
         f"score={scores['overall']}"
 
     )
-
 
     # ---------------------------------
     # Return data to formatter
@@ -1269,44 +1290,38 @@ def run_single_test(chat_engine, test):
 # Benchmark Runner
 # =====================================
 
-
-
 def run_benchmark(
     chat_engine,
     limit=None,
-    categories=None
+    categories=None,
+    suites=None
 ):
-
 
     storage = BenchmarkStorage()
 
-
-    tests = load_questions()
-
-
+    tests = load_questions(
+        suites=suites
+    )
 
     # ---------------------------------
     # Apply benchmark filters
     # ---------------------------------
     #
-    # IMPORTANT:
+    # Suite selection happens first.
     #
-    # limit=None means NO LIMIT.
-    #
-    # When both limit and categories are None,
-    # we skip the filter function completely.
-    # This guarantees that "all" really means
-    # every loaded benchmark test.
+    # Category and limit filters then
+    # operate on the selected tests.
     # ---------------------------------
 
     if limit is None and not categories:
 
         print(
-            "No benchmark limit or category filter."
+            "No benchmark limit or "
+            "category filter."
         )
 
         print(
-            "Running the COMPLETE benchmark suite."
+            "Running all selected suite tests."
         )
 
         print()
@@ -1323,8 +1338,6 @@ def run_benchmark(
 
         )
 
-
-
     if not tests:
 
         print(
@@ -1333,19 +1346,14 @@ def run_benchmark(
 
         return []
 
-
-
     print(
-        f"Running {len(tests)} benchmark test(s)..."
+        f"Running {len(tests)} "
+        f"benchmark test(s)..."
     )
 
     print()
 
-
-
     results = []
-
-
 
     for index, test in enumerate(
 
@@ -1355,7 +1363,6 @@ def run_benchmark(
 
     ):
 
-
         print("=" * 60)
 
         print(
@@ -1363,16 +1370,21 @@ def run_benchmark(
         )
 
         print(
-            f"ID: {test.get('test_id', 'unknown')}"
+            f"ID: "
+            f"{test.get('test_id', 'unknown')}"
         )
 
         print(
-            f"Category: {test.get('category', 'unknown')}"
+            f"Suite: "
+            f"{test.get('suite', 'unknown')}"
+        )
+
+        print(
+            f"Category: "
+            f"{test.get('category', 'unknown')}"
         )
 
         print("=" * 60)
-
-
 
         behavior_tags = test.get(
 
@@ -1382,8 +1394,6 @@ def run_benchmark(
 
         )
 
-
-
         if isinstance(
 
             behavior_tags,
@@ -1392,13 +1402,11 @@ def run_benchmark(
 
         ):
 
-
             behavior_tags = [
 
                 behavior_tags
 
             ]
-
 
         elif not isinstance(
 
@@ -1408,13 +1416,9 @@ def run_benchmark(
 
         ):
 
-
             behavior_tags = []
 
-
-
         try:
-
 
             result = run_single_test(
 
@@ -1423,8 +1427,6 @@ def run_benchmark(
                 test=test
 
             )
-
-
 
             formatted_result = format_benchmark_result(
 
@@ -1436,7 +1438,26 @@ def run_benchmark(
 
             )
 
+            # ---------------------------------
+            # Make sure suite information is
+            # available to the visualizer.
+            # ---------------------------------
 
+            if isinstance(
+                formatted_result,
+                dict
+            ):
+
+                formatted_result.setdefault(
+
+                    "suite",
+
+                    test.get(
+                        "suite",
+                        "unknown"
+                    )
+
+                )
 
             storage.add(
 
@@ -1444,44 +1465,32 @@ def run_benchmark(
 
             )
 
-
             results.append(
 
                 formatted_result
 
             )
 
-
-
         except Exception as e:
-
 
             benchmark_logger.exception(
 
-                f"Benchmark test failed: {test.get('test_id', 'unknown')}"
+                "Benchmark test failed: "
+                f"{test.get('test_id', 'unknown')}"
 
             )
-
 
             print(
-
                 f"ERROR: {e}"
-
             )
 
-
-
         print()
-
-
 
     # ---------------------------------
     # Generate final summary
     # ---------------------------------
 
     storage.save_summary()
-
-
 
     print("=" * 60)
 
@@ -1495,21 +1504,21 @@ def run_benchmark(
         f"Tests run: {len(results)}"
     )
 
+    print(
+        f"Raw results: "
+        f"{storage.run_file}"
+    )
+
     print()
 
-
-
     return results
-
 
 
 # ====================================
 # CYN-X Behavioral Benchmark Runner
 # ====================================
 
-
 def create_cynx_engine():
-
 
     print()
 
@@ -1523,24 +1532,15 @@ def create_cynx_engine():
 
     print()
 
-
-
     cfg = get_config()
 
-
-
     logger = logging.getLogger(
-
         "cynx"
-
     )
-
-
 
     # -----------------------------
     # Database / Memory
     # -----------------------------
-
 
     conn = sqlite_connect(
 
@@ -1548,15 +1548,11 @@ def create_cynx_engine():
 
     )
 
-
-
     memory_store = MemoryStore(
 
         conn
 
     )
-
-
 
     memory_manager = MemoryManager(
 
@@ -1564,21 +1560,15 @@ def create_cynx_engine():
 
     )
 
-
-
     memory_extractor = MemoryExtractor(
 
         memory_manager
 
     )
 
-
-
-
     # -----------------------------
     # Ollama Model
     # -----------------------------
-
 
     ollama = OllamaClient(
 
@@ -1588,13 +1578,9 @@ def create_cynx_engine():
 
     )
 
-
-
-
     # -----------------------------
     # Prompt System
     # -----------------------------
-
 
     prompt_builder = PromptBuilder(
 
@@ -1602,27 +1588,17 @@ def create_cynx_engine():
 
     )
 
-
-
-
     # -----------------------------
     # Modes
     # -----------------------------
 
-
     mode_manager = ModeManager()
-
-
-
 
     # -----------------------------
     # Tools
     # -----------------------------
 
-
     tool_router = ToolRouter()
-
-
 
     tool_router.register_tool(
 
@@ -1630,15 +1606,11 @@ def create_cynx_engine():
 
     )
 
-
-
     tool_router.register_tool(
 
         CalculatorTool()
 
     )
-
-
 
     print(
 
@@ -1646,13 +1618,9 @@ def create_cynx_engine():
 
     )
 
-
-
-
     # -----------------------------
     # Create Chat Engine
     # -----------------------------
-
 
     engine = ChatEngine(
 
@@ -1674,115 +1642,139 @@ def create_cynx_engine():
 
     )
 
-
-
-
     print()
 
     print(
-
         "CYN-X READY"
-
     )
 
     print()
 
-
-
     return engine
-
-
 
 
 # =====================================
 # Command Runner
 # =====================================
 
-
 def run_command(engine):
-
 
     command = get_benchmark_command()
 
-
-
-    if isinstance(command, dict):
-
-
-        mode = command.get(
-
-            "mode",
-
-            "all"
-
-        )
-
-
-        settings = get_benchmark_mode(
-
-            mode
-
-        )
-
-
-
-        if command.get(
-
-            "limit"
-
-        ) is not None:
-
-
-            settings["limit"] = command["limit"]
-
-
-
-    else:
-
-
-        settings = get_benchmark_mode(
-
-            command
-
-        )
-
-
-
     # ---------------------------------
-    # ALL MODE FIX
-    # ---------------------------------
-    #
-    # If the selected mode is "all",
-    # explicitly remove both the limit
-    # and category restriction.
-    #
-    # This guarantees the complete suite
-    # is executed.
+    # Handle parser result
     # ---------------------------------
 
-    if isinstance(command, dict):
+    if not isinstance(
+        command,
+        dict
+    ):
 
-        mode = command.get(
-
-            "mode",
-
-            "all"
-
-        )
-
-    else:
+        # Backwards compatibility with
+        # the old CLI.
 
         mode = command
 
+        settings = get_benchmark_mode(
+            mode
+        )
 
+        suites = None
+
+    else:
+
+        mode = command.get(
+            "mode",
+            "all"
+        )
+
+        suites = command.get(
+            "suites"
+        )
+
+        # ---------------------------------
+        # Help / parser error
+        # ---------------------------------
+
+        if mode in (
+            "help",
+            "error"
+        ):
+
+            return []
+
+        # ---------------------------------
+        # Suite mode
+        # ---------------------------------
+
+        if str(mode).lower() == "suite":
+
+            settings = {
+
+                "limit":
+                    command.get(
+                        "limit"
+                    ),
+
+                "categories":
+                    None
+
+            }
+
+        # ---------------------------------
+        # All mode
+        # ---------------------------------
+
+        elif str(mode).lower() == "all":
+
+            settings = {
+
+                "limit":
+                    command.get(
+                        "limit"
+                    ),
+
+                "categories":
+                    None
+
+            }
+
+        # ---------------------------------
+        # Legacy modes
+        # ---------------------------------
+
+        else:
+
+            settings = get_benchmark_mode(
+
+                mode
+
+            )
+
+            if command.get(
+                "limit"
+            ) is not None:
+
+                settings["limit"] = (
+                    command["limit"]
+                )
+
+    # ---------------------------------
+    # ALL MODE
+    # ---------------------------------
+    #
+    # No suite list means all suite files.
+    #
+    # A supplied --limit is still respected.
+    # ---------------------------------
 
     if str(mode).lower() == "all":
 
-        settings["limit"] = None
-
         settings["categories"] = None
 
-
+    # ---------------------------------
+    # Display configuration
+    # ---------------------------------
 
     print()
 
@@ -1795,46 +1787,54 @@ def run_command(engine):
     print("=" * 60)
 
     print(
-        f"Limit: {settings['limit']}"
+        f"Mode: {mode}"
     )
 
     print(
-        f"Categories: {settings['categories']}"
+        f"Suites: "
+        f"{', '.join(suites) if suites else 'ALL'}"
+    )
+
+    print(
+        f"Limit: "
+        f"{settings.get('limit')}"
+    )
+
+    print(
+        f"Categories: "
+        f"{settings.get('categories')}"
     )
 
     print("=" * 60)
 
     print()
 
-
-
     return run_benchmark(
 
         chat_engine=engine,
 
-        limit=settings["limit"],
+        limit=settings.get(
+            "limit"
+        ),
 
-        categories=settings["categories"]
+        categories=settings.get(
+            "categories"
+        ),
+
+        suites=suites
 
     )
-
-
 
 
 # =====================================
 # Application Entry Point
 # =====================================
 
-
 def main():
-
 
     try:
 
-
         engine = create_cynx_engine()
-
-
 
         run_command(
 
@@ -1842,25 +1842,15 @@ def main():
 
         )
 
-
-
     except KeyboardInterrupt:
-
 
         print()
 
-
-
         print(
-
             "Benchmark cancelled."
-
         )
 
-
-
     except Exception as error:
-
 
         benchmark_logger.exception(
 
@@ -1868,31 +1858,21 @@ def main():
 
         )
 
-
-
         print()
 
-
-
         print(
-
             "Fatal error:"
-
         )
 
-
-
-        print(error)
-
-
+        print(
+            error
+        )
 
 
 # =====================================
 # Start Program
 # =====================================
 
-
 if __name__ == "__main__":
-
 
     main()
