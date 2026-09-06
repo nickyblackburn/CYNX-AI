@@ -113,36 +113,35 @@ class ChatEngine:
  
         )
 
-
     def _ollama_tools(self, user_text: str = ""):
         if not self.tool_router:
             return None
 
         tools = self.tool_router.as_ollama_tools()
 
-        # Python decides whether web_search is allowed for this turn.
-        # The LLM should NOT autonomously research casual conversation.
+        # Python is authoritative for tool selection.
         detected = None
+
         if hasattr(self.tool_router, "detect"):
             try:
                 detected = self.tool_router.detect(user_text)
             except Exception:
                 detected = None
 
-        web_search_allowed = (
-            detected is not None
-            and detected.get("tool") == "web_search"
-        )
+        # Casual conversation = NO tools.
+        if not detected:
+            return []
 
-        if not web_search_allowed:
-            tools = [
-                tool for tool in tools
-                if tool.get("function", {}).get("name") != "web_search"
-            ]
+        allowed_tool = detected.get("tool")
+
+        # Only expose the tool Python actually detected.
+        tools = [
+            tool
+            for tool in tools
+            if tool.get("function", {}).get("name") == allowed_tool
+        ]
 
         return tools
-
-
     def handle_user_message(        self,
         user_id: str,
         text: str,
