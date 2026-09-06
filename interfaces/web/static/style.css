@@ -276,4 +276,83 @@ border-radius:8px;
 
 .cyn-text {
     color: #d8b4ff;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Markdown element styling inside Cyn's responses */
+.cyn-text p {
+    margin: 0 0 8px 0;
+}
+
+.cyn-text ol,
+.cyn-text ul {
+    margin: 8px 0 8px 20px;
+}
+
+.cyn-text li {
+    margin: 4px 0;
+}
+
+.cyn-text strong {
+    font-weight: 700;
+}
+
+.cyn-text em {
+    font-style: italic;
+}
+
+.cyn-text a.cyn-link {
+    color: #c084fc;
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.cyn-text a.cyn-link:hover {
+    text-decoration-thickness: 2px;
+    color: #ffffff;
+    background: rgba(157, 78, 221, 0.12);
+    border-radius: 4px;
+    padding: 0 2px;
+}
+
+.cyn-text h1, .cyn-text h2, .cyn-text h3, .cyn-text h4, .cyn-text h5, .cyn-text h6 {
+    color: #e9d5ff;
+    margin: 8px 0 6px 0;
+}
+
+.cyn-text blockquote {
+    border-left: 3px solid rgba(157,78,221,0.5);
+    margin: 8px 0;
+    padding: 6px 12px;
+    background: rgba(157,78,221,0.04);
+    color: #f0e6ff;
+}
+
+.cyn-text code {
+    background: rgba(0,0,0,0.25);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    color: #ffd6ff;
+}
+
+.cyn-text pre {
+    background: rgba(0,0,0,0.35);
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    color: #ffd6ff;
+}
+
+.cyn-text pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.cyn-text {
+    color: #d8b4ff;
+    white-space: pre-wrap;
+    word-break: break-word;
 }

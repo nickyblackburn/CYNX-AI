@@ -321,80 +321,154 @@ async function send(){
 // ==========================
 // CHAT DISPLAY
 // ==========================
-// ==========================
-// CHAT DISPLAY
-// ==========================
 
-function addMessage(message){
+function escapeHTML(text){
 
+    const div = document.createElement("div");
 
-    const chat =
-        document.getElementById(
-            "chat"
-        );
+    div.textContent = text;
 
-
-    if(!chat)
-        return;
-
-
-
-    const div =
-        document.createElement(
-            "div"
-        );
-
-
-    div.className =
-        "message";
-
-
-
-    if(message.startsWith("You:")){
-
-
-        div.innerHTML =
-            `<span class="you-name">You:</span>` +
-            `<span class="you-text">${message.substring(4)}</span>`;
-
-    }
-
-
-    else if(message.startsWith("Cyn:")){
-
-
-        div.innerHTML =
-            `<span class="cyn-name">Cyn:</span>` +
-            `<span class="cyn-text">${message.substring(4)}</span>`;
-
-    }
-
-
-    else{
-
-
-        div.innerText =
-            message;
-
-
-    }
-
-
-
-    chat.appendChild(
-        div
-    );
-
-
-    chat.scrollTop =
-        chat.scrollHeight;
-
+    return div.innerHTML;
 
 }
 
 
+function formatCynText(text){
+
+    // If marked and DOMPurify are available, render Markdown -> sanitize -> return.
+    if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+
+        const renderer = new marked.Renderer();
+
+        // Render links only for http/https and add the required attributes
+        renderer.link = function(href, title, text) {
+            try {
+                if (!href) return escapeHTML(text);
+
+                // allow only http(s)
+                if (!/^https?:\/\//i.test(href)) {
+                    return escapeHTML(text);
+                }
+
+                const safeHref = escapeHTML(href);
+                const safeText = text || safeHref;
+                const titleAttr = title ? ' title="' + escapeHTML(title) + '"' : '';
+
+                return '<a class="cyn-link" href="' + safeHref + '"' + titleAttr + ' target="_blank" rel="noopener noreferrer">' + safeText + '</a>';
+
+            } catch (e) {
+                return escapeHTML(text);
+            }
+        };
+
+        // Escape any raw HTML blocks from the model to avoid injecting HTML
+        renderer.html = function(html) {
+            return escapeHTML(html);
+        };
+
+        const rawHtml = marked.parse(text, { renderer: renderer });
+
+        // Sanitize produced HTML and only allow http/https URIs
+        const clean = DOMPurify.sanitize(rawHtml, { ALLOWED_URI_REGEXP: /^(?:https?):/i });
+
+        return clean;
+
+    }
+
+    // Fallback: escape and linkify as before
+    let safeText = escapeHTML(text);
+
+    safeText = safeText.replace(
+        /(https?:\/\/[^\s<]+)/gi,
+        function(url){
+
+            // Remove punctuation accidentally attached to URL.
+            let cleanURL = url;
+            let trailing = "";
+
+            const match = url.match(/[.,!?;:)]+$/);
+
+            if(match){
+
+                trailing = match[0];
+
+                cleanURL =
+                    url.substring(
+                        0,
+                        url.length - trailing.length
+                    );
+
+            }
+
+            return (
+                '<a class="cyn-link" ' +
+                'href="' + cleanURL + '" ' +
+                'target="_blank" ' +
+                'rel="noopener noreferrer">' +
+                cleanURL +
+                '</a>' +
+                trailing
+            );
+
+        }
+    );
+
+    // Preserve line breaks in Cyn responses.
+    safeText = safeText.replace(
+        /\n/g,
+        "<br>"
+    );
+
+    return safeText;
+
+}
 
 
+function addMessage(message) {
+
+    const chat = document.getElementById("chat");
+
+    if (!chat)
+        return;
+
+    const div = document.createElement("div");
+
+    div.className = "message";
+
+    if (message.startsWith("You:")) {
+
+        const text = message.substring(4);
+
+        div.innerHTML =
+            '<span class="you-name">You:</span>' +
+            '<span class="you-text">' +
+            escapeHTML(text) +
+            '</span>';
+
+    }
+
+    else if (message.startsWith("Cyn:")) {
+
+        const text = message.substring(4);
+
+        div.innerHTML =
+            '<span class="cyn-name">Cyn:</span>' +
+            '<span class="cyn-text">' +
+            formatCynText(text) +
+            '</span>';
+
+    }
+
+    else {
+
+        div.textContent = message;
+
+    }
+
+    chat.appendChild(div);
+
+    chat.scrollTop = chat.scrollHeight;
+}
 
 
 

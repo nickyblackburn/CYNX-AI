@@ -13,6 +13,7 @@ expand with async handling and retries later.
 
 import json
 import logging
+import os
 from typing import Optional
 
 from ai.memory_system import MemoryManager, MemoryExtractor
@@ -345,6 +346,11 @@ class ChatEngine:
         ]
 
         print("[USER]", text)
+
+        if os.environ.get("CYN_DEBUG_PROMPT") == "1":
+            print("===== ACTUAL SYSTEM PROMPT =====")
+            print(messages[0]["content"])
+            print("================================")
 
         # Call Ollama with a real chat tool schema. If the model issues a tool call,
         # execute it in Python and then send the tool result back to Ollama.

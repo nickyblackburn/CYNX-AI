@@ -355,7 +355,14 @@ class PromptBuilder:
 
                 continue
 
-
+            if (
+                size == 0
+                and section.get("priority", 0) >= 90
+            ):
+                budgeted = content[:self.MAX_FINAL_PROMPT_CHARS]
+                output.append(budgeted)
+                size += len(budgeted)
+                continue
 
             if (
 
@@ -367,9 +374,12 @@ class PromptBuilder:
 
             ):
 
-
+                if not output and section.get("priority", 0) >= 90:
+                    budgeted = content[:self.MAX_FINAL_PROMPT_CHARS]
+                    output.append(budgeted)
+                    size += len(budgeted)
+                    continue
                 continue
-
 
 
             output.append(
@@ -378,9 +388,7 @@ class PromptBuilder:
 
             )
 
-
             size += len(content)
-
 
 
         return output
@@ -667,23 +675,9 @@ class PromptBuilder:
 
 
         # ---------------------------------
-        # User Input
+        # User Input is kept separate from the system prompt.
+        # It is sent as the actual user message in ChatEngine.
         # ---------------------------------
-
-        sections.append({
-
-            "priority": 110,
-
-            "content":
-
-                "User: "
-
-                +
-
-                user_input
-
-        })
-
 
 
         # ---------------------------------
