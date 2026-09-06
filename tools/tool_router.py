@@ -220,9 +220,20 @@ class ToolRouter:
                 limit = parse_number(tl) or 10
                 return {"tool": "smoke_counter", "action": "recent", "limit": limit}
 
-            # stats
-            if re.search(r"\b(how many|how often|how many times|show my smoking stats|how many hits|how many times did)\b", tl):
-                return {"tool": "smoke_counter", "action": "stats"}
+            # stats (including type-filtered counts like 'how many vape hits do I have today?')
+            smoke_type_for_stats = None
+            for candidate in ["vape", "pen", "bong", "cigarette", "cig"]:
+                if candidate in tl:
+                    smoke_type_for_stats = self.normalize_smoke_type(candidate)
+                    break
+
+            if re.search(r"\b(how many|how often|how many times|show my smoking stats|how many hits|how many times did|how much have i smoked|how much have i smoked today)\b", tl):
+                payload = {"tool": "smoke_counter", "action": "stats"}
+                if smoke_type_for_stats:
+                    payload["smoke_type"] = smoke_type_for_stats
+                if "today" in tl:
+                    payload["scope"] = "today"
+                return payload
 
             # log patterns
             # e.g. "log 2 cigarettes", "add one cigarette", "i just smoked", "i took 3 hits"

@@ -262,42 +262,94 @@ def log_smoke(
 # Statistics
 # ============================================================
 
-def get_stats() -> Dict[str, Any]:
-    """Return overall smoking statistics."""
+def normalize_smoke_type(value: Optional[str]) -> Optional[str]:
+    """Normalize common aliases to canonical smoke types."""
+    if value is None:
+        return None
+    v = str(value).lower().strip()
+    if not v:
+        return None
+    aliases = {
+        "cig": "cigarette",
+        "cigs": "cigarette",
+        "cigarette": "cigarette",
+        "cigarettes": "cigarette",
+        "bong": "bong",
+        "bongs": "bong",
+        "vape": "vape",
+        "vapes": "vape",
+        "vaped": "vape",
+        "pen": "pen",
+        "pens": "pen",
+        "weed": "weed",
+        "joint": "joint",
+        "joints": "joint"
+    }
+    return aliases.get(v, v)
+
+
+def get_stats(smoke_type: Optional[str] = None, scope: str = "all") -> Dict[str, Any]:
+    """Return smoking statistics.
+
+    If smoke_type is provided, only matches that smoke type.
+    If scope == 'today', only count today's sessions.
+    """
 
     data = load_data()
-
     sessions = data.get("sessions", [])
 
-    # Count today's sessions
+    normalized = normalize_smoke_type(smoke_type)
+    if normalized:
+        sessions = [
+            s for s in sessions
+            if normalize_smoke_type(str(s.get("type", ""))) == normalized
+        ]
+
     today = datetime.now().strftime("%Y-%m-%d")
+    if str(scope).lower() == "today":
+        sessions = [
+            s for s in sessions
+            if str(s.get("time", "")).startswith(today)
+        ]
+
+    units = sum(float(s.get("units", 0) or 0) for s in sessions)
+    session_count = len(sessions)
+    last_session = sessions[-1] if sessions else None
+
+    if normalized is not None:
+        return {
+            "success": True,
+            "scope": str(scope).lower() if scope else "all",
+            "smoke_type": normalized,
+            "units": units,
+            "sessions": session_count,
+            "today_sessions": len([s for s in sessions if str(s.get("time", "")).startswith(today)]),
+            "today_units": sum(float(s.get("units", 0) or 0) for s in sessions if str(s.get("time", "")).startswith(today)),
+            "last_session": last_session,
+        }
 
     today_sessions = [
-        s
-        for s in sessions
+        s for s in data.get("sessions", [])
         if str(s.get("time", "")).startswith(today)
     ]
-
-    today_units = sum(
-        float(s.get("units", 0))
-        for s in today_sessions
-    )
+    today_units = sum(float(s.get("units", 0) or 0) for s in today_sessions)
 
     return {
         "success": True,
         "total_units": data.get("total_units", 0),
-        "total_cigarettes": data.get(
-            "total_cigarettes",
-            0
-        ),
-        "total_sessions": len(sessions),
+        "total_cigarettes": data.get("total_cigarettes", 0),
+        "total_sessions": len(data.get("sessions", [])),
         "today_sessions": len(today_sessions),
         "today_units": today_units,
         "last_session": (
-            sessions[-1]
-            if sessions
+            data.get("sessions", [])[-1]
+            if data.get("sessions")
             else None
-        )
+        ),
+        "scope": "all",
+        "smoke_type": None,
+        "units": data.get("total_units", 0),
+        "sessions": len(data.get("sessions", [])),
     }
 
 
@@ -419,7 +471,7 @@ class SmokeCounterTool(BaseTool):
         Reset the entire smoking tracker.
     """
 
-    def call(self, args=None, action: str = "stats", smoke_type: Optional[str] = None, amount: float = 1, limit: int = 10) -> ToolResult:
+    def call(self, args=None, action: str = "stats", smoke_type: Optional[str] = None, amount: float = 1, limit: int = 10, scope: str = "all") -> ToolResult:
         """
         Flexible call interface:
         - If args is a dict (tool_router), use it.
@@ -435,8 +487,10 @@ class SmokeCounterTool(BaseTool):
             smoke_type = req.get('smoke_type', smoke_type)
             amount = req.get('amount', amount)
             limit = req.get('limit', limit)
+            scope = str(req.get('scope', scope)).lower()
         else:
             action = str(action).lower().strip()
+            scope = str(scope).lower()
 
         # Call underlying functions and get a structured result
         try:
@@ -456,14 +510,21 @@ class SmokeCounterTool(BaseTool):
                 return ToolResult(result.get('success', False), out, metadata=result)
 
             elif action == "stats":
-                result = get_stats()
+                smoke_type_value = normalize_smoke_type(smoke_type)
+                scope_value = str(scope).lower() if scope else 'all'
+                result = get_stats(smoke_type=smoke_type_value, scope=scope_value)
                 if result.get('success'):
-                    out = (
-                        f"Total units: {result.get('total_units')}. "
-                        f"Total cigarettes: {result.get('total_cigarettes')}. "
-                        f"Sessions: {result.get('total_sessions')}. "
-                        f"Today: {result.get('today_sessions')} sessions ({result.get('today_units')} units)."
-                    )
+                    if smoke_type_value:
+                        out = (
+                            f"{smoke_type_value.title()} total for {scope_value}: {result.get('units')} units across {result.get('sessions')} sessions."
+                        )
+                    else:
+                        out = (
+                            f"Total units: {result.get('total_units')}. "
+                            f"Total cigarettes: {result.get('total_cigarettes')}. "
+                            f"Sessions: {result.get('total_sessions')}. "
+                            f"Today: {result.get('today_sessions')} sessions ({result.get('today_units')} units)."
+                        )
                 else:
                     out = "Statistics not available."
                 return ToolResult(result.get('success', False), out, metadata=result)
@@ -519,7 +580,8 @@ def smoke_counter_call(
     action: str = "stats",
     smoke_type: Optional[str] = None,
     amount: float = 1,
-    limit: int = 10
+    limit: int = 10,
+    scope: str = "all"
 ) -> Dict[str, Any]:
 
     """
@@ -530,7 +592,8 @@ def smoke_counter_call(
         action=action,
         smoke_type=smoke_type,
         amount=amount,
-        limit=limit
+        limit=limit,
+        scope=scope
     )
 
 
