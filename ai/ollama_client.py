@@ -167,6 +167,10 @@ class OllamaClient:
             "model": self.model,
             "messages": messages,
             "stream": stream,
+            "options": {
+                "num_ctx": 8192,
+                "temperature": 0.7
+            },
             **kwargs
         }
         if tools is not None:
