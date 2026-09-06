@@ -454,14 +454,27 @@ class BenchmarkStorage:
         )
 
 
+        # sanitize test_id to create a Windows-safe filename
+        def _sanitize_filename(name: str) -> str:
+            invalid = '<>:"/\\|?*'
+            # replace invalid chars and control chars
+            cleaned = ''.join('_' if (c in invalid or ord(c) < 32) else c for c in name)
+            # trim excessive length
+            return cleaned[:200]
 
-        file = output / (
+        safe_name = _sanitize_filename(str(test_id)) or "unknown"
 
-            f"{test_id}.json"
+        file = output / f"{safe_name}.json"
 
-        )
-
-
+        # avoid accidental overwrite by appending an index when needed
+        if file.exists():
+            i = 1
+            while True:
+                candidate = output / f"{safe_name}_{i}.json"
+                if not candidate.exists():
+                    file = candidate
+                    break
+                i += 1
 
         with open(
 
@@ -490,7 +503,7 @@ class BenchmarkStorage:
 
         benchmark_logger.info(
 
-            f"Saved {test_id} -> {section}"
+            f"Saved {test_id} -> {section} (path: {file})"
 
         )
 
@@ -529,9 +542,27 @@ class BenchmarkStorage:
     def save_raw(self):
 
 
+        # ensure parent directory exists
+        self.run_file.parent.mkdir(parents=True, exist_ok=True)
+
+        run_file = self.run_file
+
+        # avoid accidental overwrite if same timestamp was reused
+        if run_file.exists():
+            i = 1
+            while True:
+                candidate = RAW_RESULTS / f"benchmark_{self.timestamp}_{i}.json"
+                if not candidate.exists():
+                    run_file = candidate
+                    break
+                i += 1
+
+        # update self.run_file so subsequent writes target the same file
+        self.run_file = run_file
+
         with open(
 
-            self.run_file,
+            run_file,
 
             "w",
 
@@ -613,6 +644,18 @@ class BenchmarkStorage:
             f"summary_{self.timestamp}.json"
         )
 
+        # ensure parent directory exists
+        file.parent.mkdir(parents=True, exist_ok=True)
+
+        # avoid accidental overwrite
+        if file.exists():
+            i = 1
+            while True:
+                candidate = SUMMARY_RESULTS / f"summary_{self.timestamp}_{i}.json"
+                if not candidate.exists():
+                    file = candidate
+                    break
+                i += 1
 
         with open(
             file,
@@ -628,7 +671,7 @@ class BenchmarkStorage:
 
 
         benchmark_logger.info(
-            "Benchmark summary generated"
+            f"Benchmark summary generated -> {file}"
         )
 
 
