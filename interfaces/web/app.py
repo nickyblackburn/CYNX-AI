@@ -37,6 +37,7 @@ from memory.memory import MemoryStore
 from tools.tool_router import ToolRouter
 from tools.web_search import WebSearchTool
 from tools.calculator import CalculatorTool
+from tools.SmokeCounterTool import smoke_counter
 
 
 
@@ -90,6 +91,11 @@ tool_router.register_tool(
 
 tool_router.register_tool(
     CalculatorTool()
+)
+
+# Register the smoke_counter tool so Cyn can call it from web interface
+tool_router.register_tool(
+    smoke_counter
 )
 
 

@@ -289,11 +289,18 @@ class ChatEngine:
 
 
 
+        # Prepare tools specification for the model so it knows available tools and
+        # the concise rule: call tools when appropriate (direct action first).
+        tools_list = []
+        if self.tool_router:
+            for t in self.tool_router.describe_tools():
+                tools_list.append(f"{t['name']}: {t['description']}")
+        tools_spec_str = "Available tools:\n" + "\n".join(tools_list)
+        tools_spec_str += "\n\nTool-use instruction: When the user asks for information or an action that one of your available tools can perform, use the appropriate tool. Execute the tool and use its result in your response. PRIORITY: Direct response first. Personality second. Do not redirect mundane requests into unrelated topics."
+
         prompt = self.prompt_builder.build_prompt(
 
-
             user_input=text,
-
 
             mode_fragment="\n".join(
 
@@ -301,18 +308,11 @@ class ChatEngine:
 
             ),
 
-
             memory_summary=mem_summary,
-
 
             knowledge_context=knowledge_context,
 
-
-            tools_spec=(
-
-                f"Personality: {personality}"
-
-            )
+            tools_spec=tools_spec_str
 
         )
 
