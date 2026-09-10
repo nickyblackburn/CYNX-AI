@@ -166,24 +166,16 @@ class MemoryExtractor:
 
 
 
-            memory_id = self.memory_store.add_memory(
+            memory_id = self.memory_store.remember(
 
-                user_id=user_id,
 
-                kind=category,
+                user_id,
 
-                content=content,
+                content,
 
-                importance=importance,
+                category,
 
-                tags=[category],
-
-                metadata={
-
-                    "source": "memory_extractor"
-
-                }
-
+                importance
             )
 
 

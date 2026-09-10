@@ -1,3 +1,6 @@
+
+
+
 class ContextManager:
 
 
@@ -9,6 +12,7 @@ class ContextManager:
         knowledge_store
     ):
 
+        
         self.memory_store = memory_store
         self.knowledge_store = knowledge_store
 
@@ -43,7 +47,48 @@ class ContextManager:
 
             if memories:
 
-                memory_context = "\n".join(memories)
+                # MemoryManager.search() may return
+                # formatted strings or memory records.
+
+                if isinstance(memories, str):
+
+                    memory_context = memories
+
+                else:
+
+                    formatted_memories = []
+
+                    for memory in memories:
+
+                        if isinstance(memory, str):
+
+                            formatted_memories.append(
+                                memory
+                            )
+
+                        elif isinstance(memory, dict):
+
+                            content = memory.get(
+                                "content",
+                                ""
+                            )
+
+                            if content:
+
+                                formatted_memories.append(
+                                    content
+                                )
+
+                        else:
+
+                            formatted_memories.append(
+                                str(memory)
+                            )
+
+
+                    memory_context = "\n".join(
+                        formatted_memories
+                    )
 
 
             print("[MEMORY FOUND]")
@@ -71,9 +116,16 @@ class ContextManager:
 
             if documents:
 
-                knowledge_context = "\n".join(
-                    documents
-                )
+                if isinstance(documents, str):
+
+                    knowledge_context = documents
+
+                else:
+
+                    knowledge_context = "\n".join(
+                        str(document)
+                        for document in documents
+                    )
 
 
         except Exception as e:

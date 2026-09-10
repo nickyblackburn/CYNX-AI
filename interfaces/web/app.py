@@ -32,8 +32,6 @@ from ai.prompt_builder import PromptBuilder
 from ai.mode_manager import ModeManager
 from ai.chat_engine import ChatEngine
 
-from memory.memory import MemoryStore
-
 from tools.tool_router import ToolRouter
 from tools.web_search import WebSearchTool
 from tools.calculator import CalculatorTool
@@ -75,10 +73,29 @@ prompt_builder = PromptBuilder()
 
 conn = connect()
 
-memory_store = MemoryStore(
+
+
+# ======================
+# MEMORY
+# ======================
+
+# MemoryManager is now the single
+# memory system used by CYN-X.
+
+memory_manager = MemoryManager(
     conn
 )
 
+
+memory_extractor = MemoryExtractor(
+    memory_manager
+)
+
+
+
+# ======================
+# TOOLS
+# ======================
 
 
 tool_router = ToolRouter()
@@ -93,34 +110,52 @@ tool_router.register_tool(
     CalculatorTool()
 )
 
-# Register the smoke_counter tool so Cyn can call it from web interface
+
+# Register the smoke_counter tool so Cyn
+# can call it from the web interface
 tool_router.register_tool(
     smoke_counter
 )
 
 
 
+# ======================
+# MODE / KNOWLEDGE
+# ======================
+
+
 mode_manager = ModeManager()
 
-memory_store = MemoryStore(conn)
 
-memory_manager = MemoryManager(conn)
-
-memory_extractor = MemoryExtractor(memory_store)
 knowledge_store = KnowledgeStore(
     conn
 )
 
+
+
+# ======================
+# CONTEXT
+# ======================
+
+# ContextManager and MemoryExtractor now
+# use the exact same MemoryManager.
+
 context_manager = ContextManager(
-    memory_store,
+    memory_manager,
     knowledge_store,
 )
+
+
+
+# ======================
+# CHAT ENGINE
+# ======================
 
 
 chat_engine = ChatEngine(
     ollama_client,
     prompt_builder,
-    memory_store,
+    memory_manager,
     tool_router,
     mode_manager,
     memory_manager,
@@ -144,6 +179,7 @@ async def home(request:Request):
         name="chat.html",
         context={}
     )
+
 
 @app.get("/dashboard")
 def dashboard(request:Request):
@@ -176,7 +212,11 @@ async def chat(data:dict):
         ""
     )
 
-    print(f"[CHAT REQUEST] id={request_id} count={chat_request_count} message_preview={message[:120]}")
+    print(
+        f"[CHAT REQUEST] id={request_id} "
+        f"count={chat_request_count} "
+        f"message_preview={message[:120]}"
+    )
 
     response = chat_engine.handle_user_message(
         user_id="web_user",
@@ -189,7 +229,10 @@ async def chat(data:dict):
         3
     )
 
-    print(f"[CHAT COMPLETE] id={request_id} elapsed={elapsed}s")
+    print(
+        f"[CHAT COMPLETE] id={request_id} "
+        f"elapsed={elapsed}s"
+    )
 
     return {
 

@@ -45,7 +45,7 @@ class MemoryManager:
             cur = self.conn.cursor()
 
             cur.execute(
-                '''INSERT INTO user_memories
+                '''INSERT INTO memories
                    (user_id, category, content, importance, created_at, updated_at)
                    VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))''',
                 (
