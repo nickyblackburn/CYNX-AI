@@ -1,3 +1,4 @@
+
 """
 ToolRouter:
 - Register tools
@@ -230,10 +231,15 @@ class ToolRouter:
         Detect whether a message requires a tool.
         """
 
+        if not text:
+            return None
+
         text_lower = text.lower()
 
 
+        # ========================================================
         # First: detect smoke-counter intents
+        # ========================================================
 
         smoke_words = [
             "smoke",
@@ -615,15 +621,26 @@ class ToolRouter:
             return smoke_req
 
 
+        # ========================================================
         # Research / factual-question detection
+        # ========================================================
 
         research_words = [
             "research",
             "studies",
             "study",
             "science",
+            "scientific",
             "scientists",
             "researchers",
+            "evidence",
+            "academic",
+            "psychology",
+            "psychological",
+            "medical",
+            "clinical",
+            "prevalence",
+            "statistics",
             "according to research",
             "what does research say",
             "what do studies say",
@@ -639,27 +656,59 @@ class ToolRouter:
 
         research_question_patterns = [
             "why do people",
+            "why do humans",
             "why does",
+            "why did",
             "why are people",
+            "why are humans",
+            "why would people",
+            "why would humans",
             "what causes",
             "what makes people",
-            "how common",
-            "how often",
-            "what are the effects",
-            "what are the risks",
+            "what makes humans",
             "what is the psychology",
             "psychology of",
             "what researchers",
-            "what does science"
+            "what does science",
+            "what does research",
+            "what do studies",
+            "what are the effects",
+            "what are the risks",
+            "how common",
+            "how often",
+            "how prevalent"
         ]
 
 
-        if (
-            any(word in text_lower for word in research_words)
-            or any(
-                pattern in text_lower
-                for pattern in research_question_patterns
+        # --------------------------------------------------------
+        # Normalize common casual typos
+        # --------------------------------------------------------
+
+        normalized_text = text_lower
+
+        typo_replacements = {
+            "wy ": "why ",
+            "wit ": "with ",
+            "wth ": "with ",
+            "ave ": "have ",
+            "hav ": "have ",
+        }
+
+        for old, new in typo_replacements.items():
+
+            normalized_text = normalized_text.replace(
+                old,
+                new
             )
+
+
+        # --------------------------------------------------------
+        # Explicit research requests
+        # --------------------------------------------------------
+
+        if any(
+            word in normalized_text
+            for word in research_words
         ):
 
             return {
@@ -668,7 +717,63 @@ class ToolRouter:
             }
 
 
+        # --------------------------------------------------------
+        # Known research question patterns
+        # --------------------------------------------------------
+
+        if any(
+            pattern in normalized_text
+            for pattern in research_question_patterns
+        ):
+
+            return {
+                "tool": "web_search",
+                "query": text
+            }
+
+
+        # --------------------------------------------------------
+        # General causal questions
+        # --------------------------------------------------------
+
+        import re
+
+        why_pattern = re.search(
+            r"\bwhy\s+"
+            r"(?:do|does|did|are|is|was|were|would|can|could)\b",
+            normalized_text
+        )
+
+        if why_pattern:
+
+            return {
+                "tool": "web_search",
+                "query": text
+            }
+
+
+        # --------------------------------------------------------
+        # General factual questions
+        # --------------------------------------------------------
+
+        factual_pattern = re.search(
+            r"\b(?:what|how)\s+"
+            r"(?:is|are|does|do|did|can|could|common|often|"
+            r"causes|caused|affects|affect)\b",
+            normalized_text
+        )
+
+        if factual_pattern:
+
+            return {
+                "tool": "web_search",
+                "query": text
+            }
+
+
+        # ========================================================
         # Fallback: search detection
+        # ========================================================
 
         search_words = [
             "search",
@@ -684,7 +789,10 @@ class ToolRouter:
         ]
 
 
-        if any(word in text_lower for word in search_words):
+        if any(
+            word in text_lower
+            for word in search_words
+        ):
 
             return {
                 "tool": "web_search",
