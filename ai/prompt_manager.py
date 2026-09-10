@@ -1,3 +1,27 @@
+"""
+CYN-X Prompt Manager.
+
+Loads and assembles CYN-X's prompt architecture.
+
+Prompt layers include:
+
+- Core identity
+- Personality
+- Personality matrix
+- Voice
+- Overrides
+- CYN Studio knowledge
+- Conversation behavior
+- Examples
+- Reasoning
+- Projects
+- Safety
+- Modes
+- Options
+- Memory
+- Retrieved knowledge / tool context
+"""
+
 from pathlib import Path
 from typing import Optional
 
@@ -39,6 +63,8 @@ class PromptManager:
     # ---------------------------------------------
 
     MAX_CORE_CHARS = 12000
+
+    MAX_PERSONALITY_CHARS = 4000
 
     MAX_SAFETY_CHARS = 3000
 
@@ -180,7 +206,6 @@ class PromptManager:
 
     def load_core_prompts(self):
 
-       
 
         print("\n=== CORE FILE SIZES ===")
 
@@ -237,17 +262,40 @@ class PromptManager:
         core = "\n\n".join(parts)
 
 
-        
-        terminal.section("CORE PREVIEW")
-        terminal.dim(core[:500])
+        terminal.section(
+            "CORE PREVIEW"
+        )
 
-        terminal.info("CORE CONTAINS PIPER")
-        if "Piper" in core or "piper" in core:
-            terminal.info("YES - Piper exists in core")
+        terminal.dim(
+            core[:500]
+        )
+
+
+        terminal.info(
+            "CORE CONTAINS PIPER"
+        )
+
+
+        if (
+            "Piper" in core
+            or
+            "piper" in core
+        ):
+
+            terminal.info(
+                "YES - Piper exists in core"
+            )
+
         else:
-            terminal.warning("NO - Piper missing")
 
-        terminal.dim(core[:1000])
+            terminal.warning(
+                "NO - Piper missing"
+            )
+
+
+        terminal.dim(
+            core[:1000]
+        )
 
 
 
@@ -258,6 +306,50 @@ class PromptManager:
             self.MAX_CORE_CHARS
 
         )
+
+
+
+
+    # ---------------------------------------------
+    # Personality Matrix
+    # ---------------------------------------------
+
+    def load_personality_matrix(self):
+
+
+        try:
+
+            from .personality import (
+                build_personality_prompt
+            )
+
+
+            personality = (
+                build_personality_prompt()
+            )
+
+
+            return self.trim_text(
+
+                personality,
+
+                self.MAX_PERSONALITY_CHARS
+
+            )
+
+
+        except Exception as e:
+
+            terminal.warning(
+
+                "PERSONALITY MATRIX ERROR: "
+
+                + str(e)
+
+            )
+
+
+            return ""
 
 
 
@@ -391,13 +483,42 @@ class PromptManager:
 
 
 
+        # -----------------------------
+        # Core Identity
+        # -----------------------------
+
         core = self.load_core_prompts()
 
 
         if core:
+
             parts.append(
+
                 "[CORE IDENTITY - ALWAYS FOLLOW]\n"
-                + core
+                +
+
+                core
+
+            )
+
+
+
+
+        # -----------------------------
+        # Personality Matrix
+        # -----------------------------
+
+        personality_matrix = (
+            self.load_personality_matrix()
+        )
+
+
+        if personality_matrix:
+
+            parts.append(
+
+                personality_matrix
+
             )
 
 
@@ -593,7 +714,8 @@ class PromptManager:
 
                         self.trim_text(
 
-                            f"[{mode.upper()} MODE]\n{mode_text}",
+                            f"[{mode.upper()} MODE]\n"
+                            f"{mode_text}",
 
                             self.MAX_MODE_CHARS
 
@@ -626,7 +748,8 @@ class PromptManager:
 
                         self.trim_text(
 
-                            f"[{option.upper()} OPTION]\n{option_text}",
+                            f"[{option.upper()} OPTION]\n"
+                            f"{option_text}",
 
                             self.MAX_OPTION_CHARS
 
@@ -648,7 +771,8 @@ class PromptManager:
 
                 self.trim_text(
 
-                    f"[MEMORY]\n{memory_summary}",
+                    f"[MEMORY]\n"
+                    f"{memory_summary}",
 
                     self.MAX_MEMORY_CHARS
 
@@ -681,6 +805,10 @@ class PromptManager:
 
 
 
+        # ---------------------------------------------
+        # Final Prompt
+        # ---------------------------------------------
+
         prompt = "\n\n".join(
 
             p
@@ -692,20 +820,107 @@ class PromptManager:
         )
 
 
-        def section_label(name, text):
-            return f"[PROMPT SECTION] {name}: {len(text or '')} chars"
+        # ---------------------------------------------
+        # Debug Information
+        # ---------------------------------------------
+
+        def section_label(
+            name,
+            text
+        ):
+
+            return (
+                f"[PROMPT SECTION] "
+                f"{name}: "
+                f"{len(text or '')} chars"
+            )
 
 
-        print(section_label("core", core))
-        print(section_label("studio", cyn_studio))
-        print(section_label("conversation", conversation))
-        print(section_label("examples", examples))
-        print(section_label("reasoning", reasoning))
-        print(section_label("projects", projects))
-        print(section_label("safety", safety))
-        print(section_label("memory", memory_summary))
-        print(section_label("additional_context", additional_context))
-        print(f"[FINAL SYSTEM PROMPT] {len(prompt)} chars / {len(prompt.split())} words")
+        print(
+            section_label(
+                "core",
+                core
+            )
+        )
 
 
-        return prompt
+        print(
+            section_label(
+                "personality_matrix",
+                personality_matrix
+            )
+        )
+
+
+        print(
+            section_label(
+                "studio",
+                cyn_studio
+            )
+        )
+
+
+        print(
+            section_label(
+                "conversation",
+                conversation
+            )
+        )
+
+
+        print(
+            section_label(
+                "examples",
+                examples
+            )
+        )
+
+
+        print(
+            section_label(
+                "reasoning",
+                reasoning
+            )
+        )
+
+
+        print(
+            section_label(
+                "projects",
+                projects
+            )
+        )
+
+
+        print(
+            section_label(
+                "safety",
+                safety
+            )
+        )
+
+
+        print(
+            section_label(
+                "memory",
+                memory_summary
+            )
+        )
+
+
+        print(
+            section_label(
+                "additional_context",
+                additional_context
+            )
+        )
+
+
+        print(
+            f"[FINAL SYSTEM PROMPT] "
+            f"{len(prompt)} chars / "
+            f"{len(prompt.split())} words"
+        )
+
+
+        return promp
