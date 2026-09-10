@@ -1037,60 +1037,60 @@ color:#c084fc;
 
 
 
-.tool-panel {
+.tool-panel {{
   margin-top:20px;
-}
+}}
 
-.tool-panel h2 {
+.tool-panel h2 {{
   margin-top:0;
-}
+}}
 
-.muted {
+.muted {{
   opacity:0.7;
-}
+}}
 
-.tool-stats {
+.tool-stats {{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:12px;
   margin:18px 0 22px 0;
-}
+}}
 
-.tool-stat {
+.tool-stat {{
   background:#10101d;
   padding:14px;
   border-radius:10px;
   text-align:center;
-}
+}}
 
-.tool-number {
+.tool-number {{
   display:block;
   font-size:28px;
   font-weight:bold;
   color:#c084fc;
   margin-bottom:5px;
-}
+}}
 
-.tool-status {
+.tool-status {{
   font-weight:bold;
-}
+}}
 
-.tool-status.pass {
+.tool-status.pass {{
   color:#86efac;
-}
+}}
 
-.tool-status.fail {
+.tool-status.fail {{
   color:#fca5a5;
-}
+}}
 
-.tool-status.unknown {
+.tool-status.unknown {{
   color:#fde68a;
-}
+}}
 
-.tool-empty {
+.tool-empty {{
   opacity:0.7;
   padding:10px 0;
-}
+}}
 
 </style>
 

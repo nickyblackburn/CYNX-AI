@@ -1263,6 +1263,8 @@ def run_single_test(chat_engine, test):
     # Normalize response
     # ---------------------------------
 
+    tool_trace = {}
+
     if response is None:
 
         response_text = ""
@@ -1288,6 +1290,29 @@ def run_single_test(chat_engine, test):
             or response.get("content")
 
             or ""
+
+        )
+
+        # ---------------------------------
+        # Preserve Tool Test Mode data
+        # ---------------------------------
+        #
+        # ChatEngine may expose tool execution
+        # information under one of these keys.
+        #
+        # Do NOT discard it while normalizing
+        # the response for the benchmark.
+        # ---------------------------------
+
+        tool_trace = (
+
+            response.get("tool_test")
+
+            or response.get("tool_trace")
+
+            or response.get("tools")
+
+            or {}
 
         )
 
@@ -1341,6 +1366,77 @@ def run_single_test(chat_engine, test):
         f"Overall score: [cyan]{scores['overall']}[/cyan]"
     )
 
+    # ---------------------------------
+    # Tool Test Mode display
+    # ---------------------------------
+
+    if tool_trace:
+
+        console.print()
+
+        console.print(
+            "[bold cyan][TOOL TEST MODE][/bold cyan]"
+        )
+
+        if isinstance(
+            tool_trace,
+            dict
+        ):
+
+            expected_tool = tool_trace.get(
+                "expected_tool",
+                "unknown"
+            )
+
+            detected_tool = tool_trace.get(
+                "detected_tool",
+                tool_trace.get(
+                    "tool_name",
+                    "none"
+                )
+            )
+
+            executed_tool = tool_trace.get(
+                "executed_tool",
+                detected_tool
+            )
+
+            result_passed = tool_trace.get(
+                "result_passed_to_llm",
+                tool_trace.get(
+                    "passed_to_llm",
+                    False
+                )
+            )
+
+            tool_success = tool_trace.get(
+                "tool_succeeded",
+                tool_trace.get(
+                    "success",
+                    False
+                )
+            )
+
+            console.print(
+                f"Expected tool: [cyan]{expected_tool}[/cyan]"
+            )
+
+            console.print(
+                f"Detected tool: [cyan]{detected_tool}[/cyan]"
+            )
+
+            console.print(
+                f"Executed tool: [cyan]{executed_tool}[/cyan]"
+            )
+
+            console.print(
+                f"Tool success: [cyan]{tool_success}[/cyan]"
+            )
+
+            console.print(
+                f"Result passed to LLM: [cyan]{result_passed}[/cyan]"
+            )
+
     console.print()
 
     benchmark_logger.info(
@@ -1372,7 +1468,19 @@ def run_single_test(chat_engine, test):
             response_words,
 
         "scores":
-            scores
+            scores,
+
+        # ---------------------------------
+        # Tool Test Mode
+        # ---------------------------------
+        #
+        # Preserve the complete tool trace so
+        # the formatter, analyzer, raw results,
+        # and dashboard can use it.
+        # ---------------------------------
+
+        "tool_test":
+            tool_trace
 
     }
 
@@ -1583,8 +1691,15 @@ def run_benchmark(
             )
 
             # ---------------------------------
-            # Make sure suite information is
-            # available to the visualizer.
+            # Preserve Tool Test Mode data
+            # ---------------------------------
+            #
+            # format_benchmark_result() currently
+            # does not receive tool_test explicitly.
+            #
+            # Therefore attach the tool trace after
+            # formatting without changing the
+            # formatter structure.
             # ---------------------------------
 
             if isinstance(
@@ -1602,6 +1717,15 @@ def run_benchmark(
                     test.get(
                         "suite",
                         "unknown"
+                    )
+
+                )
+
+                formatted_result["tool_test"] = (
+
+                    result.get(
+                        "tool_test",
+                        {}
                     )
 
                 )
