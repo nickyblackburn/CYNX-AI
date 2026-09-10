@@ -1,4 +1,3 @@
-
 import sys
 
 
@@ -20,6 +19,8 @@ def get_benchmark_command():
         python -m benchmark.runner --suite personality safety memory
 
         python -m benchmark.runner --suite personality --limit 5
+
+        python -m benchmark.runner --suite personality safety --limit 10
 
         python -m benchmark.runner --all --limit 10
     """
@@ -54,27 +55,54 @@ def get_benchmark_command():
         print()
         print("Usage:")
         print()
+
         print("  python -m benchmark.runner --all")
         print("      Run every benchmark suite.")
         print()
+
         print("  python -m benchmark.runner --suite NAME")
         print("      Run one benchmark suite.")
         print()
+
         print("  python -m benchmark.runner --suite NAME NAME")
         print("      Run multiple benchmark suites.")
         print()
+
         print("  python -m benchmark.runner --suite NAME --limit N")
-        print("      Run selected suite(s) with a test limit.")
+        print("      Run N tests from the selected suite.")
         print()
+
+        print("  python -m benchmark.runner --suite NAME NAME --limit N")
+        print("      Run N tests from the selected suites.")
+        print()
+
         print("  python -m benchmark.runner --all --limit N")
-        print("      Run all suites with a test limit.")
+        print("      Run N tests from all suites.")
         print()
+
+        print("  python -m benchmark.runner --limit N")
+        print("      Run N tests from all suites.")
+        print()
+
+        print("Options:")
+        print()
+
+        print("  --suite, -s NAME")
+        print("      Select one or more benchmark suites.")
+        print()
+
+        print("  --limit, -l N")
+        print("      Limit the number of tests that run.")
+        print()
+
         print("Legacy modes:")
         print()
+
         print("  quick")
         print("  normal")
         print("  full")
         print()
+
         print("=" * 60)
         print()
 
@@ -112,7 +140,9 @@ def get_benchmark_command():
         ):
 
             mode = "all"
+
             i += 1
+
             continue
 
         # -----------------------------
@@ -214,6 +244,7 @@ def get_benchmark_command():
                 }
 
             i += 1
+
             continue
 
         # -----------------------------
@@ -227,7 +258,9 @@ def get_benchmark_command():
         ):
 
             mode = argument
+
             i += 1
+
             continue
 
         # -----------------------------
@@ -240,6 +273,7 @@ def get_benchmark_command():
             f"{args[i]}"
         )
         print()
+
         print(
             "Use --help for available commands."
         )
