@@ -4,12 +4,12 @@
     "sessions": [
         {
             "time": "2026-09-05 20:09:41",
-            "type": "bong",
+            "type": "weed",
             "units": 1.0
         },
         {
             "time": "2026-09-05 20:14:11",
-            "type": "vape",
+            "type": "weed",
             "units": 1.0
         },
         {
@@ -26,12 +26,12 @@
         },
         {
             "time": "2026-09-05 20:26:22",
-            "type": "vape",
+            "type": "weed",
             "units": 3.0
         },
         {
             "time": "2026-09-05 20:29:53",
-            "type": "vape",
+            "type": "weed",
             "units": 3.0
         },
         {
@@ -42,7 +42,7 @@
         },
         {
             "time": "2026-09-05 20:31:58",
-            "type": "vape",
+            "type": "weed",
             "units": 3.0
         },
         {
@@ -59,7 +59,7 @@
         },
         {
             "time": "2026-09-10 15:25:22",
-            "type": "vape",
+            "type": "weed",
             "units": 1.0
         }
     ]
