@@ -1,7 +1,9 @@
+
 """
 MemoryManager: Stores and retrieves long-term user memories.
 Scoped by user_id and categorized by memory type.
 """
+
 import sqlite3
 import logging
 from typing import List, Dict, Optional
@@ -41,20 +43,38 @@ class MemoryManager:
 
         try:
             cur = self.conn.cursor()
+
             cur.execute(
                 '''INSERT INTO user_memories
                    (user_id, category, content, importance, created_at, updated_at)
                    VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))''',
-                (user_id, category, content.strip(), max(1, min(10, importance)))
+                (
+                    user_id,
+                    category,
+                    content.strip(),
+                    max(1, min(10, importance))
+                )
             )
+
             self.conn.commit()
+
             memory_id = cur.lastrowid
-            logger.info(f"[MEMORY_SAVE] user_id={user_id} category={category} memory_id={memory_id}")
+
+            logger.info(
+                f"[MEMORY_SAVE] user_id={user_id} "
+                f"category={category} memory_id={memory_id}"
+            )
+
             return memory_id
+
         except sqlite3.IntegrityError:
             # Duplicate memory (same user, category, content)
-            logger.debug(f"[MEMORY_SKIP] Duplicate memory for {user_id}: {content[:50]}")
+            logger.debug(
+                f"[MEMORY_SKIP] Duplicate memory for "
+                f"{user_id}: {content[:50]}"
+            )
             return None
+
         except Exception as e:
             logger.error(f"[MEMORY_ERROR] Failed to save: {e}")
             return None
@@ -83,8 +103,9 @@ class MemoryManager:
 
             # Build query
             query = '''SELECT id, user_id, category, content, importance, created_at
-                      FROM user_memories
-                      WHERE user_id = ? AND importance >= ?'''
+                       FROM user_memories
+                       WHERE user_id = ? AND importance >= ?'''
+
             params = [user_id, min_importance]
 
             if categories:
@@ -100,6 +121,7 @@ class MemoryManager:
             rows = cur.fetchall()
 
             memories = []
+
             for row in rows:
                 memories.append({
                     'id': row[0],
@@ -111,9 +133,13 @@ class MemoryManager:
                 })
 
             if memories:
-                logger.info(f"[MEMORY_RECALL] user_id={user_id} recalled {len(memories)} memories")
+                logger.info(
+                    f"[MEMORY_RECALL] user_id={user_id} "
+                    f"recalled {len(memories)} memories"
+                )
 
             return memories
+
         except Exception as e:
             logger.error(f"[MEMORY_ERROR] Recall failed: {e}")
             return []
@@ -137,16 +163,22 @@ class MemoryManager:
         """
         try:
             cur = self.conn.cursor()
+
             cur.execute(
                 '''SELECT id, user_id, category, content, importance, created_at
                    FROM user_memories
                    WHERE user_id = ? AND content LIKE ?
                    ORDER BY importance DESC LIMIT ?''',
-                (user_id, f'%{query}%', limit)
+                (
+                    user_id,
+                    f'%{query}%',
+                    limit
+                )
             )
-            rows = cur.fetchall()
 
+            rows = cur.fetchall()
             memories = []
+
             for row in rows:
                 memories.append({
                     'id': row[0],
@@ -158,6 +190,7 @@ class MemoryManager:
                 })
 
             return memories
+
         except Exception as e:
             logger.error(f"[MEMORY_ERROR] Search failed: {e}")
             return []
@@ -174,13 +207,22 @@ class MemoryManager:
         """
         try:
             cur = self.conn.cursor()
-            cur.execute('DELETE FROM user_memories WHERE id = ?', (memory_id,))
+
+            cur.execute(
+                'DELETE FROM user_memories WHERE id = ?',
+                (memory_id,)
+            )
+
             self.conn.commit()
 
             if cur.rowcount > 0:
-                logger.info(f"[MEMORY_DELETE] Deleted memory_id={memory_id}")
+                logger.info(
+                    f"[MEMORY_DELETE] Deleted memory_id={memory_id}"
+                )
                 return True
+
             return False
+
         except Exception as e:
             logger.error(f"[MEMORY_ERROR] Delete failed: {e}")
             return False
@@ -197,6 +239,7 @@ class MemoryManager:
         """
         try:
             cur = self.conn.cursor()
+
             cur.execute(
                 '''SELECT id, user_id, category, content, importance, created_at
                    FROM user_memories
@@ -204,9 +247,10 @@ class MemoryManager:
                    ORDER BY importance DESC, created_at DESC''',
                 (user_id,)
             )
-            rows = cur.fetchall()
 
+            rows = cur.fetchall()
             memories = []
+
             for row in rows:
                 memories.append({
                     'id': row[0],
@@ -218,6 +262,7 @@ class MemoryManager:
                 })
 
             return memories
+
         except Exception as e:
             logger.error(f"[MEMORY_ERROR] Get all failed: {e}")
             return []
@@ -257,15 +302,24 @@ class MemoryManager:
             updates.append('updated_at = datetime("now")')
             params.append(memory_id)
 
-            query = f"UPDATE user_memories SET {', '.join(updates)} WHERE id = ?"
+            query = (
+                f"UPDATE user_memories "
+                f"SET {', '.join(updates)} "
+                f"WHERE id = ?"
+            )
+
             cur = self.conn.cursor()
             cur.execute(query, params)
             self.conn.commit()
 
             if cur.rowcount > 0:
-                logger.info(f"[MEMORY_UPDATE] Updated memory_id={memory_id}")
+                logger.info(
+                    f"[MEMORY_UPDATE] Updated memory_id={memory_id}"
+                )
                 return True
+
             return False
+
         except Exception as e:
             logger.error(f"[MEMORY_ERROR] Update failed: {e}")
             return False
@@ -284,10 +338,14 @@ class MemoryManager:
             return ""
 
         lines = []
+
         for mem in memories:
             category = mem.get('category', 'general')
             content = mem.get('content', '')
             importance = mem.get('importance', 5)
-            lines.append(f"- [{category} #{importance}] {content}")
+
+            lines.append(
+                f"- [{category} #{importance}] {content}"
+            )
 
         return "\n".join(lines)

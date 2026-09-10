@@ -923,4 +923,4 @@ class PromptManager:
         )
 
 
-        return promp
+        return prompt
