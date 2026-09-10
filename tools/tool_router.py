@@ -163,6 +163,7 @@ class ToolRouter:
 
     def normalize_smoke_type(self, text: str):
         """Normalize a freeform smoke_type string into a canonical type (pen, vape, cigarette, bong, weed, joint, unknown)."""
+
         if not text:
             return None
 
@@ -191,6 +192,7 @@ class ToolRouter:
 
     def is_read_only_smoke_query(self, text: str) -> bool:
         """Return True when the request is asking for counts/stats/history instead of logging."""
+
         if not text:
             return False
 
@@ -306,13 +308,35 @@ class ToolRouter:
 
         def parse_smoke_request(text: str):
 
-            # return dict with tool and parsed args if smoking intent detected
+            # return dict with tool and parsed args if smoking
+            # intent is explicitly detected.
             import re
 
             tl = text.lower()
 
-            if not any(w in tl for w in smoke_words):
+            if not any(
+                re.search(
+                    rf"\b{re.escape(w)}\b",
+                    tl
+                )
+                for w in smoke_words
+            ):
                 return None
+
+
+            # --------------------------------------------------------
+            # IMPORTANT:
+            #
+            # Mentioning smoking is NOT enough to activate the tool.
+            #
+            # Example:
+            #
+            # "I want to take hits off my pen"
+            #
+            # is conversation, not a logging request.
+            #
+            # The tool requires an actual tracking/statistics action.
+            # --------------------------------------------------------
 
 
             # reset explicit
@@ -349,28 +373,45 @@ class ToolRouter:
                     "weed"
                 ]:
 
-                    if candidate in tl:
+                    if re.search(
+                        rf"\b{re.escape(candidate)}\b",
+                        tl
+                    ):
 
-                        smoke_type_for_stats = self.normalize_smoke_type(
-                            candidate
+                        smoke_type_for_stats = (
+                            self.normalize_smoke_type(
+                                candidate
+                            )
                         )
 
                         break
 
                 if smoke_type_for_stats:
-                    payload["smoke_type"] = smoke_type_for_stats
+
+                    payload[
+                        "smoke_type"
+                    ] = smoke_type_for_stats
 
                 if "today" in tl:
-                    payload["scope"] = "today"
 
-                if "last" in tl and "what was my last" in tl:
+                    payload[
+                        "scope"
+                    ] = "today"
+
+                if (
+                    "last" in tl
+                    and "what was my last" in tl
+                ):
 
                     return {
                         "tool": "smoke_counter",
                         "action": "last"
                     }
 
-                if "recent" in tl or "recent hits" in tl:
+                if (
+                    "recent" in tl
+                    or "recent hits" in tl
+                ):
 
                     return {
                         "tool": "smoke_counter",
@@ -384,7 +425,10 @@ class ToolRouter:
             # last
 
             if (
-                re.search(r"\blast (hit|smoke|session)\b", tl)
+                re.search(
+                    r"\blast (hit|smoke|session)\b",
+                    tl
+                )
                 or "what was my last" in tl
             ):
 
@@ -426,14 +470,18 @@ class ToolRouter:
                 "weed"
             ]:
 
-                if candidate in tl:
+                if re.search(
+                    rf"\b{re.escape(candidate)}\b",
+                    tl
+                ):
 
-                    smoke_type_for_stats = self.normalize_smoke_type(
-                        candidate
+                    smoke_type_for_stats = (
+                        self.normalize_smoke_type(
+                            candidate
+                        )
                     )
 
                     break
-
 
             if re.search(
                 r"\b(how many|how often|how many times|show my smoking stats|show my stats|how many hits|how many times did|how much have i smoked|how much have i smoked today|how much did i smoke today|how much did i smoke)\b",
@@ -446,22 +494,84 @@ class ToolRouter:
                 }
 
                 if smoke_type_for_stats:
-                    payload["smoke_type"] = smoke_type_for_stats
+
+                    payload[
+                        "smoke_type"
+                    ] = smoke_type_for_stats
 
                 if "today" in tl:
-                    payload["scope"] = "today"
+
+                    payload[
+                        "scope"
+                    ] = "today"
 
                 return payload
 
 
-            # explicit logging requests only
+            # --------------------------------------------------------
+            # Explicit logging requests only
+            # --------------------------------------------------------
+            #
+            # These are phrases that actually communicate that the
+            # user wants the smoking tracker updated.
+            #
+            # A casual mention like:
+            #
+            # "I want to take hits off my pen"
+            #
+            # will NOT match this section.
+            # --------------------------------------------------------
 
-            if re.search(
-                r"\b(i just smoked|i just had|i just took|i smoked|i took|log|add|record|logged)\b",
-                tl
+            explicit_log_patterns = [
+                r"\blog\b",
+                r"\badd\b",
+                r"\brecord\b",
+                r"\btrack\b",
+                r"\btracker\b",
+                r"\blogged\b",
+                r"\badd(ed)?\b",
+                r"\bcount this\b",
+                r"\bcount that\b",
+                r"\bput (this|that) in\b",
+                r"\badd this\b",
+                r"\badd that\b"
+            ]
+
+            explicit_logging_request = any(
+                re.search(
+                    pattern,
+                    tl
+                )
+                for pattern in explicit_log_patterns
+            )
+
+            # Natural logging statements are also accepted,
+            # but only when they describe an event that actually
+            # happened rather than a future intention.
+            natural_log_patterns = [
+                r"\bi just smoked\b",
+                r"\bi just had\b",
+                r"\bi just took\b",
+                r"\bi smoked\b",
+                r"\bi took\b",
+                r"\bi had\b"
+            ]
+
+            natural_logging_request = any(
+                re.search(
+                    pattern,
+                    tl
+                )
+                for pattern in natural_log_patterns
+            )
+
+            if (
+                explicit_logging_request
+                or natural_logging_request
             ):
 
                 amount = parse_number(tl) or 1
+
                 smoke_type = None
 
                 for candidate in [
@@ -481,15 +591,30 @@ class ToolRouter:
                     "rip"
                 ]:
 
-                    if candidate in tl:
+                    if re.search(
+                        rf"\b{re.escape(candidate)}\b",
+                        tl
+                    ):
 
-                        if candidate in ('vape', 'vaped'):
+                        if candidate in (
+                            'vape',
+                            'vaped'
+                        ):
+
                             smoke_type = 'vape'
 
-                        elif candidate in ('pen', 'pens'):
+                        elif candidate in (
+                            'pen',
+                            'pens'
+                        ):
+
                             smoke_type = 'pen'
 
-                        elif candidate in ('bong', 'bongs'):
+                        elif candidate in (
+                            'bong',
+                            'bongs'
+                        ):
+
                             smoke_type = 'bong'
 
                         elif candidate in (
@@ -497,9 +622,13 @@ class ToolRouter:
                             'cigarette',
                             'cigarettes'
                         ):
+
                             smoke_type = 'cigarette'
 
-                        elif candidate in ('weed', 'joint'):
+                        elif candidate in (
+                            'weed',
+                            'joint'
+                        ):
 
                             smoke_type = (
                                 'weed'
@@ -508,11 +637,13 @@ class ToolRouter:
                             )
 
                         else:
+
                             smoke_type = 'unknown'
 
                         break
 
                 if smoke_type is None:
+
                     smoke_type = 'unknown'
 
                 return {
@@ -523,101 +654,27 @@ class ToolRouter:
                 }
 
 
-            # log patterns
+            # --------------------------------------------------------
+            # IMPORTANT:
+            #
+            # Do NOT use the old generic fallback:
+            #
+            # "if smoke_type and amount -> log"
+            #
+            # because that caused casual conversation containing
+            # "pen", "hit", etc. to become a logging request.
+            # --------------------------------------------------------
 
-            amount = parse_number(tl) or None
-
-            types = [
-                'cigarette',
-                'cigarettes',
-                'cig',
-                'weed',
-                'vape',
-                'vaped',
-                'pen',
-                'pens',
-                'joint',
-                'bong',
-                'bongs'
-            ]
-
-            smoke_type = None
-
-            for t in types:
-
-                if t in tl:
-
-                    if t.endswith('s'):
-                        smoke_type = t[:-1]
-
-                    else:
-                        smoke_type = t
-
-                    if smoke_type in ('cig', 'cigarette'):
-                        smoke_type = 'cigarette'
-
-                    elif smoke_type == 'vaped':
-                        smoke_type = 'vape'
-
-                    elif smoke_type in ('pens', 'pen'):
-                        smoke_type = 'pen'
-
-                    break
-
-
-            if amount is None and (
-                'hit' in tl
-                or 'rip' in tl
-                or re.search(
-                    r"\b(i just smoked|i just had|i just took|i smoked|log|add|i just)\b",
-                    tl
-                )
-            ):
-
-                amount = 1
-
-
-            if smoke_type is None and (
-                'bong' in tl
-                or 'hit' in tl
-                or 'rip' in tl
-            ):
-
-                smoke_type = (
-                    'bong'
-                    if 'bong' in tl
-                    else 'unknown'
-                )
-
-
-            if smoke_type is not None and amount is not None:
-
-                return {
-                    "tool": "smoke_counter",
-                    "action": "log",
-                    "smoke_type": smoke_type,
-                    "amount": amount
-                }
-
-
-            # fallback: if user explicitly asks about smoking counts
-
-            if re.search(
-                r"\b(how many|show my|how often|stats|count|total)\b",
-                tl
-            ):
-
-                return {
-                    "tool": "smoke_counter",
-                    "action": "stats"
-                }
-
+            # No explicit smoke-counter intent detected.
             return None
 
 
-        smoke_req = parse_smoke_request(text_lower)
+        smoke_req = parse_smoke_request(
+            text_lower
+        )
 
         if smoke_req:
+
             return smoke_req
 
 
