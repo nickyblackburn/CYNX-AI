@@ -1,3 +1,4 @@
+
 """
 MemoryExtractor
 
@@ -38,6 +39,8 @@ class MemoryExtractor:
 
 
 
+
+
     # ---------------------------------
     # Extraction
     # ---------------------------------
@@ -54,19 +57,17 @@ class MemoryExtractor:
         saved_ids = []
 
 
-        text = (
+        if not user_message or not user_message.strip():
 
-            user_message
+            return saved_ids
 
-            +
 
-            " "
+        # IMPORTANT:
+        # Extract memories only from user-authored text.
+        # Never extract user memories from assistant responses
+        # or tool output.
 
-            +
-
-            assistant_response
-
-        )
+        text = user_message
 
 
 
@@ -78,76 +79,136 @@ class MemoryExtractor:
 
         extracted += [
 
+
             (
+
+
                 "preference",
+
+
                 item,
+
+
                 6
 
+
             )
+
 
             for item in self.extract_preferences(text)
 
+
         ]
+
+
 
 
 
         extracted += [
 
+
             (
+
+
                 "goal",
+
+
                 item,
+
+
                 8
 
+
             )
+
 
             for item in self.extract_goals(text)
 
+
         ]
+
+
 
 
 
         extracted += [
 
+
             (
+
+
                 "project",
+
+
                 item,
+
+
                 9
 
+
             )
+
 
             for item in self.extract_projects(text)
 
+
         ]
+
+
 
 
 
         extracted += [
 
+
             (
+
+
                 "name",
+
+
                 item,
+
+
                 10
 
+
             )
+
 
             for item in self.extract_names(text)
 
+
         ]
+
+
 
 
 
         extracted += [
 
+
             (
+
+
                 "style",
+
+
                 item,
+
+
                 5
+
 
             )
 
+
             for item in self.extract_style(text)
 
+
         ]
+
+
 
 
 
@@ -171,20 +232,27 @@ class MemoryExtractor:
 
                 user_id,
 
+
                 content,
+
 
                 category,
 
+
                 importance
+
             )
 
 
 
             saved_ids.append(
 
+
                 memory_id
 
             )
+
+
 
 
 
@@ -196,13 +264,19 @@ class MemoryExtractor:
 
             logger.info(
 
+
                 f"[MEMORY] Saved {len(saved_ids)} memories"
+
 
             )
 
 
 
         return saved_ids
+
+
+
+
 
 
 
@@ -223,20 +297,28 @@ class MemoryExtractor:
 
         patterns = [
 
+
             r"i (?:like|love|prefer|enjoy|hate|dislike) ([^.!?]+)"
+
 
         ]
 
 
         return self.match_patterns(
 
+
             patterns,
+
 
             text,
 
+
             "Prefers"
 
+
         )
+
+
 
 
 
@@ -251,20 +333,28 @@ class MemoryExtractor:
 
         patterns = [
 
+
             r"(?:i want to|my goal is|i am trying to) ([^.!?]+)"
+
 
         ]
 
 
         return self.match_patterns(
 
+
             patterns,
+
 
             text,
 
+
             "Goal"
 
+
         )
+
+
 
 
 
@@ -280,20 +370,28 @@ class MemoryExtractor:
 
         patterns = [
 
+
             r"(?:building|creating|working on|developing) ([^.!?]+)"
+
 
         ]
 
 
         return self.match_patterns(
 
+
             patterns,
+
 
             text,
 
+
             "Project"
 
+
         )
+
+
 
 
 
@@ -309,22 +407,31 @@ class MemoryExtractor:
 
         matches = re.findall(
 
+
             r"(?:my name is|call me) ([A-Za-z ]+)",
+
 
             text,
 
+
             re.IGNORECASE
+
 
         )
 
 
         return [
 
+
             f"Name: {x.strip()}"
+
 
             for x in matches
 
+
         ]
+
+
 
 
 
@@ -340,22 +447,31 @@ class MemoryExtractor:
 
         patterns = [
 
+
             r"i prefer (.+?) explanations",
 
+
             r"i like (.+?) answers"
+
 
         ]
 
 
         return self.match_patterns(
 
+
             patterns,
+
 
             text,
 
+
             "Style"
 
+
         )
+
+
 
 
 
@@ -385,11 +501,15 @@ class MemoryExtractor:
 
             matches = re.findall(
 
+
                 pattern,
+
 
                 text,
 
+
                 re.IGNORECASE
+
 
             )
 
@@ -407,13 +527,17 @@ class MemoryExtractor:
 
                     results.append(
 
+
                         f"{prefix}: {value}"
+
 
                     )
 
 
 
         return results[:3]
+
+
 
 
 
@@ -429,16 +553,21 @@ class MemoryExtractor:
 
         cleaned = re.sub(
 
+
             r"[^a-zA-Z0-9 ]",
+
 
             "",
 
+
             text
+
 
         )
 
 
         return len(cleaned.strip()) >= 3
+
 
 
 
@@ -453,11 +582,13 @@ class MemoryExtractor:
 
         if not content:
 
+
             return False
 
 
 
         if len(content) < 5:
+
 
             return False
 
@@ -465,11 +596,15 @@ class MemoryExtractor:
 
         if not re.search(
 
+
             r"[a-zA-Z0-9]",
+
 
             content
 
+
         ):
+
 
             return False
 
