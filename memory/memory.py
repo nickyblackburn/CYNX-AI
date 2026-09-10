@@ -58,88 +58,94 @@ class MemoryManager:
     # Remember
     # ---------------------------------
 
-
-    def remember(
-        self,
-        user_id,
-        content,
-        category="general",
-        importance=5
-    ):
-
-
-        if not content:
-
-            return None
+def remember(
+    self,
+    user_id,
+    content,
+    category="general",
+    importance=5
+):
 
 
-        cur = self.conn.cursor()
+    if not content:
+
+        return None
 
 
-        try:
+    cur = self.conn.cursor()
 
-            cur.execute(
-                """
-                INSERT INTO memories
-                (
-                    user_id,
-                    kind,
-                    content,
-                    importance,
-                    tags,
-                    metadata
+
+    try:
+
+        print("[MEMORY SAVE]")
+        print("USER ID:", user_id)
+        print("CONTENT:", content)
+        print("CATEGORY:", category)
+
+
+        cur.execute(
+            """
+            INSERT INTO memories
+            (
+                user_id,
+                kind,
+                content,
+                importance,
+                tags,
+                metadata
+            )
+
+            VALUES (?, ?, ?, ?, ?, ?)
+
+            """,
+
+            (
+                user_id,
+                category,
+                content,
+                importance,
+                json.dumps([category]),
+                json.dumps(
+                    {
+                        "source":
+                        "memory_manager"
+                    }
                 )
-
-                VALUES (?, ?, ?, ?, ?, ?)
-
-                """,
-
-                (
-                    user_id,
-                    category,
-                    content,
-                    importance,
-                    json.dumps([category]),
-                    json.dumps(
-                        {
-                            "source":
-                            "memory_manager"
-                        }
-                    )
-                )
-
             )
+        )
 
 
-            self.conn.commit()
+        print("[MEMORY INSERTED]")
+        print(
+            "ROW ID:",
+            cur.lastrowid
+        )
 
 
-            memory_id = cur.lastrowid
+        self.conn.commit()
 
 
-            print(
-                f"[MEMORY SAVED] "
-                f"id={memory_id} "
-                f"category={category} "
-                f"content={content}"
-            )
+        print(
+            "[MEMORY COMMITTED]"
+        )
 
 
-            return memory_id
+        return cur.lastrowid
 
 
-        except Exception as e:
+    except Exception as e:
 
-            self.conn.rollback()
-
-
-            print(
-                "[MEMORY ERROR]",
-                e
-            )
+        self.conn.rollback()
 
 
-            return None
+        print(
+            "[MEMORY ERROR]",
+            e
+        )
+
+
+        return None
+
 
 
 

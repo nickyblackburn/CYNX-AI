@@ -1,351 +1,669 @@
 
 """
-MemoryManager: Stores and retrieves long-term user memories.
-Scoped by user_id and categorized by memory type.
+MemoryManager
+
+Handles:
+- remembering memories
+- searching memories
+- recalling memories
+- retrieving recent memories
+- retrieving all memories
+- deleting memories
+- updating memories
+
+Uses the existing SQLite memories table.
 """
 
-import sqlite3
-import logging
-from typing import List, Dict, Optional
-from datetime import datetime
 
-
-logger = logging.getLogger("cynx.memory")
+import json
 
 
 class MemoryManager:
-    """Manages user-scoped long-term memories with importance scoring."""
 
-    def __init__(self, conn: sqlite3.Connection):
+
+    def __init__(
+        self,
+        conn
+    ):
+
         self.conn = conn
+
+
+        print("===== MEMORY MANAGER DATABASE CHECK =====")
+
+
+        cur = self.conn.cursor()
+
+
+        cur.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table'
+            """
+        )
+
+
+        print(
+            cur.fetchall()
+        )
+
+
+        print(
+            "========================================="
+        )
+
+
+
+    # ---------------------------------
+    # Remember
+    # ---------------------------------
 
     def remember(
         self,
-        user_id: str,
-        content: str,
-        category: str = "general",
-        importance: int = 5
-    ) -> int:
-        """
-        Save a memory for a user.
+        user_id,
+        content,
+        category="general",
+        importance=5
+    ):
 
-        Args:
-            user_id: User identifier
-            content: Memory content
-            category: Memory type (preference, project, goal, name, style)
-            importance: 1-10 scale, higher = more important
 
-        Returns:
-            Memory ID if successful, None if duplicate
-        """
-        if not content or not content.strip():
+        if not content:
+
             return None
 
+
+        cur = self.conn.cursor()
+
+
         try:
-            cur = self.conn.cursor()
+
+            print("[MEMORY SAVE]")
+            print("USER ID:", user_id)
+            print("CONTENT:", content)
+            print("CATEGORY:", category)
+
 
             cur.execute(
-                '''INSERT INTO memories
-                   (user_id, category, content, importance, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))''',
+                """
+                INSERT INTO memories
+                (
+                    user_id,
+                    kind,
+                    content,
+                    importance,
+                    tags,
+                    metadata
+                )
+
+                VALUES (?, ?, ?, ?, ?, ?)
+
+                """,
+
                 (
                     user_id,
                     category,
-                    content.strip(),
-                    max(1, min(10, importance))
+                    content,
+                    importance,
+                    json.dumps([category]),
+                    json.dumps(
+                        {
+                            "source":
+                            "memory_manager"
+                        }
+                    )
                 )
             )
 
+
+            print(
+                "[MEMORY INSERTED]"
+            )
+
+
+            print(
+                "ROW ID:",
+                cur.lastrowid
+            )
+
+
             self.conn.commit()
 
-            memory_id = cur.lastrowid
 
-            logger.info(
-                f"[MEMORY_SAVE] user_id={user_id} "
-                f"category={category} memory_id={memory_id}"
+            print(
+                "[MEMORY COMMITTED]"
             )
 
-            return memory_id
 
-        except sqlite3.IntegrityError:
-            # Duplicate memory (same user, category, content)
-            logger.debug(
-                f"[MEMORY_SKIP] Duplicate memory for "
-                f"{user_id}: {content[:50]}"
-            )
-            return None
+            return cur.lastrowid
+
 
         except Exception as e:
-            logger.error(f"[MEMORY_ERROR] Failed to save: {e}")
+
+            self.conn.rollback()
+
+
+            print(
+                "[MEMORY ERROR]",
+                e
+            )
+
+
             return None
+
+
+
+    # ---------------------------------
+    # Recall Memories
+    # ---------------------------------
 
     def recall(
         self,
-        user_id: str,
-        limit: int = 5,
-        min_importance: int = 1,
-        categories: Optional[List[str]] = None
-    ) -> List[Dict]:
-        """
-        Retrieve top memories for a user.
+        user_id,
+        limit=5,
+        min_importance=1,
+        categories=None
+    ):
 
-        Args:
-            user_id: User identifier
-            limit: Max memories to return
-            min_importance: Filter by minimum importance (1-10)
-            categories: Filter by categories (None = all)
 
-        Returns:
-            List of memory dicts: {id, user_id, category, content, importance, created_at}
-        """
+        cur = self.conn.cursor()
+
+
         try:
-            cur = self.conn.cursor()
-
-            # Build query
-            query = '''SELECT id, user_id, category, content, importance, created_at
-                       FROM user_memories
-                       WHERE user_id = ? AND importance >= ?'''
-
-            params = [user_id, min_importance]
 
             if categories:
-                placeholders = ','.join('?' * len(categories))
-                query += f' AND category IN ({placeholders})'
-                params.extend(categories)
 
-            # Sort by importance (desc), then recency (desc)
-            query += ' ORDER BY importance DESC, created_at DESC LIMIT ?'
-            params.append(limit)
-
-            cur.execute(query, params)
-            rows = cur.fetchall()
-
-            memories = []
-
-            for row in rows:
-                memories.append({
-                    'id': row[0],
-                    'user_id': row[1],
-                    'category': row[2],
-                    'content': row[3],
-                    'importance': row[4],
-                    'created_at': row[5]
-                })
-
-            if memories:
-                logger.info(
-                    f"[MEMORY_RECALL] user_id={user_id} "
-                    f"recalled {len(memories)} memories"
+                placeholders = ",".join(
+                    "?"
+                    for _ in categories
                 )
 
-            return memories
+
+                cur.execute(
+                    f"""
+                    SELECT
+                        id,
+                        user_id,
+                        kind,
+                        content,
+                        importance,
+                        created_at
+
+                    FROM memories
+
+                    WHERE user_id=?
+                    AND importance>=?
+                    AND kind IN ({placeholders})
+
+                    ORDER BY importance DESC,
+                             created_at DESC
+
+                    LIMIT ?
+
+                    """,
+
+                    (
+                        user_id,
+                        min_importance,
+                        *categories,
+                        limit
+                    )
+                )
+
+
+            else:
+
+                cur.execute(
+                    """
+                    SELECT
+                        id,
+                        user_id,
+                        kind,
+                        content,
+                        importance,
+                        created_at
+
+                    FROM memories
+
+                    WHERE user_id=?
+                    AND importance>=?
+
+                    ORDER BY importance DESC,
+                             created_at DESC
+
+                    LIMIT ?
+
+                    """,
+
+                    (
+                        user_id,
+                        min_importance,
+                        limit
+                    )
+                )
+
+
+            return cur.fetchall()
+
 
         except Exception as e:
-            logger.error(f"[MEMORY_ERROR] Recall failed: {e}")
+
+            print(
+                "[MEMORY RECALL ERROR]",
+                e
+            )
+
+
             return []
+
+
+
+    # ---------------------------------
+    # Search Memories
+    # ---------------------------------
 
     def search(
         self,
-        user_id: str,
-        query: str,
-        limit: int = 5
-    ) -> List[Dict]:
-        """
-        Search memories by keyword (substring match).
+        user_id,
+        query,
+        limit=5
+    ):
 
-        Args:
-            user_id: User identifier
-            query: Search term
-            limit: Max results
 
-        Returns:
-            List of matching memory dicts
-        """
+        words = query.lower().split()
+
+
+        cur = self.conn.cursor()
+
+
         try:
-            cur = self.conn.cursor()
 
             cur.execute(
-                '''SELECT id, user_id, category, content, importance, created_at
-                   FROM user_memories
-                   WHERE user_id = ? AND content LIKE ?
-                   ORDER BY importance DESC LIMIT ?''',
+                """
+                SELECT
+                    id,
+                    kind,
+                    content,
+                    importance,
+                    tags
+
+                FROM memories
+
+                WHERE user_id=?
+
+                """,
+
                 (
                     user_id,
-                    f'%{query}%',
-                    limit
                 )
             )
 
-            rows = cur.fetchall()
-            memories = []
 
-            for row in rows:
-                memories.append({
-                    'id': row[0],
-                    'user_id': row[1],
-                    'category': row[2],
-                    'content': row[3],
-                    'importance': row[4],
-                    'created_at': row[5]
-                })
+            results = []
 
-            return memories
+
+            for row in cur.fetchall():
+
+                content = row[2].lower()
+
+
+                score = 0
+
+
+                for word in words:
+
+                    if word in content:
+
+                        score += 1
+
+
+                # Importance bonus
+
+                score += (
+                    row[3] * 0.1
+                )
+
+
+                if score > 0:
+
+                    results.append(
+                        {
+                            "id": row[0],
+                            "kind": row[1],
+                            "content": row[2],
+                            "importance": row[3],
+                            "score": score
+                        }
+                    )
+
+
+            results.sort(
+                key=lambda x: x["score"],
+                reverse=True
+            )
+
+
+            return [
+                memory["content"]
+                for memory in results[:limit]
+            ]
+
 
         except Exception as e:
-            logger.error(f"[MEMORY_ERROR] Search failed: {e}")
+
+            print(
+                "[MEMORY SEARCH ERROR]",
+                e
+            )
+
+
             return []
 
-    def delete_memory(self, memory_id: int) -> bool:
-        """
-        Delete a specific memory.
 
-        Args:
-            memory_id: Memory ID to delete
 
-        Returns:
-            True if deleted, False if not found or error
-        """
+    # ---------------------------------
+    # Get All Memories
+    # ---------------------------------
+
+    def get_all_memories(
+        self,
+        user_id
+    ):
+
+
+        cur = self.conn.cursor()
+
+
         try:
-            cur = self.conn.cursor()
 
             cur.execute(
-                'DELETE FROM user_memories WHERE id = ?',
-                (memory_id,)
+                """
+                SELECT
+                    id,
+                    user_id,
+                    kind,
+                    content,
+                    importance,
+                    tags,
+                    metadata,
+                    created_at
+
+                FROM memories
+
+                WHERE user_id=?
+
+                ORDER BY created_at DESC
+
+                """,
+
+                (
+                    user_id,
+                )
             )
+
+
+            return cur.fetchall()
+
+
+        except Exception as e:
+
+            print(
+                "[MEMORY ERROR]",
+                e
+            )
+
+
+            return []
+
+
+
+    # ---------------------------------
+    # Recent Memories
+    # ---------------------------------
+
+    def recent(
+        self,
+        limit=10
+    ):
+
+
+        cur = self.conn.cursor()
+
+
+        try:
+
+            cur.execute(
+                """
+                SELECT *
+
+                FROM memories
+
+                ORDER BY created_at DESC
+
+                LIMIT ?
+
+                """,
+
+                (
+                    limit,
+                )
+            )
+
+
+            return cur.fetchall()
+
+
+        except Exception as e:
+
+            print(
+                "[MEMORY ERROR]",
+                e
+            )
+
+
+            return []
+
+
+
+    # ---------------------------------
+    # Delete Memory
+    # ---------------------------------
+
+    def delete_memory(
+        self,
+        memory_id
+    ):
+
+
+        cur = self.conn.cursor()
+
+
+        try:
+
+            cur.execute(
+                """
+                DELETE FROM memories
+
+                WHERE id=?
+
+                """,
+
+                (
+                    memory_id,
+                )
+            )
+
 
             self.conn.commit()
 
-            if cur.rowcount > 0:
-                logger.info(
-                    f"[MEMORY_DELETE] Deleted memory_id={memory_id}"
-                )
-                return True
 
-            return False
+            return True
+
 
         except Exception as e:
-            logger.error(f"[MEMORY_ERROR] Delete failed: {e}")
-            return False
 
-    def get_all_memories(self, user_id: str) -> List[Dict]:
-        """
-        Get ALL memories for a user (admin/debug).
+            self.conn.rollback()
 
-        Args:
-            user_id: User identifier
 
-        Returns:
-            All memory dicts for user, sorted by importance desc
-        """
-        try:
-            cur = self.conn.cursor()
-
-            cur.execute(
-                '''SELECT id, user_id, category, content, importance, created_at
-                   FROM user_memories
-                   WHERE user_id = ?
-                   ORDER BY importance DESC, created_at DESC''',
-                (user_id,)
+            print(
+                "[MEMORY ERROR]",
+                e
             )
 
-            rows = cur.fetchall()
-            memories = []
 
-            for row in rows:
-                memories.append({
-                    'id': row[0],
-                    'user_id': row[1],
-                    'category': row[2],
-                    'content': row[3],
-                    'importance': row[4],
-                    'created_at': row[5]
-                })
+            return False
 
-            return memories
 
-        except Exception as e:
-            logger.error(f"[MEMORY_ERROR] Get all failed: {e}")
-            return []
+
+    # ---------------------------------
+    # Update Memory
+    # ---------------------------------
 
     def update_memory(
         self,
-        memory_id: int,
-        importance: Optional[int] = None,
-        content: Optional[str] = None
-    ) -> bool:
-        """
-        Update an existing memory.
+        memory_id,
+        importance=None,
+        content=None
+    ):
 
-        Args:
-            memory_id: Memory ID to update
-            importance: New importance (1-10)
-            content: New content
 
-        Returns:
-            True if updated, False if not found or error
-        """
+        cur = self.conn.cursor()
+
+
         try:
-            updates = []
-            params = []
 
             if importance is not None:
-                updates.append('importance = ?')
-                params.append(max(1, min(10, importance)))
+
+                cur.execute(
+                    """
+                    UPDATE memories
+
+                    SET importance=?
+
+                    WHERE id=?
+
+                    """,
+
+                    (
+                        importance,
+                        memory_id
+                    )
+                )
+
 
             if content is not None:
-                updates.append('content = ?')
-                params.append(content.strip())
 
-            if not updates:
-                return False
+                cur.execute(
+                    """
+                    UPDATE memories
 
-            updates.append('updated_at = datetime("now")')
-            params.append(memory_id)
+                    SET content=?
 
-            query = (
-                f"UPDATE user_memories "
-                f"SET {', '.join(updates)} "
-                f"WHERE id = ?"
-            )
+                    WHERE id=?
 
-            cur = self.conn.cursor()
-            cur.execute(query, params)
+                    """,
+
+                    (
+                        content,
+                        memory_id
+                    )
+                )
+
+
             self.conn.commit()
 
-            if cur.rowcount > 0:
-                logger.info(
-                    f"[MEMORY_UPDATE] Updated memory_id={memory_id}"
-                )
-                return True
 
-            return False
+            return True
+
 
         except Exception as e:
-            logger.error(f"[MEMORY_ERROR] Update failed: {e}")
-            return False
 
-    def format_for_prompt(self, memories: List[Dict]) -> str:
-        """
-        Format memories into readable prompt section.
+            self.conn.rollback()
 
-        Args:
-            memories: List of memory dicts from recall()
 
-        Returns:
-            Formatted string ready for system prompt, empty if no memories
-        """
-        if not memories:
-            return ""
-
-        lines = []
-
-        for mem in memories:
-            category = mem.get('category', 'general')
-            content = mem.get('content', '')
-            importance = mem.get('importance', 5)
-
-            lines.append(
-                f"- [{category} #{importance}] {content}"
+            print(
+                "[MEMORY ERROR]",
+                e
             )
 
-        return "\n".join(lines)
+
+            return False
+
+
+
+    # ---------------------------------
+    # Format Memories For Prompt
+    # ---------------------------------
+
+    def format_for_prompt(
+        self,
+        memories
+    ):
+
+
+        if not memories:
+
+            return ""
+
+
+        formatted = []
+
+
+        for memory in memories:
+
+            if isinstance(
+                memory,
+                str
+            ):
+
+                formatted.append(
+                    memory
+                )
+
+                continue
+
+
+            if isinstance(
+                memory,
+                dict
+            ):
+
+                content = memory.get(
+                    "content",
+                    ""
+                )
+
+
+                if content:
+
+                    formatted.append(
+                        content
+                    )
+
+                continue
+
+
+            # SQLite tuple
+
+            try:
+
+                content = memory[3]
+
+
+                if content:
+
+                    formatted.append(
+                        content
+                    )
+
+
+            except Exception:
+
+                formatted.append(
+                    str(memory)
+                )
+
+
+        return "\n".join(
+            formatted
+        )
