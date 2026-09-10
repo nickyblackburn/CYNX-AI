@@ -78,6 +78,12 @@ class ChatEngine:
 
         self.logger = logger_obj or logger
 
+        # Short-term conversational context.
+        # Long-term memories remain handled by MemoryManager/MemoryExtractor.
+        self.conversation_history = {}
+        self.max_conversation_turns = 12
+
+
 
 
 
@@ -380,12 +386,22 @@ class ChatEngine:
             terminal.info(f"[SMOKE TYPE] {smoke_intent.get('smoke_type', 'n/a')}")
             terminal.info(f"[SMOKE SCOPE] {smoke_intent.get('scope', 'all')}")
 
+        # Build messages from the system prompt, recent conversation,
+        # and the current user turn. This preserves short-term continuity
+        # while leaving long-term memory in the existing memory system.
+        history = self.conversation_history.setdefault(user_id, [])
+
         messages = [
             {"role": "system", "content": prompt},
+            *history,
             {"role": "user", "content": text}
         ]
 
         terminal.user(text)
+        terminal.dim(
+            f"[CONVERSATION CONTEXT] turns={len(history) // 2} "
+            f"messages={len(messages)}"
+        )
 
         if request_id:
             terminal.ollama("OLLAMA CALL", f"id={request_id} phase=first")
@@ -633,6 +649,16 @@ class ChatEngine:
                 terminal.json(messages)
             terminal.model("FINAL MODEL RESPONSE")
             terminal.dim(assistant_text)
+
+            # Save the completed turn for short-term conversational continuity.
+            history.append({"role": "user", "content": text})
+            history.append({"role": "assistant", "content": assistant_text})
+
+            # Keep history bounded so it does not consume the entire context window.
+            max_messages = self.max_conversation_turns * 2
+            if len(history) > max_messages:
+                del history[:-max_messages]
+
             return assistant_text
 
         # No tool call was requested by the model; fall back to the original generation flow.
@@ -645,9 +671,16 @@ class ChatEngine:
         terminal.model("FINAL MODEL RESPONSE")
         terminal.dim(assistant_text)
 
-        print("[CHAT ENGINE MODULE]", __file__)
-        print("[CHAT ENGINE METHODS]", [x for x in dir(ChatEngine) if "message" in x.lower()])
-        return assistant_text
+        # Save the completed turn for short-term conversational continuity.
+        history.append({"role": "user", "content": text})
+        history.append({"role": "assistant", "content": assistant_text})
+
+        # Keep history bounded so it does not consume the entire context window.
+        max_messages = self.max_conversation_turns * 2
+        if len(history) > max_messages:
+            del history[:-max_messages]
+
+
 
 
 
