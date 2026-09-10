@@ -702,6 +702,57 @@ graph(
 
 
 # ==========================
+# TOOL TEST MODE
+# ==========================
+
+tool_test_results = []
+tool_test_pass = 0
+tool_test_fail = 0
+tool_test_unknown = 0
+
+for result in results:
+    analysis = result.get("analysis", {})
+    if not isinstance(analysis, dict):
+        analysis = {}
+
+    tool_test = analysis.get("tool_test", {})
+    if not isinstance(tool_test, dict) or not tool_test:
+        tool_test = result.get("tool_test", {})
+
+    if not isinstance(tool_test, dict) or not tool_test:
+        continue
+
+    status = str(tool_test.get("status", "UNKNOWN")).upper()
+    if status not in {"PASS", "FAIL", "UNKNOWN"}:
+        status = "UNKNOWN"
+
+    if status == "PASS":
+        tool_test_pass += 1
+    elif status == "FAIL":
+        tool_test_fail += 1
+    else:
+        tool_test_unknown += 1
+
+    # Prefer an explicit failure field, but also show common failure keys.
+    failure = tool_test.get("failure", "")
+    if not failure:
+        failures_found = tool_test.get("failures", [])
+        if isinstance(failures_found, list):
+            failure = ", ".join(str(x) for x in failures_found)
+
+    tool_test_results.append({
+        "test_id": result.get("test_id", result.get("id", "UNKNOWN")),
+        "status": status,
+        "expected_tool": tool_test.get("expected_tool", "—"),
+        "tool_name": tool_test.get("tool_name", "—"),
+        "tool_called": tool_test.get("tool_called", "—"),
+        "result_passed_to_llm": tool_test.get("result_passed_to_llm", "—"),
+        "failure": failure,
+    })
+
+tool_test_total = len(tool_test_results)
+
+# ==========================
 # CREATE DASHBOARD
 # ==========================
 
@@ -985,6 +1036,62 @@ color:#c084fc;
 }}
 
 
+
+.tool-panel {
+  margin-top:20px;
+}
+
+.tool-panel h2 {
+  margin-top:0;
+}
+
+.muted {
+  opacity:0.7;
+}
+
+.tool-stats {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin:18px 0 22px 0;
+}
+
+.tool-stat {
+  background:#10101d;
+  padding:14px;
+  border-radius:10px;
+  text-align:center;
+}
+
+.tool-number {
+  display:block;
+  font-size:28px;
+  font-weight:bold;
+  color:#c084fc;
+  margin-bottom:5px;
+}
+
+.tool-status {
+  font-weight:bold;
+}
+
+.tool-status.pass {
+  color:#86efac;
+}
+
+.tool-status.fail {
+  color:#fca5a5;
+}
+
+.tool-status.unknown {
+  color:#fde68a;
+}
+
+.tool-empty {
+  opacity:0.7;
+  padding:10px 0;
+}
+
 </style>
 
 </head>
@@ -1111,6 +1218,80 @@ Avg Response
 
 """
 
+
+# ==========================
+# TOOL TEST MODE CARD
+# ==========================
+
+html += f"""
+<div class="card tool-panel">
+<h2>🧪 Tool Test Mode</h2>
+<p class="muted">
+Live benchmark visibility for tool routing, execution, and delivery of tool results to the model.
+</p>
+
+<div class="tool-stats">
+  <div class="tool-stat">
+    <span class="tool-number">{tool_test_total}</span>
+    <span>Tool Tests</span>
+  </div>
+  <div class="tool-stat">
+    <span class="tool-number">{tool_test_pass}</span>
+    <span>PASS</span>
+  </div>
+  <div class="tool-stat">
+    <span class="tool-number">{tool_test_fail}</span>
+    <span>FAIL</span>
+  </div>
+  <div class="tool-stat">
+    <span class="tool-number">{tool_test_unknown}</span>
+    <span>UNKNOWN</span>
+  </div>
+</div>
+"""
+
+if tool_test_results:
+    html += """
+<table>
+<tr>
+  <th align="left">Test</th>
+  <th align="left">Status</th>
+  <th align="left">Expected Tool</th>
+  <th align="left">Tool Called</th>
+  <th align="left">Result → LLM</th>
+  <th align="left">Failure</th>
+</tr>
+"""
+
+    for tool_test in tool_test_results:
+        status = tool_test["status"]
+        status_class = status.lower()
+
+        html += f"""
+<tr>
+  <td>{tool_test["test_id"]}</td>
+  <td><span class="tool-status {status_class}">{status}</span></td>
+  <td>{tool_test["expected_tool"]}</td>
+  <td>{tool_test["tool_name"]}</td>
+  <td>{tool_test["result_passed_to_llm"]}</td>
+  <td>{tool_test["failure"] or "—"}</td>
+</tr>
+"""
+
+    html += """
+</table>
+"""
+else:
+    html += """
+<p class="tool-empty">
+No Tool Test Mode records found yet. Run the tool tests and regenerate the dashboard.
+</p>
+"""
+
+html += """
+</div>
+<br>
+"""
 
 # ==========================
 # CATEGORY LEADERBOARD CARD
