@@ -1,4 +1,3 @@
-
 """
 ChatEngine orchestrates a single chat turn:
 - context retrieval
@@ -32,6 +31,18 @@ logger = logging.getLogger("cynx.chat")
 MAX_MEMORY_CONTEXT = 3000
 MAX_KNOWLEDGE_CONTEXT = 5000
 MAX_TOOL_CONTEXT = 6000
+
+
+# ---------------------------------
+# Ollama Context Budget
+# ---------------------------------
+
+# Ollama is currently configured with an 8192-token context window.
+OLLAMA_CONTEXT_LIMIT = 8192
+
+# Leave headroom below the hard limit so small tokenizer differences
+# or request overhead do not cause an exceed_context_size_error.
+OLLAMA_PROMPT_BUDGET = 7500
 
 
 class ChatEngine:
@@ -101,6 +112,361 @@ class ChatEngine:
             +
             "\n\n[Context shortened]"
         )
+
+    def _estimate_message_tokens(
+        self,
+        message
+    ) -> int:
+        """
+        Roughly estimate tokens in an Ollama message.
+
+        This is intentionally conservative. Actual tokenization is
+        model-dependent, so the final context budget keeps headroom.
+        """
+
+        if not isinstance(
+            message,
+            dict
+        ):
+            return 1
+
+        content = str(
+            message.get(
+                "content",
+                ""
+            )
+        )
+
+        if not content:
+            return 1
+
+        # Rough English-text estimate.
+        return max(
+            1,
+            (len(content) + 3) // 4
+        )
+
+    def _trim_ollama_messages(
+        self,
+        messages,
+        max_tokens: int = OLLAMA_PROMPT_BUDGET
+    ):
+        """
+        Prevent Ollama requests from exceeding the available context.
+
+        Priority:
+
+        1. System prompt
+        2. Current user message
+        3. Tool results required for the current response
+        4. Newest conversation history
+        5. Older conversation history
+
+        The current user message is never intentionally removed.
+        """
+
+        if not messages:
+            return messages
+
+        estimated_tokens = sum(
+            self._estimate_message_tokens(
+                message
+            )
+            for message in messages
+        )
+
+        if estimated_tokens <= max_tokens:
+
+            self.logger.info(
+                f"[CONTEXT OK] "
+                f"estimated={estimated_tokens} "
+                f"limit={max_tokens} "
+                f"messages={len(messages)}"
+            )
+
+            return messages
+
+        self.logger.warning(
+            f"[CONTEXT OVERFLOW] "
+            f"estimated={estimated_tokens} "
+            f"limit={max_tokens} "
+            f"messages={len(messages)}"
+        )
+
+        # ---------------------------------
+        # Identify important messages
+        # ---------------------------------
+
+        system_message = messages[0]
+
+        # The newest user message is treated as the current request.
+        current_user_index = None
+
+        for index in range(
+            len(messages) - 1,
+            0,
+            -1
+        ):
+
+            if (
+                messages[index].get(
+                    "role"
+                ) == "user"
+            ):
+
+                current_user_index = index
+                break
+
+        # Preserve tool results because the final response may depend
+        # directly on them.
+        tool_indices = []
+
+        for index in range(
+            1,
+            len(messages)
+        ):
+
+            if (
+                messages[index].get(
+                    "role"
+                ) == "tool"
+            ):
+
+                tool_indices.append(
+                    index
+                )
+
+        # ---------------------------------
+        # Calculate mandatory context
+        # ---------------------------------
+
+        mandatory_indices = set(
+            tool_indices
+        )
+
+        if current_user_index is not None:
+
+            mandatory_indices.add(
+                current_user_index
+            )
+
+        system_tokens = (
+            self._estimate_message_tokens(
+                system_message
+            )
+        )
+
+        mandatory_tokens = system_tokens
+
+        for index in mandatory_indices:
+
+            mandatory_tokens += (
+                self._estimate_message_tokens(
+                    messages[index]
+                )
+            )
+
+        # ---------------------------------
+        # If mandatory context is too large,
+        # shorten the system prompt.
+        # ---------------------------------
+
+        if mandatory_tokens > max_tokens:
+
+            self.logger.warning(
+                f"[CONTEXT SYSTEM OVERFLOW] "
+                f"mandatory={mandatory_tokens} "
+                f"limit={max_tokens}"
+            )
+
+            available_for_system = max(
+                100,
+                max_tokens
+                -
+                sum(
+                    self._estimate_message_tokens(
+                        messages[index]
+                    )
+                    for index in mandatory_indices
+                )
+            )
+
+            system_content = str(
+                system_message.get(
+                    "content",
+                    ""
+                )
+            )
+
+            # Convert token budget back into a conservative
+            # character budget.
+            system_char_limit = (
+                available_for_system * 4
+            )
+
+            if len(system_content) > system_char_limit:
+
+                system_message = dict(
+                    system_message
+                )
+
+                system_message[
+                    "content"
+                ] = (
+                    system_content[
+                        :system_char_limit
+                    ]
+                    +
+                    "\n\n[System context shortened]"
+                )
+
+                self.logger.warning(
+                    f"[SYSTEM CONTEXT TRIMMED] "
+                    f"chars={len(system_message['content'])}"
+                )
+
+            system_tokens = (
+                self._estimate_message_tokens(
+                    system_message
+                )
+            )
+
+        # ---------------------------------
+        # Build the trimmed message list
+        # ---------------------------------
+
+        trimmed_messages = [
+            system_message
+        ]
+
+        used_indices = {
+            0
+        }
+
+        current_tokens = system_tokens
+
+        # Preserve the current user message.
+        if (
+            current_user_index is not None
+            and current_user_index != 0
+        ):
+
+            current_message = messages[
+                current_user_index
+            ]
+
+            current_message_tokens = (
+                self._estimate_message_tokens(
+                    current_message
+                )
+            )
+
+            if (
+                current_tokens
+                +
+                current_message_tokens
+                <= max_tokens
+            ):
+
+                trimmed_messages.append(
+                    current_message
+                )
+
+                used_indices.add(
+                    current_user_index
+                )
+
+                current_tokens += (
+                    current_message_tokens
+                )
+
+        # Preserve tool results.
+        for index in tool_indices:
+
+            if index in used_indices:
+                continue
+
+            tool_message = messages[index]
+
+            tool_message_tokens = (
+                self._estimate_message_tokens(
+                    tool_message
+                )
+            )
+
+            if (
+                current_tokens
+                +
+                tool_message_tokens
+                <= max_tokens
+            ):
+
+                trimmed_messages.append(
+                    tool_message
+                )
+
+                used_indices.add(
+                    index
+                )
+
+                current_tokens += (
+                    tool_message_tokens
+                )
+
+        # ---------------------------------
+        # Preserve newest conversation history
+        # ---------------------------------
+
+        for index in range(
+            len(messages) - 1,
+            0,
+            -1
+        ):
+
+            if index in used_indices:
+                continue
+
+            message = messages[index]
+
+            message_tokens = (
+                self._estimate_message_tokens(
+                    message
+                )
+            )
+
+            if (
+                current_tokens
+                +
+                message_tokens
+                >
+                max_tokens
+            ):
+                continue
+
+            # Insert history before the current user/tool messages
+            # so the original conversational order remains intact.
+            trimmed_messages.insert(
+                1,
+                message
+            )
+
+            used_indices.add(
+                index
+            )
+
+            current_tokens += (
+                message_tokens
+            )
+
+        self.logger.warning(
+            f"[CONTEXT TRIMMED] "
+            f"estimated={current_tokens} "
+            f"limit={max_tokens} "
+            f"messages={len(trimmed_messages)} "
+            f"removed={len(messages) - len(trimmed_messages)}"
+        )
+
+        return trimmed_messages
 
     def _ollama_tools(self, user_text: str = ""):
         if not self.tool_router:
@@ -559,6 +925,11 @@ class ChatEngine:
                 }
             )
 
+            # Protect the final research request from context overflow.
+            messages = self._trim_ollama_messages(
+                messages
+            )
+
             if request_id:
 
                 terminal.ollama(
@@ -668,6 +1039,11 @@ class ChatEngine:
             terminal.dim(
                 messages[0]["content"]
             )
+
+        # Protect the first Ollama request from context overflow.
+        messages = self._trim_ollama_messages(
+            messages
+        )
 
         # Call Ollama with a real chat tool schema. If the model issues a tool call,
         # execute it in Python and then send the tool result back to Ollama.
@@ -1297,8 +1673,7 @@ class ChatEngine:
                                 if (
                                     tool_result_payload.get(
                                         "today_units"
-                                    )
-                                    is not None
+                                    ) is not None
                                 )
                                 else
                                 tool_result_payload.get(
@@ -1319,8 +1694,7 @@ class ChatEngine:
                                 if (
                                     tool_result_payload.get(
                                         "total_units"
-                                    )
-                                    is not None
+                                    ) is not None
                                 )
                                 else
                                 tool_result_payload.get(
@@ -1485,6 +1859,11 @@ class ChatEngine:
                 )
 
             else:
+
+                # Protect the final tool response from context overflow.
+                messages = self._trim_ollama_messages(
+                    messages
+                )
 
                 final_response = self.ollama.chat(
                     messages=messages,
