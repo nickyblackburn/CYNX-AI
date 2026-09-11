@@ -8,6 +8,8 @@ ToolRouter:
 """
 
 from typing import Dict, Any
+import re
+
 from tools.base import BaseTool, ToolResult
 
 
@@ -16,14 +18,11 @@ class ToolRouter:
     def __init__(self):
         self.tools: Dict[str, BaseTool] = {}
 
-
     def register_tool(self, tool: BaseTool):
         self.tools[tool.name] = tool
 
-
     def list_tools(self):
         return list(self.tools.keys())
-
 
     def describe_tools(self):
         """
@@ -37,7 +36,6 @@ class ToolRouter:
             for tool in self.tools.values()
         ]
 
-
     def as_ollama_tools(self):
         """Convert the registered tools into Ollama function-calling schemas."""
         tools = []
@@ -50,7 +48,9 @@ class ToolRouter:
                     "type": "function",
                     "function": {
                         "name": "smoke_counter",
-                        "description": "Track smoking sessions and retrieve smoking statistics.",
+                        "description": (
+                            "Track smoking sessions and retrieve smoking statistics."
+                        ),
                         "parameters": {
                             "type": "object",
                             "properties": {
@@ -70,6 +70,7 @@ class ToolRouter:
                                         "cigarette",
                                         "weed",
                                         "vape",
+                                        "pen",
                                         "joint",
                                         "bong",
                                         "unknown"
@@ -80,6 +81,41 @@ class ToolRouter:
                                 },
                                 "limit": {
                                     "type": "integer"
+                                },
+                                "scope": {
+                                    "type": "string"
+                                },
+                                "events": {
+                                    "type": "array",
+                                    "description": (
+                                        "Multiple smoking events when a user "
+                                        "mentions different smoke types or amounts "
+                                        "in the same message."
+                                    ),
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "smoke_type": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "cigarette",
+                                                    "weed",
+                                                    "vape",
+                                                    "pen",
+                                                    "joint",
+                                                    "bong",
+                                                    "unknown"
+                                                ]
+                                            },
+                                            "amount": {
+                                                "type": "number"
+                                            }
+                                        },
+                                        "required": [
+                                            "smoke_type",
+                                            "amount"
+                                        ]
+                                    }
                                 }
                             },
                             "required": []
@@ -93,7 +129,9 @@ class ToolRouter:
                     "type": "function",
                     "function": {
                         "name": "web_search",
-                        "description": "Search the internet for current information.",
+                        "description": (
+                            "Search the internet for current information."
+                        ),
                         "parameters": {
                             "type": "object",
                             "properties": {
@@ -124,7 +162,6 @@ class ToolRouter:
             tools.append(schema)
 
         return tools
-
 
     def call_tool(
         self,
@@ -160,38 +197,79 @@ class ToolRouter:
                 f"Tool '{name}' exception: {e}"
             )
 
-
     def normalize_smoke_type(self, text: str):
-        """Normalize a freeform smoke_type string into a canonical type (pen, vape, cigarette, bong, weed, joint, unknown)."""
+        """
+        Normalize a freeform smoke_type string into a canonical type.
+
+        Canonical types:
+        - cigarette
+        - pen
+        - vape
+        - bong
+        - weed
+        - joint
+        - unknown
+        """
 
         if not text:
             return None
 
-        tl = str(text).lower()
+        tl = str(text).lower().strip()
 
-        # canonical types in priority order
-        for t in [
-            'cigarette',
-            'cig',
-            'bong',
-            'vape',
-            'pen',
-            'weed',
-            'joint'
-        ]:
+        # Order matters here.
+        # Check more specific aliases before shorter ones.
+        aliases = [
+            ("cigarettes", "cigarette"),
+            ("cigarette", "cigarette"),
+            ("cigs", "cigarette"),
+            ("cig", "cigarette"),
 
-            if t in tl:
+            ("vapes", "vape"),
+            ("vaped", "vape"),
+            ("vape", "vape"),
 
-                if t == 'cig':
-                    return 'cigarette'
+            ("pens", "pen"),
+            ("pen", "pen"),
 
-                return t
+            ("bongs", "bong"),
+            ("bong", "bong"),
 
-        return tl.strip()
+            ("joints", "joint"),
+            ("joint", "joint"),
 
+            ("weed", "weed"),
+
+            ("hits", "unknown"),
+            ("hit", "unknown"),
+            ("rips", "unknown"),
+            ("rip", "unknown"),
+        ]
+
+        for alias, canonical in aliases:
+
+            if re.search(
+                rf"\b{re.escape(alias)}\b",
+                tl
+            ):
+                return canonical
+
+        return tl
 
     def is_read_only_smoke_query(self, text: str) -> bool:
-        """Return True when the request is asking for counts/stats/history instead of logging."""
+        """
+        Return True when the request is asking for counts/stats/history
+        instead of logging.
+
+        IMPORTANT:
+        Date words such as "today" do NOT make a query read-only by
+        themselves.
+
+        Example:
+
+            "I smoked 4 cigarettes today"
+
+        must remain a logging request.
+        """
 
         if not text:
             return False
@@ -217,16 +295,14 @@ class ToolRouter:
             r"\b(how many|how much|how often|show my|show me|what's my|what is my|what was my|what were my)\b",
             r"\b(stats|statistics|count|counts|total|totals)\b",
             r"\b(recent|last)\b",
-            r"\b(today|this week|this month)\b",
             r"\b(how many .* (hit|hits|smoke|smoked|cigarette|cigarettes|vape|pen|bong|joint|weed) .* today)\b",
             r"\b(how many .* did i have today|how much did i smoke today|how many hits did i have today|how many vape hits did i have today|how many cigarettes did i have today)\b"
         ]
 
         return any(
-            __import__('re').search(p, tl)
-            for p in read_only_patterns
+            re.search(pattern, tl)
+            for pattern in read_only_patterns
         )
-
 
     def detect(self, text: str):
         """
@@ -238,9 +314,8 @@ class ToolRouter:
 
         text_lower = text.lower()
 
-
         # ========================================================
-        # First: detect smoke-counter intents
+        # Smoke parsing helpers
         # ========================================================
 
         smoke_words = [
@@ -253,97 +328,321 @@ class ToolRouter:
             "hit",
             "hits",
             "rip",
+            "rips",
             "bong",
             "bongs",
             "vape",
             "vaped",
+            "vapes",
             "pen",
             "pens",
             "weed",
             "joint",
+            "joints",
             "puff",
             "nicotine",
             "quit",
             "reset"
         ]
 
+        number_words = {
+            "zero": 0,
+            "one": 1,
+            "two": 2,
+            "three": 3,
+            "four": 4,
+            "five": 5,
+            "six": 6,
+            "seven": 7,
+            "eight": 8,
+            "nine": 9,
+            "ten": 10,
+            "a": 1,
+            "an": 1
+        }
 
-        def parse_number(text: str):
+        def parse_number(value: str):
 
-            # crude number parsing: digits first, then simple words
-            import re
+            if not value:
+                return None
 
-            m = re.search(r"\b(\d+)\b", text)
+            value = value.lower()
 
-            if m:
+            # Digits first.
+            match = re.search(
+                r"\b(\d+(?:\.\d+)?)\b",
+                value
+            )
+
+            if match:
 
                 try:
-                    return int(m.group(1))
+                    number = float(match.group(1))
+
+                    if number.is_integer():
+                        return int(number)
+
+                    return number
 
                 except Exception:
                     pass
 
-            words = {
-                'one': 1,
-                'two': 2,
-                'three': 3,
-                'four': 4,
-                'five': 5,
-                'six': 6,
-                'seven': 7,
-                'eight': 8,
-                'nine': 9,
-                'ten': 10,
-                'a': 1,
-                'an': 1
-            }
+            # Then number words.
+            for word, number in number_words.items():
 
-            for w, n in words.items():
-
-                if f" {w} " in f" {text} ":
-                    return n
+                if re.search(
+                    rf"\b{re.escape(word)}\b",
+                    value
+                ):
+                    return number
 
             return None
 
+        def smoke_type_from_word(word: str):
 
-        def parse_smoke_request(text: str):
+            word = word.lower()
 
-            # return dict with tool and parsed args if smoking
-            # intent is explicitly detected.
-            import re
+            if word in (
+                "cigarette",
+                "cigarettes",
+                "cig",
+                "cigs"
+            ):
+                return "cigarette"
 
-            tl = text.lower()
+            if word in (
+                "vape",
+                "vaped",
+                "vapes"
+            ):
+                return "vape"
 
-            if not any(
-                re.search(
-                    rf"\b{re.escape(w)}\b",
-                    tl
+            if word in (
+                "pen",
+                "pens"
+            ):
+                return "pen"
+
+            if word in (
+                "bong",
+                "bongs"
+            ):
+                return "bong"
+
+            if word in (
+                "joint",
+                "joints"
+            ):
+                return "joint"
+
+            if word == "weed":
+                return "weed"
+
+            if word in (
+                "hit",
+                "hits",
+                "rip",
+                "rips"
+            ):
+                return "unknown"
+
+            return None
+
+        def parse_smoke_events(value: str):
+            """
+            Extract multiple smoking events from one natural-language
+            statement.
+
+            Examples:
+
+                "I smoked 4 cigarettes and 3 pen hits"
+
+                ->
+                [
+                    {
+                        "smoke_type": "cigarette",
+                        "amount": 4
+                    },
+                    {
+                        "smoke_type": "pen",
+                        "amount": 3
+                    }
+                ]
+
+                "I smoked four cigarettes and three pen hits"
+
+                ->
+                [
+                    {
+                        "smoke_type": "cigarette",
+                        "amount": 4
+                    },
+                    {
+                        "smoke_type": "pen",
+                        "amount": 3
+                    }
+                ]
+            """
+
+            tl = value.lower()
+
+            # Number can be a digit, simple number word, "a", or "an".
+            number_pattern = (
+                r"(?:"
+                r"\d+(?:\.\d+)?"
+                r"|zero|one|two|three|four|five|six|seven|eight|nine|ten"
+                r"|a|an"
+                r")"
+            )
+
+            # Smoke type aliases.
+            type_pattern = (
+                r"(?:"
+                r"cigarettes?|cigs?|"
+                r"vapes?|vaped|"
+                r"pens?|"
+                r"bongs?|"
+                r"joints?|"
+                r"weed"
+                r")"
+            )
+
+            # Match:
+            #
+            #   4 cigarettes
+            #   3 pen
+            #   3 pen hits
+            #   four cigarettes
+            #   three vape hits
+            #
+            event_pattern = re.compile(
+                rf"\b("
+                rf"{number_pattern}"
+                rf")\s+"
+                rf"({type_pattern})"
+                rf"(?:\s+(?:hits?|rips?|puffs?))?\b"
+            )
+
+            events = []
+
+            for match in event_pattern.finditer(tl):
+
+                number_text = match.group(1)
+                type_text = match.group(2)
+
+                amount = number_words.get(
+                    number_text,
+                    None
                 )
-                for w in smoke_words
+
+                if amount is None:
+
+                    try:
+                        number = float(number_text)
+
+                        if number.is_integer():
+                            amount = int(number)
+                        else:
+                            amount = number
+
+                    except Exception:
+                        amount = 1
+
+                smoke_type = smoke_type_from_word(
+                    type_text
+                )
+
+                if smoke_type is None:
+                    continue
+
+                events.append(
+                    {
+                        "smoke_type": smoke_type,
+                        "amount": amount
+                    }
+                )
+
+            return events
+
+        def parse_single_smoke_type(value: str):
+
+            candidates = [
+                "vape",
+                "vaped",
+                "vapes",
+                "pen",
+                "pens",
+                "bong",
+                "bongs",
+                "cigarette",
+                "cigarettes",
+                "cig",
+                "cigs",
+                "weed",
+                "joint",
+                "joints",
+                "hit",
+                "hits",
+                "rip",
+                "rips"
+            ]
+
+            for candidate in candidates:
+
+                if re.search(
+                    rf"\b{re.escape(candidate)}\b",
+                    value
+                ):
+
+                    result = smoke_type_from_word(
+                        candidate
+                    )
+
+                    if result:
+                        return result
+
+            return "unknown"
+
+        def parse_smoke_request(value: str):
+
+            # --------------------------------------------------------
+            # Determine whether this is even a smoking-related request.
+            # --------------------------------------------------------
+
+            has_smoke_word = any(
+                re.search(
+                    rf"\b{re.escape(word)}\b",
+                    value
+                )
+                for word in smoke_words
+            )
+
+            # Some smoke-counter history requests don't explicitly say
+            # "smoke", e.g. "show my recent sessions".
+            history_request_without_smoke_word = (
+                re.search(
+                    r"\b(show|give|get)\s+my\s+recent\s+sessions\b",
+                    value
+                )
+                or re.search(
+                    r"\b(show|give|get)\s+my\s+last\s+sessions?\b",
+                    value
+                )
+            )
+
+            if (
+                not has_smoke_word
+                and not history_request_without_smoke_word
             ):
                 return None
 
-
             # --------------------------------------------------------
-            # IMPORTANT:
-            #
-            # Mentioning smoking is NOT enough to activate the tool.
-            #
-            # Example:
-            #
-            # "I want to take hits off my pen"
-            #
-            # is conversation, not a logging request.
-            #
-            # The tool requires an actual tracking/statistics action.
+            # Explicit reset
             # --------------------------------------------------------
-
-
-            # reset explicit
 
             if re.search(
                 r"\breset (my )?(smoke|smoking|smoke counter|tracker)\b",
-                tl
+                value
             ):
 
                 return {
@@ -351,10 +650,11 @@ class ToolRouter:
                     "action": "reset"
                 }
 
+            # --------------------------------------------------------
+            # Read-only requests
+            # --------------------------------------------------------
 
-            # read-only requests must never log
-
-            if self.is_read_only_smoke_query(tl):
+            if self.is_read_only_smoke_query(value):
 
                 payload = {
                     "tool": "smoke_counter",
@@ -375,7 +675,7 @@ class ToolRouter:
 
                     if re.search(
                         rf"\b{re.escape(candidate)}\b",
-                        tl
+                        value
                     ):
 
                         smoke_type_for_stats = (
@@ -392,15 +692,15 @@ class ToolRouter:
                         "smoke_type"
                     ] = smoke_type_for_stats
 
-                if "today" in tl:
+                if "today" in value:
 
                     payload[
                         "scope"
                     ] = "today"
 
                 if (
-                    "last" in tl
-                    and "what was my last" in tl
+                    "last" in value
+                    and "what was my last" in value
                 ):
 
                     return {
@@ -409,27 +709,29 @@ class ToolRouter:
                     }
 
                 if (
-                    "recent" in tl
-                    or "recent hits" in tl
+                    "recent" in value
+                    or "recent hits" in value
+                    or "recent sessions" in value
                 ):
 
                     return {
                         "tool": "smoke_counter",
                         "action": "recent",
-                        "limit": parse_number(tl) or 10
+                        "limit": parse_number(value) or 10
                     }
 
                 return payload
 
-
-            # last
+            # --------------------------------------------------------
+            # Last
+            # --------------------------------------------------------
 
             if (
                 re.search(
                     r"\blast (hit|smoke|session)\b",
-                    tl
+                    value
                 )
-                or "what was my last" in tl
+                or "what was my last" in value
             ):
 
                 return {
@@ -437,15 +739,16 @@ class ToolRouter:
                     "action": "last"
                 }
 
-
-            # recent
+            # --------------------------------------------------------
+            # Recent
+            # --------------------------------------------------------
 
             if re.search(
-                r"\b(recent|show my recent|recent hits|recent smoking)\b",
-                tl
+                r"\b(recent|show my recent|recent hits|recent smoking|recent sessions)\b",
+                value
             ):
 
-                limit = parse_number(tl) or 10
+                limit = parse_number(value) or 10
 
                 return {
                     "tool": "smoke_counter",
@@ -453,10 +756,9 @@ class ToolRouter:
                     "limit": limit
                 }
 
-
-            # stats
-            # including type-filtered counts like
-            # 'how many vape hits do I have today?'
+            # --------------------------------------------------------
+            # Stats
+            # --------------------------------------------------------
 
             smoke_type_for_stats = None
 
@@ -472,7 +774,7 @@ class ToolRouter:
 
                 if re.search(
                     rf"\b{re.escape(candidate)}\b",
-                    tl
+                    value
                 ):
 
                     smoke_type_for_stats = (
@@ -484,8 +786,20 @@ class ToolRouter:
                     break
 
             if re.search(
-                r"\b(how many|how often|how many times|show my smoking stats|show my stats|how many hits|how many times did|how much have i smoked|how much have i smoked today|how much did i smoke today|how much did i smoke)\b",
-                tl
+                r"\b("
+                r"how many|"
+                r"how often|"
+                r"how many times|"
+                r"show my smoking stats|"
+                r"show my stats|"
+                r"how many hits|"
+                r"how many times did|"
+                r"how much have i smoked|"
+                r"how much have i smoked today|"
+                r"how much did i smoke today|"
+                r"how much did i smoke"
+                r")\b",
+                value
             ):
 
                 payload = {
@@ -499,7 +813,7 @@ class ToolRouter:
                         "smoke_type"
                     ] = smoke_type_for_stats
 
-                if "today" in tl:
+                if "today" in value:
 
                     payload[
                         "scope"
@@ -507,19 +821,8 @@ class ToolRouter:
 
                 return payload
 
-
             # --------------------------------------------------------
-            # Explicit logging requests only
-            # --------------------------------------------------------
-            #
-            # These are phrases that actually communicate that the
-            # user wants the smoking tracker updated.
-            #
-            # A casual mention like:
-            #
-            # "I want to take hits off my pen"
-            #
-            # will NOT match this section.
+            # Explicit logging requests
             # --------------------------------------------------------
 
             explicit_log_patterns = [
@@ -540,14 +843,15 @@ class ToolRouter:
             explicit_logging_request = any(
                 re.search(
                     pattern,
-                    tl
+                    value
                 )
                 for pattern in explicit_log_patterns
             )
 
-            # Natural logging statements are also accepted,
-            # but only when they describe an event that actually
-            # happened rather than a future intention.
+            # --------------------------------------------------------
+            # Natural logging statements
+            # --------------------------------------------------------
+
             natural_log_patterns = [
                 r"\bi just smoked\b",
                 r"\bi just had\b",
@@ -560,7 +864,7 @@ class ToolRouter:
             natural_logging_request = any(
                 re.search(
                     pattern,
-                    tl
+                    value
                 )
                 for pattern in natural_log_patterns
             )
@@ -570,81 +874,54 @@ class ToolRouter:
                 or natural_logging_request
             ):
 
-                amount = parse_number(tl) or 1
+                # ----------------------------------------------------
+                # IMPORTANT:
+                #
+                # Parse every independently stated event first.
+                #
+                # This prevents:
+                #
+                #   "I smoked 4 cigarettes and 3 pen hits"
+                #
+                # from becoming:
+                #
+                #   cigarette=4
+                #
+                # while silently losing the pen event.
+                # ----------------------------------------------------
 
-                smoke_type = None
+                events = parse_smoke_events(value)
 
-                for candidate in [
-                    "vape",
-                    "vaped",
-                    "pen",
-                    "pens",
-                    "bong",
-                    "bongs",
-                    "cigarette",
-                    "cigarettes",
-                    "cig",
-                    "weed",
-                    "joint",
-                    "hit",
-                    "hits",
-                    "rip"
-                ]:
+                if events:
 
-                    if re.search(
-                        rf"\b{re.escape(candidate)}\b",
-                        tl
-                    ):
+                    # One event: preserve the existing scalar format
+                    # for compatibility with the existing tool pipeline.
+                    if len(events) == 1:
 
-                        if candidate in (
-                            'vape',
-                            'vaped'
-                        ):
+                        return {
+                            "tool": "smoke_counter",
+                            "action": "log",
+                            "smoke_type": events[0]["smoke_type"],
+                            "amount": events[0]["amount"]
+                        }
 
-                            smoke_type = 'vape'
+                    # Multiple events: return all events explicitly.
+                    return {
+                        "tool": "smoke_counter",
+                        "action": "log",
+                        "events": events
+                    }
 
-                        elif candidate in (
-                            'pen',
-                            'pens'
-                        ):
+                # ----------------------------------------------------
+                # Fallback for an explicit logging request where a
+                # number/type pair wasn't found.
+                # ----------------------------------------------------
 
-                            smoke_type = 'pen'
+                amount = parse_number(value) or 1
 
-                        elif candidate in (
-                            'bong',
-                            'bongs'
-                        ):
-
-                            smoke_type = 'bong'
-
-                        elif candidate in (
-                            'cig',
-                            'cigarette',
-                            'cigarettes'
-                        ):
-
-                            smoke_type = 'cigarette'
-
-                        elif candidate in (
-                            'weed',
-                            'joint'
-                        ):
-
-                            smoke_type = (
-                                'weed'
-                                if 'weed' in tl
-                                else 'joint'
-                            )
-
-                        else:
-
-                            smoke_type = 'unknown'
-
-                        break
-
-                if smoke_type is None:
-
-                    smoke_type = 'unknown'
+                smoke_type = parse_single_smoke_type(
+                    value
+                )
 
                 return {
                     "tool": "smoke_counter",
@@ -653,10 +930,7 @@ class ToolRouter:
                     "amount": amount
                 }
 
-
             # --------------------------------------------------------
-            # IMPORTANT:
-            #
             # Do NOT use the old generic fallback:
             #
             # "if smoke_type and amount -> log"
@@ -665,9 +939,11 @@ class ToolRouter:
             # "pen", "hit", etc. to become a logging request.
             # --------------------------------------------------------
 
-            # No explicit smoke-counter intent detected.
             return None
 
+        # ========================================================
+        # First: detect smoke-counter intents
+        # ========================================================
 
         smoke_req = parse_smoke_request(
             text_lower
@@ -676,7 +952,6 @@ class ToolRouter:
         if smoke_req:
 
             return smoke_req
-
 
         # ========================================================
         # Research / factual-question detection
@@ -710,7 +985,6 @@ class ToolRouter:
             "recent information"
         ]
 
-
         research_question_patterns = [
             "why do people",
             "why do humans",
@@ -736,7 +1010,6 @@ class ToolRouter:
             "how prevalent"
         ]
 
-
         # --------------------------------------------------------
         # Normalize common casual typos
         # --------------------------------------------------------
@@ -758,7 +1031,6 @@ class ToolRouter:
                 new
             )
 
-
         # --------------------------------------------------------
         # Explicit research requests
         # --------------------------------------------------------
@@ -772,7 +1044,6 @@ class ToolRouter:
                 "tool": "web_search",
                 "query": text
             }
-
 
         # --------------------------------------------------------
         # Known research question patterns
@@ -788,12 +1059,9 @@ class ToolRouter:
                 "query": text
             }
 
-
         # --------------------------------------------------------
         # General causal questions
         # --------------------------------------------------------
-
-        import re
 
         why_pattern = re.search(
             r"\bwhy\s+"
@@ -807,7 +1075,6 @@ class ToolRouter:
                 "tool": "web_search",
                 "query": text
             }
-
 
         # --------------------------------------------------------
         # General factual questions
@@ -827,7 +1094,6 @@ class ToolRouter:
                 "query": text
             }
 
-
         # ========================================================
         # Fallback: search detection
         # ========================================================
@@ -845,7 +1111,6 @@ class ToolRouter:
             "where can i buy"
         ]
 
-
         if any(
             word in text_lower
             for word in search_words
@@ -855,6 +1120,5 @@ class ToolRouter:
                 "tool": "web_search",
                 "query": text
             }
-
 
         return None
