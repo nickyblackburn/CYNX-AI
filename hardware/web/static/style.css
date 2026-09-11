@@ -1,0 +1,358 @@
+body {
+
+background:#111;
+
+color:white;
+
+font-family:
+Arial, sans-serif;
+
+}
+
+
+.container {
+
+width:600px;
+
+margin:auto;
+
+margin-top:50px;
+
+}
+
+
+#chat {
+
+height:400px;
+
+background:#222;
+
+padding:15px;
+
+overflow-y:auto;
+
+border-radius:10px;
+
+}
+
+
+.input {
+
+display:flex;
+
+margin-top:10px;
+
+}
+
+
+input {
+
+flex:1;
+
+padding:12px;
+
+border-radius:8px;
+
+border:none;
+
+}
+
+
+button {
+
+padding:12px;
+
+margin-left:5px;
+
+border-radius:8px;
+
+}
+
+
+/* CYN-X LOADING PANEL STYLES */
+
+.loading-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(2px);
+}
+
+.loading-content {
+    background: linear-gradient(135deg, #1a0033 0%, #0d001f 100%);
+    border: 2px solid #9d4edd;
+    border-radius: 8px;
+    padding: 30px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 
+        0 0 20px rgba(157, 78, 221, 0.4),
+        inset 0 0 20px rgba(157, 78, 221, 0.1);
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.8;
+    animation: systemBootup 0.6s ease-out;
+}
+
+@keyframes systemBootup {
+    0% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.system-header {
+    text-align: center;
+    color: #9d4edd;
+    font-weight: bold;
+    margin-bottom: 20px;
+    font-size: 16px;
+    letter-spacing: 2px;
+    animation: headerGlitch 2s infinite;
+}
+
+@keyframes headerGlitch {
+    0%, 100% {
+        text-shadow: 0 0 0 transparent;
+    }
+    50% {
+        text-shadow: 
+            2px 0 #ff006e,
+            -2px 0 #00d9ff;
+    }
+}
+
+.diagnostic-status {
+    background: rgba(0, 0, 0, 0.3);
+    border-left: 3px solid #00d9ff;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+}
+
+.diagnostic-line {
+    color: #00d9ff;
+    margin: 8px 0;
+    animation: diagnosticPulse 1s ease-in-out infinite;
+}
+
+.diagnostic-line:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.diagnostic-line:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.diagnostic-line:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+.diagnostic-line:nth-child(4) {
+    animation-delay: 0.6s;
+}
+
+@keyframes diagnosticPulse {
+    0%, 100% {
+        opacity: 0.6;
+        text-shadow: 0 0 5px rgba(0, 217, 255, 0.3);
+    }
+    50% {
+        opacity: 1;
+        text-shadow: 0 0 15px rgba(0, 217, 255, 0.8);
+    }
+}
+
+.spinner {
+    display: inline-block;
+    font-weight: bold;
+    color: #ff006e;
+    animation: spinnerRotate 0.8s steps(4, end) infinite;
+    min-width: 20px;
+}
+
+@keyframes spinnerRotate {
+    0% { content: '◐'; color: #ff006e; }
+    25% { color: #ff006e; }
+    50% { color: #00d9ff; }
+    75% { color: #ff006e; }
+    100% { color: #ff006e; }
+}
+
+.diagnostic-footer {
+    text-align: right;
+    color: #9d4edd;
+    margin-top: 15px;
+    font-size: 12px;
+    border-top: 1px solid rgba(157, 78, 221, 0.3);
+    padding-top: 10px;
+}
+
+#timer {
+    font-weight: bold;
+    color: #00d9ff;
+    text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+}
+
+#thinking-box {
+
+    background:
+    linear-gradient(
+        135deg,
+        rgba(120,0,255,.25),
+        rgba(0,255,255,.15)
+    );
+
+    border: 1px solid purple;
+
+    border-radius: 20px;
+
+    padding:20px;
+
+    box-shadow:
+    0 0 25px rgba(160,0,255,.5);
+
+    transition:.3s;
+
+}
+
+
+.complete {
+
+    text-align:center;
+
+    font-size:18px;
+
+    animation: pulse 1s infinite alternate;
+
+}
+
+
+@keyframes pulse {
+
+    from {
+        transform:scale(1);
+    }
+
+    to {
+        transform:scale(1.05);
+    }
+
+}
+
+.message {
+    margin: 12px 0;
+}
+
+
+.you-name {
+    color: #ff69b4;
+    font-weight: bold;
+}
+
+
+.you-text {
+    color: #ffb6d9;
+}
+
+
+.cyn-name {
+    color: #b56cff;
+    font-weight: bold;
+    text-shadow: 0 0 8px #b56cff;
+}
+
+
+.cyn-text {
+    color: #d8b4ff;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Markdown element styling inside Cyn's responses */
+.cyn-text p {
+    margin: 0 0 8px 0;
+}
+
+.cyn-text ol,
+.cyn-text ul {
+    margin: 8px 0 8px 20px;
+}
+
+.cyn-text li {
+    margin: 4px 0;
+}
+
+.cyn-text strong {
+    font-weight: 700;
+}
+
+.cyn-text em {
+    font-style: italic;
+}
+
+.cyn-text a.cyn-link {
+    color: #c084fc;
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.cyn-text a.cyn-link:hover {
+    text-decoration-thickness: 2px;
+    color: #ffffff;
+    background: rgba(157, 78, 221, 0.12);
+    border-radius: 4px;
+    padding: 0 2px;
+}
+
+.cyn-text h1, .cyn-text h2, .cyn-text h3, .cyn-text h4, .cyn-text h5, .cyn-text h6 {
+    color: #e9d5ff;
+    margin: 8px 0 6px 0;
+}
+
+.cyn-text blockquote {
+    border-left: 3px solid rgba(157,78,221,0.5);
+    margin: 8px 0;
+    padding: 6px 12px;
+    background: rgba(157,78,221,0.04);
+    color: #f0e6ff;
+}
+
+.cyn-text code {
+    background: rgba(0,0,0,0.25);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    color: #ffd6ff;
+}
+
+.cyn-text pre {
+    background: rgba(0,0,0,0.35);
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    color: #ffd6ff;
+}
+
+.cyn-text pre code {
+    background: transparent;
+    padding: 0;
+}
+
+.cyn-text {
+    color: #d8b4ff;
+    white-space: pre-wrap;
+    word-break: break-word;
+}\n\n/* CYN-X structured chart cards */\n.cyn-chart-message {\n    margin: 16px 0;\n    padding: 14px;\n    background: rgba(20, 10, 35, 0.92);\n    border: 1px solid rgba(181, 108, 255, 0.45);\n    border-radius: 12px;\n    box-shadow: 0 0 18px rgba(157, 78, 221, 0.12);\n}\n\n.cyn-chart-title {\n    color: #e9d5ff;\n    font-size: 16px;\n    font-weight: 700;\n    margin-bottom: 4px;\n}\n\n.cyn-chart-description,\n.cyn-chart-footer {\n    color: #bfa9d6;\n    font-size: 12px;\n}\n\n.cyn-chart-description {\n    margin-bottom: 10px;\n}\n\n.cyn-chart-footer {\n    margin-top: 8px;\n    opacity: 0.8;\n}\n\n.cyn-chart-canvas {\n    display: block;\n    width: 100% !important;\n    height: 260px !important;\n}\n

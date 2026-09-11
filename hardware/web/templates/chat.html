@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>CYN-X</title>
+
+<link rel="stylesheet" href="/static/style.css">
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+
+    <div class="cyn-header">
+
+
+        <h1>
+            💜 CYN-X
+        </h1>
+
+
+        <div id="response-time">
+            Last Response: 0.00 seconds
+        </div>
+
+
+    </div>
+
+
+
+
+
+    <!-- CYN THINKING PANEL -->
+
+    <div 
+    id="thinking" 
+    class="loading-panel" 
+    style="display:none;"
+    >
+
+
+        <div class="loading-content">
+
+
+            <div class="system-header">
+
+                [CYN-X CORE]
+
+            </div>
+
+
+
+            <div class="diagnostic-status">
+
+
+                <div class="diagnostic-line">
+
+                    <span 
+                    class="spinner" 
+                    id="spinner">
+
+                    ◐
+
+                    </span>
+
+                    Neural processes active
+
+                </div>
+
+
+
+                <div class="diagnostic-line">
+
+                    ◓ Analyzing organic input
+
+                </div>
+
+
+
+                <div class="diagnostic-line">
+
+                    ◑ Generating response
+
+                </div>
+
+
+
+                <div class="diagnostic-line">
+
+                    ◒ Personality matrix stable
+
+                </div>
+
+
+            </div>
+
+
+
+
+
+            <div class="diagnostic-footer">
+
+                Time:
+
+                <span id="timer">
+
+                    0.0
+
+                </span>
+
+                seconds
+
+            </div>
+
+
+
+        </div>
+
+
+    </div>
+
+
+
+
+
+
+
+
+
+    <!-- CHAT WINDOW -->
+
+
+    <div id="chat"></div>
+
+
+
+
+
+
+
+
+
+    <!-- INPUT -->
+
+
+    <div class="input">
+
+
+        <input 
+
+        id="message"
+
+        placeholder="Talk to Cyn..."
+
+        />
+
+
+
+        <button 
+        id="sendButton">
+
+            Send
+
+        </button>
+
+
+
+    </div>
+
+
+
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/static/chat.js"></script>
+
+
+</body>
+
+</html>
