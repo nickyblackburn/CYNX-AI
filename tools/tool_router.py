@@ -59,6 +59,33 @@ class ToolRouter:
     def list_tools(self) -> List[str]:
         return list(self.tools.keys())
 
+
+    def describe_tools(self) -> List[str]:
+        """
+        Return human-readable descriptions of all registered tools.
+
+        ChatEngine uses this for context/debugging. This does not
+        replace as_ollama_tools(); it is simply the human-readable
+        counterpart.
+        """
+
+        descriptions = []
+
+        for name, tool in self.tools.items():
+            description = getattr(tool, "description", None)
+
+            if not description:
+                description = getattr(tool, "tool_description", None)
+
+            if not description:
+                description = f"Registered tool: {name}"
+
+            descriptions.append(
+                f"{name}: {description}"
+            )
+
+        return descriptions
+
     # ============================================================
     # TOOL LOOKUP
     # ============================================================

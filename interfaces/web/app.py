@@ -36,6 +36,8 @@ from tools.tool_router import ToolRouter
 from tools.web_search import WebSearchTool
 from tools.calculator import CalculatorTool
 from tools.SmokeCounterTool import smoke_counter
+from tools.chart_tool import ChartTool
+from tools.LeproLightsTool import LeproLightsTool
 
 
 
@@ -117,6 +119,13 @@ tool_router.register_tool(
     smoke_counter
 )
 
+tool_router.register_tool(
+    LeproLightsTool
+)
+
+tool_router.register_tool(
+    ChartTool
+    )
 
 
 # ======================
