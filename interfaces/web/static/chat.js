@@ -245,7 +245,7 @@ async function send(){
     try{
 
 
-        const response =
+        const fetchedResponse =
             await fetch(
                 "/chat",
                 {
@@ -273,7 +273,7 @@ async function send(){
 
 
         const data =
-            await response.json();
+            await fetchedResponse.json();
 
 
 
@@ -282,11 +282,20 @@ async function send(){
 
 
 
-        addMessage(
-            "Cyn: "
-            +
-            data.response
-        );
+        const cynResponse = data.response;
+
+        if (cynResponse && typeof cynResponse === "object") {
+            addMessage("Cyn: " + (cynResponse.text || ""));
+            if (cynResponse.chart) {
+                addChart(cynResponse.chart);
+            }
+        } else {
+            addMessage(
+                "Cyn: "
+                +
+                (cynResponse || "")
+            );
+        }
 
 
 

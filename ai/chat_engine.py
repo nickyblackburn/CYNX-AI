@@ -1137,6 +1137,8 @@ class ChatEngine:
             # Use the validated tool_calls (could be empty)
             tool_calls = validated_tool_calls
 
+        chart_payload = None
+
         if tool_calls:
 
             terminal.model(
@@ -1600,6 +1602,12 @@ class ChatEngine:
                         tool_result_payload
                     )
 
+                # Structured chart results are transported separately so the web UI
+                # can render them without asking the model to reproduce chart data.
+                if name == "chart" and isinstance(tool_result_payload, dict):
+                    if tool_result_payload.get("type") == "chart":
+                        chart_payload = dict(tool_result_payload)
+
                 display_override = None
 
                 if name == "smoke_counter":
@@ -1782,7 +1790,8 @@ class ChatEngine:
             # Optimize final Ollama call for deterministic tools (small prompt)
             # Deterministic tools should not require re-sending the full system prompt.
             deterministic_tools = {
-                "smoke_counter"
+                "smoke_counter",
+                "chart"
             }
 
             tool_messages = [
@@ -1930,6 +1939,12 @@ class ChatEngine:
             if len(history) > max_messages:
 
                 del history[:-max_messages]
+
+            if chart_payload is not None:
+                return {
+                    "text": assistant_text,
+                    "chart": chart_payload
+                }
 
             return assistant_text
 

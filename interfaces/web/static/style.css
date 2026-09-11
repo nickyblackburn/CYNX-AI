@@ -355,4 +355,4 @@ border-radius:8px;
     color: #d8b4ff;
     white-space: pre-wrap;
     word-break: break-word;
-}
+}\n\n/* CYN-X structured chart cards */\n.cyn-chart-message {\n    margin: 16px 0;\n    padding: 14px;\n    background: rgba(20, 10, 35, 0.92);\n    border: 1px solid rgba(181, 108, 255, 0.45);\n    border-radius: 12px;\n    box-shadow: 0 0 18px rgba(157, 78, 221, 0.12);\n}\n\n.cyn-chart-title {\n    color: #e9d5ff;\n    font-size: 16px;\n    font-weight: 700;\n    margin-bottom: 4px;\n}\n\n.cyn-chart-description,\n.cyn-chart-footer {\n    color: #bfa9d6;\n    font-size: 12px;\n}\n\n.cyn-chart-description {\n    margin-bottom: 10px;\n}\n\n.cyn-chart-footer {\n    margin-top: 8px;\n    opacity: 0.8;\n}\n\n.cyn-chart-canvas {\n    display: block;\n    width: 100% !important;\n    height: 260px !important;\n}\n
