@@ -37,7 +37,7 @@ from ai.mode_manager import ModeManager
 from ai.ollama_client import OllamaClient
 from ai.prompt_builder import PromptBuilder
 
-from memory.memory import MemoryStore
+from memory.memory import MemoryManager
 from memory.sqlite import connect as sqlite_connect
 
 from tools.calculator import CalculatorTool
@@ -1860,13 +1860,9 @@ def create_cynx_engine():
         cfg.db_path
 
     )
-
-    memory_store = MemoryStore(
-
+    memory_store = MemoryManager(
         conn
-
     )
-
     memory_manager = MemoryManager(
 
         conn
