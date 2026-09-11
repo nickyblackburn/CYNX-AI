@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator
 
-from lepro.commands import DpPayload, dp_json_text
+from hardware.lepro.lib.lepro.commands import DpPayload, dp_json_text
 
 # ── Device profile ────────────────────────────────────────────────────────────
 
@@ -65,7 +65,7 @@ EFFECT_APK_TYPE: dict[str, int] = {
     "CenterIn": 13,
 }
 
-from lepro.paths import repo_path
+from hardware.lepro.lib.lepro.paths import repo_path
 
 PRESETS_DIR = repo_path("tmp/LeproTB1/presets")
 
@@ -361,7 +361,7 @@ def resolve_mode(name: str, **kwargs: Any) -> DpPayload:
             bulb_count=kwargs.get("bulb_count"),
         )
     if n == "segment_solid":
-        from lepro.commands import segment_solid as _seg
+        from hardware.lepro.lib.lepro.commands import segment_solid as _seg
 
         rgb = kwargs.get("rgb", (255, 255, 255))
         return _seg(
@@ -374,17 +374,17 @@ def resolve_mode(name: str, **kwargs: Any) -> DpPayload:
 
 def debug_payload(mac: str, payload: DpPayload) -> dict[str, Any]:
     """Return JSON text + encrypted size + estimated BLE page count."""
-    from lepro.commands import build_dp_value_packets, build_get_dp_state_packet
+    from hardware.lepro.lib.lepro.commands import build_dp_value_packets, build_get_dp_state_packet
 
     text = dp_json_text(payload)
     if isinstance(payload, list):
-        from lepro.protocol import parse_packet
+        from hardware.lepro.lib.lepro.protocol import parse_packet
 
         pkt = build_get_dp_state_packet(mac, 0, payload, session_rand=0)
         hdr = parse_packet(pkt)
         ct_len = len(hdr.payload) if hdr else 0
         return {"json": text, "opcode": "0x1102", "packets": 1, "ciphertext_bytes": ct_len}
-    from lepro.protocol import parse_packet
+    from hardware.lepro.lib.lepro.protocol import parse_packet
 
     packets, _ = build_dp_value_packets(mac, 0, payload, session_rand=0)
     ct_lens = [len(parse_packet(p).payload) for p in packets if parse_packet(p)]

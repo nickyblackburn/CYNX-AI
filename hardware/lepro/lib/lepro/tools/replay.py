@@ -19,7 +19,7 @@ import asyncio, argparse, os
 
 from bleak import BleakClient, BleakScanner
 
-from lepro.protocol import (
+from hardware.lepro.lib.lepro.protocol import (
     GATT_CMD as CMD_CHAR,
     GATT_RSP as RSP_CHAR,
     GATT_SERVICE as SERVICE_UUID,

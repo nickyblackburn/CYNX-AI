@@ -6,8 +6,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 
-from lepro.bond import normalize_mac
-from lepro.cli._common import run_status
+from hardware.lepro.lib.lepro.bond import normalize_mac
+from hardware.lepro.lib.lepro.cli._common import run_status
 
 
 def main() -> None:

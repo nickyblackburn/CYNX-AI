@@ -20,10 +20,10 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from lepro.apk_analysis import TOKEN_FIELDS
-from lepro.crypto import derive_aes_key
-from lepro.frame import DecryptedFrame, parse_bond_result
-from lepro.protocol import (
+from hardware.lepro.lib.lepro.apk_analysis import TOKEN_FIELDS
+from hardware.lepro.lib.lepro.crypto import derive_aes_key
+from hardware.lepro.lib.lepro.frame import DecryptedFrame, parse_bond_result
+from hardware.lepro.lib.lepro.protocol import (
     CMD_AUTH_16,
     CMD_AUTH_32,
     CMD_CTRL_C,
@@ -308,8 +308,8 @@ async def _connect_transport(
 ):
     from bleak import BleakClient, BleakScanner
 
-    from lepro.protocol import GATT_CMD, GATT_RSP
-    from lepro.session import BleakTransport
+    from hardware.lepro.lib.lepro.protocol import GATT_CMD, GATT_RSP
+    from hardware.lepro.lib.lepro.session import BleakTransport
 
     device = await BleakScanner.find_device_by_address(mac, timeout=scan_timeout)
     if device is None:
@@ -326,7 +326,7 @@ async def _connect_transport(
 
 
 async def _cmd_bond(args: argparse.Namespace) -> None:
-    from lepro.session import LeproSession, bond_device
+    from hardware.lepro.lib.lepro.session import LeproSession, bond_device
 
     mac = normalize_mac(args.mac)
     transport, client = await _connect_transport(

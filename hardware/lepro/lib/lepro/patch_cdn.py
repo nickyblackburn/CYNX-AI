@@ -49,14 +49,14 @@ from pathlib import Path
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 
-from lepro.firmware_profile import (
+from hardware.lepro.lib.lepro.firmware_profile import (
     BytePatch,
     BundleConfig,
     FirmwareProfile,
     load_profiles,
     resolve_profile,
 )
-from lepro.paths import repo_path
+from hardware.lepro.lib.lepro.paths import repo_path
 
 DEFAULT_CERT = repo_path("deploy/lepro-debug/certs/cdn.pem")
 

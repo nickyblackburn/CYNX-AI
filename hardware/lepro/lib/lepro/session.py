@@ -13,9 +13,9 @@ import time
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from lepro.commands import DpPayload
+from hardware.lepro.lib.lepro.commands import DpPayload
 
-from lepro.bond import (
+from hardware.lepro.lib.lepro.bond import (
     BOND_ERR_ALREADY,
     BOND_ERR_INVALID,
     BondCredentials,
@@ -26,16 +26,16 @@ from lepro.bond import (
     save_creds,
     tokens_from_bond_frames,
 )
-from lepro.frame import parse_bond_result
-from lepro.commands import (
+from hardware.lepro.lib.lepro.frame import parse_bond_result
+from hardware.lepro.lib.lepro.commands import (
     build_dp_ciphertext_packets,
     build_dp_value_packets,
     build_get_dp_state_packet,
     build_raw_cmd_packet,
 )
-from lepro.crypto import encrypt_bond_request, encrypt_search_hello
-from lepro.frame import DecryptedFrame, OP_BOND_RESP_ALT, RxAssembler
-from lepro.protocol import (
+from hardware.lepro.lib.lepro.crypto import encrypt_bond_request, encrypt_search_hello
+from hardware.lepro.lib.lepro.frame import DecryptedFrame, OP_BOND_RESP_ALT, RxAssembler
+from hardware.lepro.lib.lepro.protocol import (
     OP_BOND,
     OP_BOND_RESP,
     OP_DP_ACK,

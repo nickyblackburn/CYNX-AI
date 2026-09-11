@@ -20,16 +20,16 @@ from pathlib import Path
 
 from bleak import BleakClient, BleakScanner
 
-from lepro.bond import (
+from hardware.lepro.lib.lepro.bond import (
     BOND_ERR_ALREADY,
     BondCredentials,
     is_bond_success,
     load_creds,
     normalize_mac,
 )
-from lepro.crypto import encrypt_bond_request, encrypt_dp_json
-from lepro.frame import parse_bond_result
-from lepro.protocol import (
+from hardware.lepro.lib.lepro.crypto import encrypt_bond_request, encrypt_dp_json
+from hardware.lepro.lib.lepro.frame import parse_bond_result
+from hardware.lepro.lib.lepro.protocol import (
     GATT_CMD,
     GATT_RSP,
     OP_WIFI_MQTT,
@@ -37,7 +37,7 @@ from lepro.protocol import (
     OP_WIFI_PROGRESS,
     build_packet_opcode,
 )
-from lepro.session import BleakTransport, LeproSession
+from hardware.lepro.lib.lepro.session import BleakTransport, LeproSession
 
 DEFAULT_DOMAIN = "dvc-eu-iot.example.home"
 DEFAULT_ROOT = "pub/cert/AmazonRootCA13.pem"
@@ -227,7 +227,7 @@ async def send_wifi_mqtt(
 async def cmd_provision(args: argparse.Namespace) -> None:
     mac = normalize_mac(args.mac)
     if args.dry_run:
-        from lepro.session import DryRunTransport, SessionConfig
+        from hardware.lepro.lib.lepro.session import DryRunTransport, SessionConfig
 
         transport = DryRunTransport()
         session = LeproSession(mac, transport, config=SessionConfig(dry_run=True, send_delay=0))

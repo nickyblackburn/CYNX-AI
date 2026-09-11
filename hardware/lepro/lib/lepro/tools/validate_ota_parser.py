@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from lepro.paths import repo_path
+from hardware.lepro.lib.lepro.paths import repo_path
 
 REPO_ROOT = repo_path()
 DEFAULT_ELF = repo_path("firmware/3_le_light_zb1_pid_55_v2.3.18.elf")

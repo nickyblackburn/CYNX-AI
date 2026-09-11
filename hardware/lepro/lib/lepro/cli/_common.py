@@ -6,11 +6,11 @@ import asyncio
 
 from bleak import BleakClient, BleakScanner
 
-from lepro.bond import creds_path, load_creds
-from lepro.commands import DpPayload
-from lepro.crypto import decrypt_dp_json
-from lepro.protocol import GATT_CMD, GATT_RSP, OP_DP_CMD, OP_SEARCH, parse_packet
-from lepro.session import BleakTransport, DryRunTransport, LeproSession, SessionConfig
+from hardware.lepro.lib.lepro.bond import creds_path, load_creds
+from hardware.lepro.lib.lepro.commands import DpPayload
+from hardware.lepro.lib.lepro.crypto import decrypt_dp_json
+from hardware.lepro.lib.lepro.protocol import GATT_CMD, GATT_RSP, OP_DP_CMD, OP_SEARCH, parse_packet
+from hardware.lepro.lib.lepro.session import BleakTransport, DryRunTransport, LeproSession, SessionConfig
 
 
 async def connect_transport(
@@ -91,7 +91,7 @@ async def run_status(
     dry_run: bool = False,
     debug_rx: bool = False,
 ) -> None:
-    from lepro.commands import status_query
+    from hardware.lepro.lib.lepro.commands import status_query
 
     query = status_query()
     if dry_run:

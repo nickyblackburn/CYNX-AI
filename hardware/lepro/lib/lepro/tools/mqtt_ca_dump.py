@@ -52,7 +52,7 @@ DEFAULT_ROOT = "pub/cert/AmazonRootCA13.pem"
 DEFAULT_MQTT_HOST = "mqtt.example.home"
 DEFAULT_MQTT_IP = "10.0.0.5"
 DEFAULT_MQTT_PORT = 8883
-from lepro.paths import repo_path
+from hardware.lepro.lib.lepro.paths import repo_path
 
 DEFAULT_CA = repo_path("deploy/lepro-debug/certs/ca.pem")
 

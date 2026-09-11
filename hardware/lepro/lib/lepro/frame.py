@@ -8,8 +8,8 @@ from __future__ import annotations
 import struct
 from dataclasses import dataclass
 
-from lepro.crypto import MAIN_IV, decrypt_cbc, derive_aes_key, derive_session_key
-from lepro.protocol import (
+from hardware.lepro.lib.lepro.crypto import MAIN_IV, decrypt_cbc, derive_aes_key, derive_session_key
+from hardware.lepro.lib.lepro.protocol import (
     MAGIC_FRAG_FIRST,
     MAGIC_FRAG_FIRST_ENC,
     MAGIC_FRAG_LAST,
@@ -286,7 +286,7 @@ def load_capture_packets(path: str | Path | None = None) -> list[bytes]:
     import re
     from pathlib import Path
 
-    from lepro.paths import repo_path
+    from hardware.lepro.lib.lepro.paths import repo_path
 
     log_path = Path(path) if path is not None else repo_path("captures.log")
     packets: list[bytes] = []

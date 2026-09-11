@@ -8,10 +8,10 @@ import asyncio
 import json
 import sys
 
-from lepro.bond import normalize_mac
-from lepro.cli._common import print_dry_run, run_control, run_dry_control
-from lepro.commands import color_hsv, power_off, power_on
-from lepro.modes import DIY_EFFECTS, debug_payload, format_mode_catalog, load_preset, preset_duration_ms, preset_frames, resolve_mode
+from hardware.lepro.lib.lepro.bond import normalize_mac
+from hardware.lepro.lib.lepro.cli._common import print_dry_run, run_control, run_dry_control
+from hardware.lepro.lib.lepro.commands import color_hsv, power_off, power_on
+from hardware.lepro.lib.lepro.modes import DIY_EFFECTS, debug_payload, format_mode_catalog, load_preset, preset_duration_ms, preset_frames, resolve_mode
 
 
 async def _cmd_mode_play(args: argparse.Namespace) -> None:

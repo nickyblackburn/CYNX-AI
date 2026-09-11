@@ -7,7 +7,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from lepro.paths import repo_path
+from hardware.lepro.lib.lepro.paths import repo_path
 
 DEFAULT_CONFIG_PATH = repo_path("lepro-lab.toml")
 ENV_CONFIG = "LEPRO_LAB_CONFIG"

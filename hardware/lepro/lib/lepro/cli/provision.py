@@ -7,8 +7,8 @@ import argparse
 import asyncio
 from pathlib import Path
 
-from lepro.config import config_path, load_config
-from lepro.provision import _add_cert_refresh_flags, cmd_provision
+from hardware.lepro.lib.lepro.config import config_path, load_config
+from hardware.lepro.lib.lepro.provision import _add_cert_refresh_flags, cmd_provision
 
 
 def _apply_config(args: argparse.Namespace, cfg_path: Path | None) -> None:

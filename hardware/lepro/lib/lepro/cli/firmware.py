@@ -10,9 +10,9 @@ import sys
 import urllib.request
 from pathlib import Path
 
-from lepro.firmware_profile import load_profiles, resolve_profile
-from lepro.patch_cdn import DEFAULT_CERT, patch_firmware
-from lepro.paths import repo_path
+from hardware.lepro.lib.lepro.firmware_profile import load_profiles, resolve_profile
+from hardware.lepro.lib.lepro.patch_cdn import DEFAULT_CERT, patch_firmware
+from hardware.lepro.lib.lepro.paths import repo_path
 
 
 def _resolve(

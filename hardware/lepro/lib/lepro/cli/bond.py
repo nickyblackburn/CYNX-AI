@@ -8,7 +8,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-from lepro.bond import (
+from hardware.lepro.lib.lepro.bond import (
     BondHarvestError,
     creds_path,
     export_provision_header,
@@ -16,10 +16,10 @@ from lepro.bond import (
     load_creds,
     normalize_mac,
 )
-from lepro.cli._common import connect_transport
-from lepro.crypto import encrypt_search_hello
-from lepro.protocol import OP_SEARCH, build_packet_opcode
-from lepro.session import DryRunTransport, LeproSession, SessionConfig, bond_device
+from hardware.lepro.lib.lepro.cli._common import connect_transport
+from hardware.lepro.lib.lepro.crypto import encrypt_search_hello
+from hardware.lepro.lib.lepro.protocol import OP_SEARCH, build_packet_opcode
+from hardware.lepro.lib.lepro.session import DryRunTransport, LeproSession, SessionConfig, bond_device
 
 
 async def _cmd_bond(args: argparse.Namespace) -> None:
@@ -62,7 +62,7 @@ async def _cmd_bond(args: argparse.Namespace) -> None:
 
 
 def _cmd_export(args: argparse.Namespace) -> None:
-    from lepro.bond import load_creds
+    from hardware.lepro.lib.lepro.bond import load_creds
 
     mac = normalize_mac(args.mac)
     creds = load_creds(mac)

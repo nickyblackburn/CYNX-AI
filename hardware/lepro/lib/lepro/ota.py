@@ -49,10 +49,10 @@ from pathlib import Path
 
 from bleak import BleakClient, BleakScanner
 
-from lepro.bond import creds_path, load_creds, normalize_mac
-from lepro.crypto import derive_session_key, encrypt_cbc, MAIN_IV
-from lepro.frame import DecryptedFrame, OP_BOND_RESP_ALT, parse_bond_result, parse_ota_data_resp, parse_ota_start_resp
-from lepro.protocol import (
+from hardware.lepro.lib.lepro.bond import creds_path, load_creds, normalize_mac
+from hardware.lepro.lib.lepro.crypto import derive_session_key, encrypt_cbc, MAIN_IV
+from hardware.lepro.lib.lepro.frame import DecryptedFrame, OP_BOND_RESP_ALT, parse_bond_result, parse_ota_data_resp, parse_ota_start_resp
+from hardware.lepro.lib.lepro.protocol import (
     GATT_CMD,
     GATT_RSP,
     MAGIC_SINGLE,
@@ -65,8 +65,8 @@ from lepro.protocol import (
     crc16_lepro,
     parse_packet,
 )
-from lepro.session import BleakTransport, DryRunTransport, LeproSession, SessionConfig
-from lepro.paths import repo_path
+from hardware.lepro.lib.lepro.session import BleakTransport, DryRunTransport, LeproSession, SessionConfig
+from hardware.lepro.lib.lepro.paths import repo_path
 
 DEFAULT_FIRMWARE = repo_path("firmware/3_le_light_zb1_pid_55_v2.3.18.patched.bin")
 OTA_INNER_SIZE = 0x1400  # 5120 — legacy padded inner (pre-v2.3.18 path)

@@ -8,7 +8,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from lepro.paths import repo_path
+from hardware.lepro.lib.lepro.paths import repo_path
 
 DEFAULT_PROFILES_PATH = repo_path("firmware/patch-profiles.toml")
 _HEX_RE = re.compile(r"^[0-9a-fA-F]*$")

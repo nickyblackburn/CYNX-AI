@@ -23,9 +23,9 @@ import time
 import urllib.request
 from pathlib import Path
 
-from lepro.firmware_profile import load_profiles, resolve_profile
-from lepro.patch_cdn import build_bundle_record, find_bundle_layout, sha256_hex, split_bundle_record
-from lepro.paths import repo_path
+from hardware.lepro.lib.lepro.firmware_profile import load_profiles, resolve_profile
+from hardware.lepro.lib.lepro.patch_cdn import build_bundle_record, find_bundle_layout, sha256_hex, split_bundle_record
+from hardware.lepro.lib.lepro.paths import repo_path
 
 LOG_PATH = repo_path(".cursor/debug-7ed36c.log")
 SESSION_ID = "7ed36c"

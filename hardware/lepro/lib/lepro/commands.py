@@ -7,8 +7,8 @@ import colorsys
 import json
 from typing import Any
 
-from lepro.crypto import encrypt_dp_json
-from lepro.protocol import OP_DP_CMD, OP_DP_VALUE, build_packet_opcode, build_packets_fragmented
+from hardware.lepro.lib.lepro.crypto import encrypt_dp_json
+from hardware.lepro.lib.lepro.protocol import OP_DP_CMD, OP_DP_VALUE, build_packet_opcode, build_packets_fragmented
 
 # Gson DpValue types serialize top-level keys (com.lepro.iotCore.mqtt.model.*).
 # TestProvisioningActivity: on/off {"d1":0|1}, getDpState '["d1",…]' string to native.
@@ -57,7 +57,7 @@ def segment_solid(
     *,
     bulb_count: int | None = None,
 ) -> dict[str, Any]:
-    from lepro.modes import default_bulb_count, effect_tail
+    from hardware.lepro.lib.lepro.modes import default_bulb_count, effect_tail
 
     r, g, b = (max(0, min(255, c)) for c in rgb)
     colors_str = f"{r:02X}{g:02X}{b:02X}"

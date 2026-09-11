@@ -27,8 +27,8 @@ import re
 import struct
 from pathlib import Path
 
-from lepro.crypto import decrypt_cbc, decrypt_search_hello, derive_session_key
-from lepro.protocol import OP_SEARCH, parse_packet, verify_packet
+from hardware.lepro.lib.lepro.crypto import decrypt_cbc, decrypt_search_hello, derive_session_key
+from hardware.lepro.lib.lepro.protocol import OP_SEARCH, parse_packet, verify_packet
 
 LOG_RE = re.compile(r"\[(\d+:\d+:\d+\.\d+)\] (\S+)\s+hex=([0-9a-f]+)")
 
