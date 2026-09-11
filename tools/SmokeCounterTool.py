@@ -1,4 +1,3 @@
-
 """
 CYN Studio - Smoke Counter Tool
 
@@ -10,8 +9,8 @@ Supported actions:
     recent  -> Get recent sessions
     reset   -> Reset the entire tracker
 
-Data is stored locally in:
-    smoking_log.json
+Data is stored locally in SQLite:
+    smoking_log.db
 
 Example tool calls:
 
@@ -31,129 +30,140 @@ from typing import Any, Dict, Optional
 # Configuration
 # ============================================================
 
+import json
 import os
-from typing import Any, Dict
+import sqlite3
+from datetime import datetime
+from typing import Any, Dict, Optional
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FILE = os.path.join(BASE_DIR, "smoking_log.json")
-
+DB_FILE = os.path.join(BASE_DIR, "smoking_log.db")
 
 
 # ============================================================
-# Data Handling
+# Database
 # ============================================================
 
-def empty_data() -> Dict[str, Any]:
-    """Return a fresh tracker structure."""
-    return {
-        "total_units": 0,
-        "total_cigarettes": 0,
-        "sessions": []
+def get_connection() -> sqlite3.Connection:
+    """Open the smoke-counter SQLite database."""
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db() -> None:
+    """Create the smoke-session table if it does not already exist."""
+    with get_connection() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS smoke_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                smoke_type TEXT NOT NULL,
+                units REAL NOT NULL,
+                cigarettes REAL NOT NULL DEFAULT 0
+            )
+            """
+        )
+        conn.commit()
+
+
+def _row_to_session(row: sqlite3.Row) -> Dict[str, Any]:
+    """Convert a SQLite row into the session structure used by CYN."""
+    session = {
+        "time": row["timestamp"],
+        "type": row["smoke_type"],
+        "units": row["units"],
     }
 
+    if row["cigarettes"]:
+        session["cigarettes"] = row["cigarettes"]
 
-def reconcile_totals(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Keep cumulative totals derived from the session list so they can't drift."""
-    sessions = data.get("sessions", [])
-    data["total_units"] = sum(float(s.get("units", 0) or 0) for s in sessions)
-    data["total_cigarettes"] = sum(float(s.get("cigarettes", 0) or 0) for s in sessions)
-    return data
+    return session
 
 
-def load_data() -> Dict[str, Any]:
+def migrate_json_once() -> None:
     """
-    Load smoking data from disk.
+    Migrate the legacy smoking_log.json into SQLite once.
 
-    Also converts the older tracker format automatically.
+    The JSON file is never used as the active source of truth after migration.
     """
+    legacy_file = os.path.join(BASE_DIR, "smoking_log.json")
 
-    if not os.path.exists(FILE):
-        return empty_data()
+    if not os.path.exists(legacy_file):
+        return
+
+    with get_connection() as conn:
+        existing = conn.execute(
+            "SELECT COUNT(*) FROM smoke_sessions"
+        ).fetchone()[0]
+
+    # Do not import repeatedly.
+    if existing > 0:
+        return
 
     try:
-        with open(FILE, "r", encoding="utf-8") as f:
+        import json
+
+        with open(legacy_file, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-    except (json.JSONDecodeError, OSError):
-        # Do not crash CYN if the log is damaged.
-        return empty_data()
+        sessions = data.get("sessions", [])
 
-    # --------------------------------------------------------
-    # Convert old tracker format
-    # --------------------------------------------------------
+        with get_connection() as conn:
+            for s in sessions:
+                amount = float(s.get("amount", s.get("units", 0)) or 0)
+                smoke_type = str(
+                    s.get("type", "unknown")
+                ).lower().strip()
 
-    if "total" in data and "total_units" not in data:
+                if smoke_type == "ciggerette":
+                    smoke_type = "cigarette"
 
-        new_data = {
-            "total_units": 0,
-            "total_cigarettes": 0,
-            "sessions": []
-        }
-
-        for s in data.get("sessions", []):
-
-            amount = float(s.get("amount", 0))
-            smoke_type = str(
-                s.get("type", "unknown")
-            ).lower().strip()
-
-            # Fix old typo
-            if smoke_type == "ciggerette":
-                smoke_type = "cigarette"
-
-            if smoke_type == "cigarette":
-
-                units = amount * 0.5
-
-                new_data["total_cigarettes"] += amount
-
-            else:
-
-                units = amount
-
-            new_data["total_units"] += units
-
-            new_data["sessions"].append({
-                "time": s.get(
+                timestamp = s.get(
                     "time",
-                    datetime.now().strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                ),
-                "type": smoke_type,
-                "units": units,
-                "cigarettes": (
-                    amount
-                    if smoke_type == "cigarette"
-                    else 0
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 )
-            })
 
-        save_data(new_data)
-        return new_data
+                if smoke_type == "cigarette":
+                    cigarettes = float(
+                        s.get("cigarettes", amount) or 0
+                    )
 
-    # --------------------------------------------------------
-    # Make sure expected fields exist
-    # --------------------------------------------------------
+                    # Old tracker stored cigarettes as 0.5 units each.
+                    units = float(
+                        s.get("units", cigarettes * 0.5) or 0
+                    )
+                else:
+                    cigarettes = 0.0
+                    units = float(
+                        s.get("units", amount) or 0
+                    )
 
-    data.setdefault("total_units", 0)
-    data.setdefault("total_cigarettes", 0)
-    data.setdefault("sessions", [])
+                conn.execute(
+                    """
+                    INSERT INTO smoke_sessions
+                    (timestamp, smoke_type, units, cigarettes)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        timestamp,
+                        smoke_type or "unknown",
+                        units,
+                        cigarettes,
+                    ),
+                )
 
-    return reconcile_totals(data)
+            conn.commit()
+
+    except (json.JSONDecodeError, OSError, ValueError, TypeError):
+        # Never let a damaged legacy JSON file crash CYN.
+        return
 
 
-def save_data(data: Dict[str, Any]) -> None:
-    """Save tracker data safely."""
-
-    data = reconcile_totals(data)
-
-    with open(FILE, "w", encoding="utf-8") as f:
-        json.dump(
-            data,
-            f,
-            indent=4,
-            ensure_ascii=False
-        )
+# Initialize and migrate at module load.
+init_db()
+migrate_json_once()
 
 
 # ============================================================
@@ -165,7 +175,7 @@ def log_smoke(
     amount: float = 1
 ) -> Dict[str, Any]:
     """
-    Log a smoking session.
+    Log a smoking session into SQLite.
 
     Cigarettes:
         1 cigarette = 0.5 units
@@ -174,14 +184,11 @@ def log_smoke(
         amount = units directly
     """
 
-    data = load_data()
-
     smoke_type = str(smoke_type).lower().strip()
 
     if not smoke_type:
         smoke_type = "unknown"
 
-    # Prevent invalid negative entries
     try:
         amount = float(amount)
     except (TypeError, ValueError):
@@ -196,63 +203,69 @@ def log_smoke(
             "error": "Amount must be greater than zero."
         }
 
-    # --------------------------------------------------------
-    # Cigarettes
-    # --------------------------------------------------------
-
     if smoke_type == "cigarette":
-
         cigarettes = amount
-
-        # 1 cigarette = 0.5 units
         units = cigarettes * 0.5
-
-        session = {
-            "time": datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
-            "type": "cigarette",
-            "cigarettes": cigarettes,
-            "units": units
-        }
-
-    # --------------------------------------------------------
-    # Other smoke types
-    # --------------------------------------------------------
-
     else:
-
+        cigarettes = 0.0
         units = amount
 
-        session = {
-            "time": datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
-            "type": smoke_type,
-            "units": units
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        with get_connection() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO smoke_sessions
+                (timestamp, smoke_type, units, cigarettes)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    timestamp,
+                    smoke_type,
+                    units,
+                    cigarettes,
+                ),
+            )
+
+            session_id = cursor.lastrowid
+            conn.commit()
+
+    except sqlite3.Error as e:
+        return {
+            "success": False,
+            "error": f"Database error: {e}"
         }
 
-    # --------------------------------------------------------
-    # Save
-    # --------------------------------------------------------
+    session = {
+        "time": timestamp,
+        "type": smoke_type,
+        "units": units,
+    }
 
-    data["sessions"].append(session)
-    data = reconcile_totals(data)
-    save_data(data)
+    if cigarettes:
+        session["cigarettes"] = cigarettes
 
-    # Merge stats so callers always receive the full up-to-date statistics
     stats = get_stats()
 
     result = {
         "success": True,
         "message": "Smoking session logged.",
+        "id": session_id,
         "type": smoke_type,
         "amount": amount,
         "added_units": units,
-        "time": session["time"]
+        "time": timestamp,
     }
-    # copy numeric/stat fields from stats
-    for k in ("total_units", "total_cigarettes", "total_sessions", "today_sessions", "today_units", "last_session"):
+
+    for k in (
+        "total_units",
+        "total_cigarettes",
+        "total_sessions",
+        "today_sessions",
+        "today_units",
+        "last_session",
+    ):
         result[k] = stats.get(k)
 
     return result
@@ -262,13 +275,18 @@ def log_smoke(
 # Statistics
 # ============================================================
 
-def normalize_smoke_type(value: Optional[str]) -> Optional[str]:
+def normalize_smoke_type(
+    value: Optional[str]
+) -> Optional[str]:
     """Normalize common aliases to canonical smoke types."""
     if value is None:
         return None
+
     v = str(value).lower().strip()
+
     if not v:
         return None
+
     aliases = {
         "cig": "cigarette",
         "cigs": "cigarette",
@@ -283,74 +301,139 @@ def normalize_smoke_type(value: Optional[str]) -> Optional[str]:
         "pens": "pen",
         "weed": "weed",
         "joint": "joint",
-        "joints": "joint"
+        "joints": "joint",
     }
+
     return aliases.get(v, v)
 
 
-def get_stats(smoke_type: Optional[str] = None, scope: str = "all") -> Dict[str, Any]:
-    """Return smoking statistics.
-
-    If smoke_type is provided, only matches that smoke type.
-    If scope == 'today', only count today's sessions.
-    """
-
-    data = load_data()
-    sessions = data.get("sessions", [])
+def get_stats(
+    smoke_type: Optional[str] = None,
+    scope: str = "all"
+) -> Dict[str, Any]:
+    """Return smoking statistics directly from SQLite."""
 
     normalized = normalize_smoke_type(smoke_type)
+    scope_value = str(scope).lower() if scope else "all"
+
+    where = []
+    params = []
+
     if normalized:
-        sessions = [
-            s for s in sessions
-            if normalize_smoke_type(str(s.get("type", ""))) == normalized
-        ]
+        where.append("smoke_type = ?")
+        params.append(normalized)
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    if str(scope).lower() == "today":
-        sessions = [
-            s for s in sessions
-            if str(s.get("time", "")).startswith(today)
-        ]
+    if scope_value == "today":
+        where.append("DATE(timestamp) = DATE('now', 'localtime')")
 
-    units = sum(float(s.get("units", 0) or 0) for s in sessions)
-    session_count = len(sessions)
-    last_session = sessions[-1] if sessions else None
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
 
-    if normalized is not None:
+    try:
+        with get_connection() as conn:
+
+            row = conn.execute(
+                f"""
+                SELECT
+                    COUNT(*) AS sessions,
+                    COALESCE(SUM(units), 0) AS units,
+                    COALESCE(SUM(cigarettes), 0) AS cigarettes
+                FROM smoke_sessions
+                {where_sql}
+                """,
+                params,
+            ).fetchone()
+
+            last_row = conn.execute(
+                f"""
+                SELECT *
+                FROM smoke_sessions
+                {where_sql}
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                params,
+            ).fetchone()
+
+            if normalized is not None:
+                today_params = [normalized]
+
+                today_row = conn.execute(
+                    """
+                    SELECT
+                        COUNT(*) AS sessions,
+                        COALESCE(SUM(units), 0) AS units
+                    FROM smoke_sessions
+                    WHERE smoke_type = ?
+                    AND DATE(timestamp) = DATE('now', 'localtime')
+                    """,
+                    today_params,
+                ).fetchone()
+
+                return {
+                    "success": True,
+                    "scope": scope_value,
+                    "smoke_type": normalized,
+                    "units": row["units"],
+                    "sessions": row["sessions"],
+                    "today_sessions": today_row["sessions"],
+                    "today_units": today_row["units"],
+                    "last_session": (
+                        _row_to_session(last_row)
+                        if last_row else None
+                    ),
+                }
+
+            today_row = conn.execute(
+                """
+                SELECT
+                    COUNT(*) AS sessions,
+                    COALESCE(SUM(units), 0) AS units
+                FROM smoke_sessions
+                WHERE DATE(timestamp) = DATE('now', 'localtime')
+                """
+            ).fetchone()
+
+            total_row = conn.execute(
+                """
+                SELECT
+                    COUNT(*) AS sessions,
+                    COALESCE(SUM(units), 0) AS units,
+                    COALESCE(SUM(cigarettes), 0) AS cigarettes
+                FROM smoke_sessions
+                """
+            ).fetchone()
+
+            last_total = conn.execute(
+                """
+                SELECT *
+                FROM smoke_sessions
+                ORDER BY id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+
+            return {
+                "success": True,
+                "total_units": total_row["units"],
+                "total_cigarettes": total_row["cigarettes"],
+                "total_sessions": total_row["sessions"],
+                "today_sessions": today_row["sessions"],
+                "today_units": today_row["units"],
+                "last_session": (
+                    _row_to_session(last_total)
+                    if last_total else None
+                ),
+                "scope": "all",
+                "smoke_type": None,
+                "units": total_row["units"],
+                "sessions": total_row["sessions"],
+            }
+
+    except sqlite3.Error as e:
         return {
-            "success": True,
-            "scope": str(scope).lower() if scope else "all",
-            "smoke_type": normalized,
-            "units": units,
-            "sessions": session_count,
-            "today_sessions": len([s for s in sessions if str(s.get("time", "")).startswith(today)]),
-            "today_units": sum(float(s.get("units", 0) or 0) for s in sessions if str(s.get("time", "")).startswith(today)),
-            "last_session": last_session,
+            "success": False,
+            "error": f"Database error: {e}"
         }
-
-    today_sessions = [
-        s for s in data.get("sessions", [])
-        if str(s.get("time", "")).startswith(today)
-    ]
-    today_units = sum(float(s.get("units", 0) or 0) for s in today_sessions)
-
-    return {
-        "success": True,
-        "total_units": data.get("total_units", 0),
-        "total_cigarettes": data.get("total_cigarettes", 0),
-        "total_sessions": len(data.get("sessions", [])),
-        "today_sessions": len(today_sessions),
-        "today_units": today_units,
-        "last_session": (
-            data.get("sessions", [])[-1]
-            if data.get("sessions")
-            else None
-        ),
-        "scope": "all",
-        "smoke_type": None,
-        "units": data.get("total_units", 0),
-        "sessions": len(data.get("sessions", [])),
-    }
 
 
 # ============================================================
@@ -358,9 +441,7 @@ def get_stats(smoke_type: Optional[str] = None, scope: str = "all") -> Dict[str,
 # ============================================================
 
 def get_recent(limit: int = 10) -> Dict[str, Any]:
-    """Return the most recent smoking sessions."""
-
-    data = load_data()
+    """Return the most recent smoking sessions from SQLite."""
 
     try:
         limit = int(limit)
@@ -369,15 +450,35 @@ def get_recent(limit: int = 10) -> Dict[str, Any]:
 
     limit = max(1, min(limit, 100))
 
-    sessions = data.get("sessions", [])
+    try:
+        with get_connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT *
+                FROM smoke_sessions
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
 
-    recent = sessions[-limit:]
+        # Preserve the old API's oldest -> newest presentation order.
+        sessions = [
+            _row_to_session(row)
+            for row in reversed(rows)
+        ]
 
-    return {
-        "success": True,
-        "count": len(recent),
-        "sessions": recent
-    }
+        return {
+            "success": True,
+            "count": len(sessions),
+            "sessions": sessions,
+        }
+
+    except sqlite3.Error as e:
+        return {
+            "success": False,
+            "error": f"Database error: {e}"
+        }
 
 
 # ============================================================
@@ -387,21 +488,34 @@ def get_recent(limit: int = 10) -> Dict[str, Any]:
 def get_last() -> Dict[str, Any]:
     """Return the most recently logged session."""
 
-    data = load_data()
+    try:
+        with get_connection() as conn:
+            row = conn.execute(
+                """
+                SELECT *
+                FROM smoke_sessions
+                ORDER BY id DESC
+                LIMIT 1
+                """
+            ).fetchone()
 
-    sessions = data.get("sessions", [])
+        if not row:
+            return {
+                "success": True,
+                "last_session": None,
+                "message": "No smoking sessions have been logged.",
+            }
 
-    if not sessions:
         return {
             "success": True,
-            "last_session": None,
-            "message": "No smoking sessions have been logged."
+            "last_session": _row_to_session(row),
         }
 
-    return {
-        "success": True,
-        "last_session": sessions[-1]
-    }
+    except sqlite3.Error as e:
+        return {
+            "success": False,
+            "error": f"Database error: {e}"
+        }
 
 
 # ============================================================
@@ -412,19 +526,42 @@ def reset_stats() -> Dict[str, Any]:
     """
     Completely reset the smoking tracker.
 
-    This intentionally requires an explicit tool action.
+    This deletes all rows from the SQLite smoke-session table.
     """
 
-    data = empty_data()
-    save_data(data)
+    try:
+        with get_connection() as conn:
+            conn.execute("DELETE FROM smoke_sessions")
+            conn.commit()
 
-    return {
-        "success": True,
-        "message": "Smoking tracker has been reset.",
-        "total_units": 0,
-        "total_cigarettes": 0,
-        "total_sessions": 0
-    }
+        return {
+            "success": True,
+            "message": "Smoking tracker has been reset.",
+            "total_units": 0,
+            "total_cigarettes": 0,
+            "total_sessions": 0,
+        }
+
+    except sqlite3.Error as e:
+        return {
+            "success": False,
+            "error": f"Database error: {e}"
+        }
+
+
+# ============================================================
+# Utilities
+# ============================================================
+
+def repair_aggregates() -> Dict[str, Any]:
+    """
+    Return current database-derived statistics.
+
+    Kept for compatibility with the old API. SQLite is already
+    the source of truth, so no aggregate repair is necessary.
+    """
+    return get_stats()
+
 
 
 # ============================================================
