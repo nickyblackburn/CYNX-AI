@@ -1,0 +1,11 @@
+{
+  "devices": {
+    "main room": {
+      "name": "main room",
+      "mac": "FC:01:2C:C2:D9:EA",
+      "type": "lepro",
+      "configured": true,
+      "discovered_name": "LP"
+    }
+  }
+}
