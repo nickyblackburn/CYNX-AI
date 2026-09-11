@@ -263,15 +263,19 @@ class ToolRouter:
             and "rip" not in tl
         ):
             return False
-
         read_only_patterns = [
-            r"\b(how many|how much|how often|show my|show me|what's my|what is my|what was my|what were my)\b",
-            r"\b(stats|statistics|count|counts|total|totals)\b",
-            r"\b(recent|last)\b",
-            r"\b(how many .* (hit|hits|smoke|smoked|cigarette|cigarettes|vape|pen|bong|joint|weed) .* today)\b",
-            r"\b(how many .* did i have today|how much did i smoke today|how many hits did i have today|how many vape hits did i have today|how many cigarettes did i have today)\b"
-        ]
 
+            r"\b(how many|how much|how often|show my|show me|what's my|what is my|what was my|what were my)\b",
+
+            r"\b(stats|statistics|count|counts|total|totals)\b",
+
+            r"\b(recent|last)\b",
+
+            r"\b(how many .* (hit|hits|smoke|smoked|cigarette|cigarettes|vape|pen|bong|joint|weed) .* today)\b",
+
+            r"\b(how many .* did i have today|how much did i smoke today|how many hits did i have today|how many vape hits did i have today|how many cigarettes did i have today)\b"
+
+        ]
         return any(
             __import__('re').search(p, tl)
             for p in read_only_patterns

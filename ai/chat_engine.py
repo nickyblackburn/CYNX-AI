@@ -1014,6 +1014,288 @@ class ChatEngine:
             return assistant_text
 
         # --------------------------------------------------
+        # Python-authoritative smoke counter execution
+        # --------------------------------------------------
+        #
+        # Smoke tracking is deterministic. Python already knows from
+        # tool_router.detect() whether this is a smoke_counter request.
+        #
+        # Do NOT make Ollama decide whether to execute the smoke tool.
+        # This prevents model refusals, invented arguments, and accidental
+        # reinterpretation of simple tracking requests.
+        # --------------------------------------------------
+
+        if (
+            detected_tool
+            and detected_tool.get("tool") == "smoke_counter"
+            and self.tool_router
+            and "smoke_counter" in self.tool_router.tools
+        ):
+
+            smoke_arguments = {}
+
+            # The router is authoritative for the parsed request.
+            for key in (
+                "action",
+                "smoke_type",
+                "amount",
+                "limit",
+                "scope",
+            ):
+                value = detected_tool.get(key)
+
+                if value is not None:
+                    smoke_arguments[key] = value
+
+            # A smoke query with no explicit action is a stats request.
+            if not smoke_arguments.get("action"):
+                smoke_arguments["action"] = "stats"
+
+            # Normalize the smoke type before execution when supported.
+            if (
+                smoke_arguments.get("smoke_type")
+                and hasattr(
+                    self.tool_router,
+                    "normalize_smoke_type",
+                )
+            ):
+                try:
+                    smoke_arguments["smoke_type"] = (
+                        self.tool_router.normalize_smoke_type(
+                            smoke_arguments["smoke_type"]
+                        )
+                    )
+                except Exception:
+                    pass
+
+            # Read-only requests must never become log operations just
+            # because the model/router supplied an ambiguous action.
+            if (
+                hasattr(
+                    self.tool_router,
+                    "is_read_only_smoke_query",
+                )
+                and self.tool_router.is_read_only_smoke_query(text)
+                and smoke_arguments.get("action") == "log"
+            ):
+                smoke_arguments["action"] = "stats"
+
+            # "today" is an explicit scope in the user's request.
+            if (
+                smoke_arguments.get("action") == "stats"
+                and "scope" not in smoke_arguments
+                and "today" in text.lower()
+            ):
+                smoke_arguments["scope"] = "today"
+
+            if request_id:
+                terminal.tool(
+                    "TOOL CALL",
+                    f"id={request_id} tool=smoke_counter",
+                )
+            else:
+                terminal.tool(
+                    "TOOL CALL",
+                    "name=smoke_counter",
+                )
+
+            terminal.tool_args("TOOL ARGUMENTS")
+            terminal.json(smoke_arguments)
+
+            if request_id:
+                terminal.execute(
+                    "EXECUTING TOOL",
+                    f"id={request_id} tool=smoke_counter",
+                )
+            else:
+                terminal.execute(
+                    "EXECUTING TOOL",
+                    "tool=smoke_counter",
+                )
+
+            smoke_result = self.tool_router.call_tool(
+                "smoke_counter",
+                smoke_arguments,
+            )
+
+            smoke_payload = (
+                smoke_result.metadata
+                if smoke_result.metadata is not None
+                else {
+                    "success": smoke_result.success,
+                    "output": smoke_result.output,
+                }
+            )
+
+            if not isinstance(smoke_payload, dict):
+                smoke_payload = {
+                    "success": smoke_result.success,
+                    "output": str(smoke_payload),
+                }
+            else:
+                smoke_payload = dict(smoke_payload)
+
+            smoke_payload.setdefault(
+                "success",
+                smoke_result.success,
+            )
+            smoke_payload.setdefault(
+                "output",
+                smoke_result.output,
+            )
+
+            # This flag is deliberately explicit so the final model knows
+            # these numbers came from the current authoritative execution.
+            smoke_payload["authoritative_source"] = (
+                "current_tool_result"
+            )
+
+            if request_id:
+                terminal.result(
+                    "TOOL RESULT",
+                    f"id={request_id}",
+                )
+            else:
+                terminal.result("TOOL RESULT")
+
+            terminal.json(smoke_payload)
+
+            # Cyn should interpret the real data, not read the database
+            # structure back to the user. Keep the personality layer while
+            # making the factual boundary explicit.
+            smoke_identity = (
+                "CYN-X identity: You are Cyn, a playful, curious AI "
+                "companion with a strong personality. Respond naturally "
+                "and conversationally. You can be affectionate, "
+                "mischievous, bratty, flirty, dramatic, or playfully "
+                "mean when it fits the conversation.\n\n"
+                "The user asked you to interact with their smoking "
+                "tracker. The tracker result below is authoritative.\n\n"
+                "Do NOT mention tools, APIs, schemas, internal routing, "
+                "or 'tool results'. Do NOT dump database fields or "
+                "technical metadata at the user.\n\n"
+                "Never invent, change, recalculate, or exaggerate "
+                "numbers. If a number is present in the tracker result, "
+                "use that number exactly. Do not substitute one metric "
+                "for another (for example, sessions for units).\n\n"
+                "If the smoking data is notable, surprising, or "
+                "ridiculous, naturally react to it yourself. You do not "
+                "need the user to explicitly ask you to tease them. "
+                "Let Cyn's personality respond to interesting data "
+                "naturally. If the user just logged an unusually large "
+                "amount, react to the surprising amount before briefly "
+                "giving the relevant factual information.\n\n"
+                "If the result is ordinary, respond normally. Never let "
+                "the joke replace the actual data.\n\n"
+                "Desired behavior: DATA -> CYN REACTS -> CYN INTERPRETS "
+                "-> CYN GIVES RELEVANT FACTS."
+            )
+
+            smoke_final_messages = [
+                {
+                    "role": "system",
+                    "content": smoke_identity,
+                },
+                {
+                    "role": "user",
+                    "content": text,
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "python_smoke_counter",
+                    "name": "smoke_counter",
+                    "content": json.dumps(
+                        {
+                            "tool_name": "smoke_counter",
+                            "result": smoke_payload,
+                        },
+                        ensure_ascii=False,
+                    ),
+                },
+            ]
+
+            # The smoke tool has already executed. Ollama is only writing
+            # Cyn's response now, so there is no reason to expose tools.
+            if request_id:
+                terminal.ollama(
+                    "OLLAMA CALL",
+                    f"id={request_id} phase=final "
+                    f"(authoritative smoke)",
+                )
+            else:
+                terminal.ollama(
+                    "OLLAMA CALL",
+                    "phase=final (authoritative smoke)",
+                )
+
+            final_start = time.perf_counter()
+
+            final_response = self.ollama.chat(
+                messages=smoke_final_messages,
+                tools=None,
+            )
+
+            terminal.timing(
+                f"[FINAL OLLAMA TIME] "
+                f"{time.perf_counter() - final_start:.2f}s"
+            )
+
+            assistant_text = (
+                (final_response.get("message") or {}).get(
+                    "content",
+                )
+                or final_response.get("response")
+                or final_response.get("text")
+                or str(final_response)
+            )
+
+            terminal.model("FINAL MODEL RESPONSE")
+            terminal.dim(assistant_text)
+
+            # Save the completed turn for short-term conversational
+            # continuity, exactly like the existing paths.
+            history.append(
+                {
+                    "role": "user",
+                    "content": text,
+                }
+            )
+
+            history.append(
+                {
+                    "role": "assistant",
+                    "content": assistant_text,
+                }
+            )
+
+            max_messages = self.max_conversation_turns * 2
+
+            if len(history) > max_messages:
+                del history[:-max_messages]
+
+            # -----------------------------
+            # 6. Extract memories
+            # -----------------------------
+
+            if self.memory_extractor:
+
+                saved_ids = (
+                    self.memory_extractor.extract_and_save(
+                        user_id,
+                        text,
+                        assistant_text,
+                    )
+                )
+
+                if saved_ids:
+                    self.logger.info(
+                        f"[MEMORY_SAVE] "
+                        f"Saved {len(saved_ids)} memories"
+                    )
+
+            return assistant_text
+
+        # --------------------------------------------------
         # Existing Ollama tool-calling path
         # --------------------------------------------------
         #
