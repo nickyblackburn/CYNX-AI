@@ -24,6 +24,7 @@ sys.path.append(
 )
 
 
+
 from ai.context_manager import ContextManager
 from ai.memory_system.extractor import MemoryExtractor
 from ai.memory_system.manager import MemoryManager
@@ -168,7 +169,7 @@ chat_engine = ChatEngine(
     memory_manager,
     memory_extractor=memory_extractor,
     context_manager=context_manager
-    
+
 )
 
 
@@ -188,9 +189,10 @@ async def home(request:Request):
     )
 
 
+
 @app.get("/dashboard")
 def dashboard(request:Request):
-    
+
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -201,6 +203,7 @@ def dashboard(request:Request):
 
 
 chat_request_count = 0
+
 
 
 @app.post("/chat")
@@ -214,10 +217,51 @@ async def chat(data:dict):
 
     start=time.perf_counter()
 
+
     message=data.get(
         "message",
         ""
     )
+
+
+    # ======================
+    # PROMPT LAYERS
+    # ======================
+
+    prompt_preset = data.get(
+        "prompt_preset",
+        None
+    )
+
+    prompt_layers = data.get(
+        "prompt_layers",
+        None
+    )
+
+
+    # Apply preset
+    if prompt_preset:
+
+        try:
+
+            prompt_builder.apply_prompt_preset(
+                prompt_preset
+            )
+
+        except ValueError as e:
+
+            print(
+                f"[PROMPT LAYERS] {e}"
+            )
+
+
+    # Apply custom layer settings
+    elif prompt_layers is not None:
+
+        prompt_builder.set_prompt_layers(
+            prompt_layers
+        )
+
 
     print(
         f"[CHAT REQUEST] id={request_id} "
@@ -225,26 +269,39 @@ async def chat(data:dict):
         f"message_preview={message[:120]}"
     )
 
+
+    print(
+        f"[PROMPT LAYERS] "
+        f"{prompt_builder.get_prompt_layers()}"
+    )
+
+
     response = chat_engine.handle_user_message(
         user_id="web_user",
         text=message,
         request_id=request_id
     )
 
+
     elapsed = round(
         time.perf_counter()-start,
         3
     )
+
 
     print(
         f"[CHAT COMPLETE] id={request_id} "
         f"elapsed={elapsed}s"
     )
 
+
     return {
 
         "response":response,
 
-        "response_time":elapsed
+        "response_time":elapsed,
+
+        "prompt_layers":
+            prompt_builder.get_prompt_layers()
 
     }

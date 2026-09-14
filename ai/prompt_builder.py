@@ -32,12 +32,9 @@ This version keeps the original structure but adds:
 - history limits
 - conversation summaries
 """
-
-
 from typing import List, Optional, Dict, Any
 
 from .prompt_manager import PromptManager
-
 
 
 class PromptBuilder:
@@ -60,7 +57,6 @@ class PromptBuilder:
     MAX_HISTORY_MESSAGES = 6
 
     MAX_FINAL_PROMPT_CHARS = 24000
-
 
 
     # ---------------------------------------------
@@ -89,6 +85,143 @@ class PromptBuilder:
     }
 
 
+    # ---------------------------------------------
+    # Prompt Layers
+    # ---------------------------------------------
+
+    DEFAULT_PROMPT_LAYERS = {
+
+        "core": True,
+
+        "personality": True,
+
+        "voice": True,
+
+        "conversation": True,
+
+        "safety": True,
+
+        "modes": True,
+
+        "examples": True,
+
+        "overrides": True
+
+    }
+
+
+    # ---------------------------------------------
+    # Prompt Layer Presets
+    # ---------------------------------------------
+
+    PROMPT_LAYER_PRESETS = {
+
+        "base": {
+
+            "core": False,
+
+            "personality": False,
+
+            "voice": False,
+
+            "conversation": False,
+
+            "safety": False,
+
+            "modes": False,
+
+            "examples": False,
+
+            "overrides": False
+
+        },
+
+        "core_only": {
+
+            "core": True,
+
+            "personality": False,
+
+            "voice": False,
+
+            "conversation": False,
+
+            "safety": False,
+
+            "modes": False,
+
+            "examples": False,
+
+            "overrides": False
+
+        },
+
+        "core_safety": {
+
+            "core": True,
+
+            "personality": False,
+
+            "voice": False,
+
+            "conversation": False,
+
+            "safety": True,
+
+            "modes": False,
+
+            "examples": False,
+
+            "overrides": False
+
+        },
+
+        "core_personality": {
+
+            "core": True,
+
+            "personality": True,
+
+            "voice": False,
+
+            "conversation": False,
+
+            "safety": False,
+
+            "modes": False,
+
+            "examples": False,
+
+            "overrides": False
+
+        },
+
+        "full_cyn": {
+
+            "core": True,
+
+            "personality": True,
+
+            "voice": True,
+
+            "conversation": True,
+
+            "safety": True,
+
+            "modes": True,
+
+            "examples": True,
+
+            "overrides": True
+
+        }
+
+    }
+
+
+    # ---------------------------------------------
+    # Initialization
+    # ---------------------------------------------
 
     def __init__(
         self,
@@ -99,6 +232,76 @@ class PromptBuilder:
             templates_dir
         )
 
+        self.prompt_layers = dict(
+            self.DEFAULT_PROMPT_LAYERS
+        )
+
+
+    # ---------------------------------------------
+    # Prompt Layer Utilities
+    # ---------------------------------------------
+
+    def normalize_prompt_layers(
+        self,
+        prompt_layers: Optional[Dict[str, bool]] = None
+    ) -> Dict[str, bool]:
+
+        layers = dict(
+            self.DEFAULT_PROMPT_LAYERS
+        )
+
+        if prompt_layers:
+
+            for name, enabled in prompt_layers.items():
+
+                if name in layers:
+
+                    layers[name] = bool(
+                        enabled
+                    )
+
+        return layers
+
+
+    def set_prompt_layers(
+        self,
+        prompt_layers: Optional[Dict[str, bool]] = None
+    ) -> Dict[str, bool]:
+
+        self.prompt_layers = (
+            self.normalize_prompt_layers(
+                prompt_layers
+            )
+        )
+
+        return dict(
+            self.prompt_layers
+        )
+
+
+    def get_prompt_layers(
+        self
+    ) -> Dict[str, bool]:
+
+        return dict(
+            self.prompt_layers
+        )
+
+
+    def apply_prompt_preset(
+        self,
+        preset: str
+    ) -> Dict[str, bool]:
+
+        if preset not in self.PROMPT_LAYER_PRESETS:
+
+            raise ValueError(
+                f"Unknown prompt preset: {preset}"
+            )
+
+        return self.set_prompt_layers(
+            self.PROMPT_LAYER_PRESETS[preset]
+        )
 
 
     # ---------------------------------------------
@@ -133,7 +336,6 @@ class PromptBuilder:
         )
 
 
-
     def should_include_context(
         self,
         text: str
@@ -149,7 +351,6 @@ class PromptBuilder:
             text.strip()
 
         )
-
 
 
     # ---------------------------------------------
@@ -190,9 +391,7 @@ class PromptBuilder:
                 score += 1
 
 
-
         return score
-
 
 
     def select_context(
@@ -232,7 +431,6 @@ class PromptBuilder:
             )
 
 
-
         scored.sort(
 
             key=lambda x: x[0],
@@ -240,7 +438,6 @@ class PromptBuilder:
             reverse=True
 
         )
-
 
 
         output = ""
@@ -265,9 +462,7 @@ class PromptBuilder:
             )
 
 
-
         return output.strip()
-
 
 
     # ---------------------------------------------
@@ -278,9 +473,9 @@ class PromptBuilder:
         self,
         modes: Optional[List[str]] = None,
         memory: str = "",
-        context: str = ""
+        context: str = "",
+        prompt_layers: Optional[Dict[str, bool]] = None
     ) -> str:
-
 
 
         memory = self.trim_context(
@@ -301,21 +496,52 @@ class PromptBuilder:
         )
 
 
+        layers = self.normalize_prompt_layers(
 
-        return self.manager.build_system_prompt(
+            prompt_layers
 
+            if prompt_layers is not None
 
-            active_modes=modes,
-
-
-            memory_summary=memory,
-
-
-            additional_context=context
-
+            else self.prompt_layers
 
         )
 
+
+        return self.manager.build_system_prompt(
+
+            active_modes=(
+
+                modes
+
+                if layers["modes"]
+
+                else None
+
+            ),
+
+            memory_summary=(
+
+                memory
+
+                if layers["conversation"]
+
+                else ""
+
+            ),
+
+            additional_context=(
+
+                context
+
+                if layers["conversation"]
+
+                else ""
+
+            ),
+
+            enabled_layers=layers
+
+        )
 
 
     # ---------------------------------------------
@@ -344,7 +570,6 @@ class PromptBuilder:
         size = 0
 
 
-
         for section in sections:
 
 
@@ -355,14 +580,39 @@ class PromptBuilder:
 
                 continue
 
+
             if (
+
                 size == 0
+
                 and section.get("priority", 0) >= 90
+
             ):
-                budgeted = content[:self.MAX_FINAL_PROMPT_CHARS]
-                output.append(budgeted)
-                size += len(budgeted)
+
+                budgeted = (
+
+                    content[
+
+                        :self.MAX_FINAL_PROMPT_CHARS
+
+                    ]
+
+                )
+
+                output.append(
+
+                    budgeted
+
+                )
+
+                size += len(
+
+                    budgeted
+
+                )
+
                 continue
+
 
             if (
 
@@ -374,11 +624,44 @@ class PromptBuilder:
 
             ):
 
-                if not output and section.get("priority", 0) >= 90:
-                    budgeted = content[:self.MAX_FINAL_PROMPT_CHARS]
-                    output.append(budgeted)
-                    size += len(budgeted)
+                if (
+
+                    not output
+
+                    and section.get(
+
+                        "priority",
+
+                        0
+
+                    ) >= 90
+
+                ):
+
+                    budgeted = (
+
+                        content[
+
+                            :self.MAX_FINAL_PROMPT_CHARS
+
+                        ]
+
+                    )
+
+                    output.append(
+
+                        budgeted
+
+                    )
+
+                    size += len(
+
+                        budgeted
+
+                    )
+
                     continue
+
                 continue
 
 
@@ -388,11 +671,14 @@ class PromptBuilder:
 
             )
 
-            size += len(content)
+            size += len(
+
+                content
+
+            )
 
 
         return output
-
 
 
     # ---------------------------------------------
@@ -409,13 +695,23 @@ class PromptBuilder:
         knowledge_context: str = "",
         tools_spec: str = "",
         intent: str = "",
-        conversation_summary: str = ""
+        conversation_summary: str = "",
+        prompt_layers: Optional[Dict[str, bool]] = None
     ) -> str:
 
 
+        layers = self.normalize_prompt_layers(
+
+            prompt_layers
+
+            if prompt_layers is not None
+
+            else self.prompt_layers
+
+        )
+
 
         sections = []
-
 
 
         # ---------------------------------
@@ -428,58 +724,81 @@ class PromptBuilder:
 
             memory=memory_summary,
 
-            context=knowledge_context
+            context=knowledge_context,
+
+            prompt_layers=layers
 
         )
-
 
 
         sections.append({
 
             "priority":
+
                 self.CONTEXT_PRIORITY["identity"],
 
             "content":
+
                 system
 
         })
-
 
 
         # ---------------------------------
         # Intent
         # ---------------------------------
 
-        if intent:
+        if (
+
+            intent
+
+            and
+
+            layers["conversation"]
+
+        ):
 
 
             sections.append({
 
                 "priority":
+
                     self.CONTEXT_PRIORITY["intent"],
 
                 "content":
+
                     "Intent:\n"
+
                     +
+
                     intent
 
             })
-
 
 
         # ---------------------------------
         # Personality Override
         # ---------------------------------
 
-        if personality_fragment:
+        if (
+
+            personality_fragment
+
+            and
+
+            layers["personality"]
+
+        ):
 
 
             sections.append({
 
                 "priority":
+
                     self.CONTEXT_PRIORITY["personality"],
 
                 "content":
+
                     self.trim_context(
 
                         personality_fragment,
@@ -491,20 +810,29 @@ class PromptBuilder:
             })
 
 
-
         # ---------------------------------
         # Mode
         # ---------------------------------
 
-        if mode_fragment:
+        if (
+
+            mode_fragment
+
+            and
+
+            layers["modes"]
+
+        ):
 
 
             sections.append({
 
                 "priority":
+
                     self.CONTEXT_PRIORITY["mode"],
 
                 "content":
+
                     self.trim_context(
 
                         mode_fragment,
@@ -516,22 +844,33 @@ class PromptBuilder:
             })
 
 
-
         # ---------------------------------
         # Memory
         # ---------------------------------
 
-        if memory_summary:
+        if (
+
+            memory_summary
+
+            and
+
+            layers["conversation"]
+
+        ):
 
 
             sections.append({
 
                 "priority":
+
                     self.CONTEXT_PRIORITY["memory"],
 
                 "content":
+
                     "Memory:\n"
+
                     +
+
                     self.trim_context(
 
                         memory_summary,
@@ -543,22 +882,33 @@ class PromptBuilder:
             })
 
 
-
         # ---------------------------------
         # Knowledge
         # ---------------------------------
 
-        if knowledge_context:
+        if (
+
+            knowledge_context
+
+            and
+
+            layers["conversation"]
+
+        ):
 
 
             sections.append({
 
                 "priority":
+
                     self.CONTEXT_PRIORITY["knowledge"],
 
                 "content":
+
                     "Relevant knowledge:\n"
+
                     +
+
                     self.trim_context(
 
                         knowledge_context,
@@ -570,22 +920,33 @@ class PromptBuilder:
             })
 
 
-
         # ---------------------------------
         # Tools
         # ---------------------------------
 
-        if tools_spec:
+        if (
+
+            tools_spec
+
+            and
+
+            layers["conversation"]
+
+        ):
 
 
             sections.append({
 
                 "priority":
+
                     self.CONTEXT_PRIORITY["tools"],
 
                 "content":
+
                     "Available tools:\n"
+
                     +
+
                     self.trim_context(
 
                         tools_spec,
@@ -597,33 +958,51 @@ class PromptBuilder:
             })
 
 
-
         # ---------------------------------
         # Conversation Summary
         # ---------------------------------
 
-        if conversation_summary:
+        if (
+
+            conversation_summary
+
+            and
+
+            layers["conversation"]
+
+        ):
 
 
             sections.append({
 
                 "priority":
+
                     self.CONTEXT_PRIORITY["history"],
 
                 "content":
+
                     "Conversation summary:\n"
+
                     +
+
                     conversation_summary
 
             })
-
 
 
         # ---------------------------------
         # History
         # ---------------------------------
 
-        if history:
+        if (
+
+            history
+
+            and
+
+            layers["conversation"]
+
+        ):
 
 
             history_text = [
@@ -633,7 +1012,15 @@ class PromptBuilder:
             ]
 
 
-            for msg in history[-self.MAX_HISTORY_MESSAGES:]:
+            for msg in (
+
+                history[
+
+                    -self.MAX_HISTORY_MESSAGES:
+
+                ]
+
+            ):
 
 
                 role = msg.get(
@@ -661,17 +1048,21 @@ class PromptBuilder:
                 )
 
 
-
             sections.append({
 
                 "priority":
+
                     self.CONTEXT_PRIORITY["history"],
 
                 "content":
-                    "\n".join(history_text)
+
+                    "\n".join(
+
+                        history_text
+
+                    )
 
             })
-
 
 
         # ---------------------------------
@@ -693,7 +1084,6 @@ class PromptBuilder:
             )
 
         )
-
 
 
         return self.trim_context(
