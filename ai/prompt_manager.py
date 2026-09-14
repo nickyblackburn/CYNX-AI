@@ -33,13 +33,13 @@ class PromptManager:
 
     CORE_ORDER = [
         "core.md",
-        "personality.md",
-        "voice.md",
-        "overrides.md",
     ]
 
 
     OPTIONAL_FILES = {
+        "personality": "personality.md",
+        "voice": "voice.md",
+        "overrides": "overrides.md",
         "safety": "safety.md",
         "conversation": "conversation.md",
         "examples": "examples.md",
@@ -55,7 +55,6 @@ class PromptManager:
         "creative": "creative.md",
         "researcher": "researcher.md",
     }
-
 
 
     # ---------------------------------------------
@@ -75,6 +74,23 @@ class PromptManager:
     MAX_MEMORY_CHARS = 3000
 
     MAX_CONTEXT_CHARS = 4000
+
+
+
+    # ---------------------------------------------
+    # Prompt Layer Defaults
+    # ---------------------------------------------
+
+    DEFAULT_PROMPT_LAYERS = {
+        "core": True,
+        "personality": True,
+        "voice": True,
+        "conversation": True,
+        "safety": True,
+        "modes": True,
+        "examples": True,
+        "overrides": True
+    }
 
 
 
@@ -124,6 +140,37 @@ class PromptManager:
         self._cache = {}
 
         self._mode_cache = {}
+
+
+
+
+    # ---------------------------------------------
+    # Prompt Layer Utilities
+    # ---------------------------------------------
+
+    def normalize_prompt_layers(
+        self,
+        enabled_layers=None
+    ):
+
+
+        layers = dict(
+            self.DEFAULT_PROMPT_LAYERS
+        )
+
+
+        if enabled_layers:
+
+            for name, enabled in enabled_layers.items():
+
+                if name in layers:
+
+                    layers[name] = bool(
+                        enabled
+                    )
+
+
+        return layers
 
 
 
@@ -476,7 +523,25 @@ class PromptManager:
         memory_summary="",
         additional_context="",
         include_safety=True,
+        enabled_layers=None,
     ):
+
+
+        # ---------------------------------------------
+        # Normalize Layer Configuration
+        # ---------------------------------------------
+
+        layers = self.normalize_prompt_layers(
+
+            enabled_layers
+
+        )
+
+
+        print(
+            "[PROMPT MANAGER LAYERS]",
+            layers
+        )
 
 
         parts = []
@@ -487,20 +552,24 @@ class PromptManager:
         # Core Identity
         # -----------------------------
 
-        core = self.load_core_prompts()
+        core = ""
 
 
-        if core:
+        if layers["core"]:
 
-            parts.append(
+            core = self.load_core_prompts()
 
-                "[CORE IDENTITY - ALWAYS FOLLOW]\n"
-                +
 
-                core
+            if core:
 
-            )
+                parts.append(
 
+                    "[CORE IDENTITY - ALWAYS FOLLOW]\n"
+                    +
+
+                    core
+
+                )
 
 
 
@@ -508,19 +577,89 @@ class PromptManager:
         # Personality Matrix
         # -----------------------------
 
-        personality_matrix = (
-            self.load_personality_matrix()
-        )
+        personality_matrix = ""
 
 
-        if personality_matrix:
+        if layers["personality"]:
 
-            parts.append(
+            personality_matrix = (
 
-                personality_matrix
+                self.load_personality_matrix()
 
             )
 
+
+            if personality_matrix:
+
+                parts.append(
+
+                    personality_matrix
+
+                )
+
+
+
+        # -----------------------------
+        # Voice
+        # -----------------------------
+
+        voice = ""
+
+
+        if layers["voice"]:
+
+            voice = self.load_optional(
+
+                "voice"
+
+            )
+
+
+            if voice:
+
+                parts.append(
+
+                    self.trim_text(
+
+                        voice,
+
+                        self.MAX_PERSONALITY_CHARS
+
+                    )
+
+                )
+
+
+
+        # -----------------------------
+        # Overrides
+        # -----------------------------
+
+        overrides = ""
+
+
+        if layers["overrides"]:
+
+            overrides = self.load_optional(
+
+                "overrides"
+
+            )
+
+
+            if overrides:
+
+                parts.append(
+
+                    self.trim_text(
+
+                        overrides,
+
+                        self.MAX_CONTEXT_CHARS
+
+                    )
+
+                )
 
 
 
@@ -528,31 +667,40 @@ class PromptManager:
         # CYN Studio Knowledge
         # -----------------------------
 
-        cyn_studio = self.load_optional(
-            "cyn-studio"
-        )
+        cyn_studio = ""
 
 
-        print(
-            "CYN STUDIO LENGTH:",
-            len(cyn_studio)
-        )
+        if layers["conversation"]:
 
+            cyn_studio = self.load_optional(
 
-        if cyn_studio:
-
-            parts.append(
-
-                self.trim_text(
-
-                    cyn_studio,
-
-                    self.MAX_CONTEXT_CHARS
-
-                )
+                "cyn-studio"
 
             )
 
+
+            print(
+
+                "CYN STUDIO LENGTH:",
+
+                len(cyn_studio)
+
+            )
+
+
+            if cyn_studio:
+
+                parts.append(
+
+                    self.trim_text(
+
+                        cyn_studio,
+
+                        self.MAX_CONTEXT_CHARS
+
+                    )
+
+                )
 
 
 
@@ -560,25 +708,31 @@ class PromptManager:
         # Conversation
         # -----------------------------
 
-        conversation = self.load_optional(
-            "conversation"
-        )
+        conversation = ""
 
 
-        if conversation:
+        if layers["conversation"]:
 
-            parts.append(
+            conversation = self.load_optional(
 
-                self.trim_text(
-
-                    conversation,
-
-                    self.MAX_CONTEXT_CHARS
-
-                )
+                "conversation"
 
             )
 
+
+            if conversation:
+
+                parts.append(
+
+                    self.trim_text(
+
+                        conversation,
+
+                        self.MAX_CONTEXT_CHARS
+
+                    )
+
+                )
 
 
 
@@ -586,25 +740,31 @@ class PromptManager:
         # Examples
         # -----------------------------
 
-        examples = self.load_optional(
-            "examples"
-        )
+        examples = ""
 
 
-        if examples:
+        if layers["examples"]:
 
-            parts.append(
+            examples = self.load_optional(
 
-                self.trim_text(
-
-                    examples,
-
-                    self.MAX_CONTEXT_CHARS
-
-                )
+                "examples"
 
             )
 
+
+            if examples:
+
+                parts.append(
+
+                    self.trim_text(
+
+                        examples,
+
+                        self.MAX_CONTEXT_CHARS
+
+                    )
+
+                )
 
 
 
@@ -612,25 +772,31 @@ class PromptManager:
         # Reasoning Framework
         # -----------------------------
 
-        reasoning = self.load_optional(
-            "reasoning"
-        )
+        reasoning = ""
 
 
-        if reasoning:
+        if layers["conversation"]:
 
-            parts.append(
+            reasoning = self.load_optional(
 
-                self.trim_text(
-
-                    reasoning,
-
-                    self.MAX_CONTEXT_CHARS
-
-                )
+                "reasoning"
 
             )
 
+
+            if reasoning:
+
+                parts.append(
+
+                    self.trim_text(
+
+                        reasoning,
+
+                        self.MAX_CONTEXT_CHARS
+
+                    )
+
+                )
 
 
 
@@ -638,25 +804,31 @@ class PromptManager:
         # Projects
         # -----------------------------
 
-        projects = self.load_optional(
-            "projects"
-        )
+        projects = ""
 
 
-        if projects:
+        if layers["conversation"]:
 
-            parts.append(
+            projects = self.load_optional(
 
-                self.trim_text(
-
-                    projects,
-
-                    self.MAX_CONTEXT_CHARS
-
-                )
+                "projects"
 
             )
 
+
+            if projects:
+
+                parts.append(
+
+                    self.trim_text(
+
+                        projects,
+
+                        self.MAX_CONTEXT_CHARS
+
+                    )
+
+                )
 
 
 
@@ -667,11 +839,17 @@ class PromptManager:
         safety = ""
 
 
-        if include_safety:
+        if (
+            layers["safety"]
+            and
+            include_safety
+        ):
 
 
             safety = self.load_optional(
+
                 "safety"
+
             )
 
 
@@ -691,19 +869,24 @@ class PromptManager:
 
 
 
-
         # -----------------------------
-        # Active modes only
+        # Active Modes
         # -----------------------------
 
-        if active_modes:
+        if (
+            layers["modes"]
+            and
+            active_modes
+        ):
 
 
             for mode in active_modes:
 
 
                 mode_text = self.load_mode(
+
                     mode
+
                 )
 
 
@@ -725,19 +908,24 @@ class PromptManager:
 
 
 
-
         # -----------------------------
-        # Active options
+        # Active Options
         # -----------------------------
 
-        if active_options:
+        if (
+            layers["modes"]
+            and
+            active_options
+        ):
 
 
             for option in active_options:
 
 
                 option_text = self.load_option(
+
                     option
+
                 )
 
 
@@ -759,12 +947,15 @@ class PromptManager:
 
 
 
-
         # -----------------------------
         # Memory
         # -----------------------------
 
-        if memory_summary:
+        if (
+            layers["conversation"]
+            and
+            memory_summary
+        ):
 
 
             parts.append(
@@ -782,12 +973,15 @@ class PromptManager:
 
 
 
-
         # -----------------------------
         # Retrieved knowledge/tools
         # -----------------------------
 
-        if additional_context:
+        if (
+            layers["conversation"]
+            and
+            additional_context
+        ):
 
 
             parts.append(
@@ -801,7 +995,6 @@ class PromptManager:
                 )
 
             )
-
 
 
 
@@ -830,96 +1023,183 @@ class PromptManager:
         ):
 
             return (
+
                 f"[PROMPT SECTION] "
                 f"{name}: "
                 f"{len(text or '')} chars"
+
             )
 
 
         print(
+
             section_label(
+
                 "core",
                 core
+
             )
+
         )
 
 
         print(
+
             section_label(
+
                 "personality_matrix",
                 personality_matrix
+
             )
+
         )
 
 
         print(
+
             section_label(
+
+                "voice",
+                voice
+
+            )
+
+        )
+
+
+        print(
+
+            section_label(
+
+                "overrides",
+                overrides
+
+            )
+
+        )
+
+
+        print(
+
+            section_label(
+
                 "studio",
                 cyn_studio
+
             )
+
         )
 
 
         print(
+
             section_label(
+
                 "conversation",
                 conversation
+
             )
+
         )
 
 
         print(
+
             section_label(
+
                 "examples",
                 examples
+
             )
+
         )
 
 
         print(
+
             section_label(
+
                 "reasoning",
                 reasoning
+
             )
+
         )
 
 
         print(
+
             section_label(
+
                 "projects",
                 projects
+
             )
+
         )
 
 
         print(
+
             section_label(
+
                 "safety",
                 safety
+
             )
+
         )
 
 
         print(
+
             section_label(
+
                 "memory",
                 memory_summary
+
             )
+
         )
 
 
         print(
+
             section_label(
+
                 "additional_context",
                 additional_context
+
             )
+
         )
 
 
         print(
+
+            "[PROMPT LAYERS ACTIVE]",
+
+            [
+
+                name
+
+                for name, enabled
+
+                in layers.items()
+
+                if enabled
+
+            ]
+
+        )
+
+
+        print(
+
             f"[FINAL SYSTEM PROMPT] "
             f"{len(prompt)} chars / "
             f"{len(prompt.split())} words"
+
         )
 
 
