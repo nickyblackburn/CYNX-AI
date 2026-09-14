@@ -1,4 +1,4 @@
-FROM llama3.1:8b
+FROM dolphin3:8b-llama3.1-q8_0
 
 PARAMETER temperature 1.15
 PARAMETER top_p 0.95
