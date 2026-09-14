@@ -1,4 +1,3 @@
-
 import json
 import logging
 import statistics
@@ -354,14 +353,6 @@ def load_questions(suites=None):
                 suite_name
             ).strip()
 
-            # Allow the user to type either:
-            #
-            # personality
-            #
-            # or:
-            #
-            # personality.json
-
             if suite_name.lower().endswith(
                 ".json"
             ):
@@ -539,6 +530,222 @@ def load_questions(suites=None):
 
 
 # =====================================
+# Benchmark Prompt Configuration
+# =====================================
+
+DEFAULT_PROMPT_PRESET = "full_cyn"
+
+
+# =====================================
+# Configure Benchmark Prompt
+# =====================================
+
+# =====================================
+# Configure Benchmark Prompt
+# =====================================
+
+def configure_benchmark_prompt(
+    chat_engine,
+    test
+):
+    """
+    Configure the existing PromptBuilder using
+    the benchmark test's prompt preset/layers.
+
+    Uses the existing PromptBuilder layer system.
+    Does not require apply_preset() or set_preset().
+    """
+
+    prompt_builder = getattr(
+        chat_engine,
+        "prompt_builder",
+        None
+    )
+
+    if prompt_builder is None:
+        prompt_builder = getattr(
+            chat_engine,
+            "builder",
+            None
+        )
+
+    if prompt_builder is None:
+        raise RuntimeError(
+            "ChatEngine does not expose a PromptBuilder."
+        )
+
+    # ---------------------------------
+    # Determine requested prompt layers
+    # ---------------------------------
+
+    explicit_layers = test.get(
+        "prompt_layers"
+    )
+
+    if isinstance(explicit_layers, dict):
+        layers = prompt_builder.normalize_prompt_layers(
+            explicit_layers
+        )
+
+    else:
+        preset = str(
+            test.get(
+                "prompt_preset",
+                "full_cyn"
+            )
+        ).strip().lower()
+
+        presets = {
+            "base": {
+                "core": False,
+                "personality": False,
+                "voice": False,
+                "overrides": False,
+                "safety": False,
+                "conversation": False,
+                "examples": False,
+                "cyn-studio": False,
+                "projects": False,
+                "reasoning": False,
+            },
+
+            "core_only": {
+                "core": True,
+                "personality": False,
+                "voice": False,
+                "overrides": False,
+                "safety": False,
+                "conversation": False,
+                "examples": False,
+                "cyn-studio": False,
+                "projects": False,
+                "reasoning": False,
+            },
+
+            "core_safety": {
+                "core": True,
+                "personality": False,
+                "voice": False,
+                "overrides": False,
+                "safety": True,
+                "conversation": False,
+                "examples": False,
+                "cyn-studio": False,
+                "projects": False,
+                "reasoning": False,
+            },
+
+            "core_personality": {
+                "core": True,
+                "personality": True,
+                "voice": False,
+                "overrides": False,
+                "safety": False,
+                "conversation": False,
+                "examples": False,
+                "cyn-studio": False,
+                "projects": False,
+                "reasoning": False,
+            },
+
+            "full_cyn": {
+                "core": True,
+                "personality": True,
+                "voice": True,
+                "overrides": True,
+                "safety": True,
+                "conversation": True,
+                "examples": True,
+                "cyn-studio": True,
+                "projects": True,
+                "reasoning": True,
+            },
+        }
+
+        if preset == "custom":
+            layers = test.get(
+                "custom_prompt_layers",
+                {}
+            )
+
+        else:
+            layers = presets.get(
+                preset,
+                presets["full_cyn"]
+            )
+
+        layers = prompt_builder.normalize_prompt_layers(
+            layers
+        )
+
+    # ---------------------------------
+    # Apply layers to existing builder
+    # ---------------------------------
+
+    setter = getattr(
+        prompt_builder,
+        "set_prompt_layers",
+        None
+    )
+
+    if callable(setter):
+        setter(layers)
+
+    elif hasattr(
+        prompt_builder,
+        "prompt_layers"
+    ):
+        prompt_builder.prompt_layers = layers
+
+    elif hasattr(
+        prompt_builder,
+        "enabled_layers"
+    ):
+        prompt_builder.enabled_layers = layers
+
+    else:
+        raise RuntimeError(
+            "PromptBuilder does not expose a prompt layer state."
+        )
+
+    # ---------------------------------
+    # Build summary
+    # ---------------------------------
+
+    layer_summary = ", ".join(
+        f"{name}={'ON' if enabled else 'OFF'}"
+        for name, enabled in layers.items()
+    )
+
+    return {
+        "preset": test.get(
+            "prompt_preset",
+            "full_cyn"
+        ),
+        "layers": layers,
+        "layer_summary": layer_summary,
+    }
+def format_prompt_layers(layers):
+
+    if not isinstance(
+        layers,
+        dict
+    ):
+
+        return "unknown"
+
+    return ", ".join(
+
+        f"{name}="
+        f"{'ON' if enabled else 'OFF'}"
+
+        for name, enabled
+        in layers.items()
+
+    )
+
+
+# =====================================
 # Benchmark Storage System
 # =====================================
 
@@ -583,14 +790,6 @@ class BenchmarkStorage:
             "suite",
             "unknown"
         )
-
-        # ---------------------------------
-        # Preserve existing behavior-tag
-        # organization when available.
-        #
-        # If a behavior tag exists, use it.
-        # Otherwise use the originating suite.
-        # ---------------------------------
 
         behavior_tags = result.get(
             "behavior_tags",
@@ -1152,7 +1351,10 @@ def score_response(response, category):
 # Run Single Benchmark Test
 # =====================================
 
-def run_single_test(chat_engine, test):
+def run_single_test(
+    chat_engine,
+    test
+):
 
     test_id = test.get(
         "test_id",
@@ -1201,8 +1403,42 @@ def run_single_test(chat_engine, test):
         "normal"
     )
 
+    # ---------------------------------
+    # Prompt configuration
+    # ---------------------------------
+
+    prompt_config = configure_benchmark_prompt(
+
+        chat_engine,
+
+        test
+
+    )
+
+    prompt_preset = prompt_config.get(
+        "preset",
+        DEFAULT_PROMPT_PRESET
+    )
+
+    prompt_layers = prompt_config.get(
+        "layers",
+        {}
+    )
+
     console.print(
         f"Question: {question}"
+    )
+
+    console.print()
+
+    console.print(
+        f"Prompt preset: "
+        f"[cyan]{prompt_preset}[/cyan]"
+    )
+
+    console.print(
+        "Prompt layers: "
+        f"[cyan]{format_prompt_layers(prompt_layers)}[/cyan]"
     )
 
     console.print()
@@ -1212,7 +1448,9 @@ def run_single_test(chat_engine, test):
         f"Starting benchmark test "
         f"{test_id} | "
         f"category={category} | "
-        f"suite={test.get('suite', 'unknown')}"
+        f"suite={test.get('suite', 'unknown')} | "
+        f"prompt_preset={prompt_preset} | "
+        f"prompt_layers={prompt_layers}"
 
     )
 
@@ -1292,17 +1530,6 @@ def run_single_test(chat_engine, test):
             or ""
 
         )
-
-        # ---------------------------------
-        # Preserve Tool Test Mode data
-        # ---------------------------------
-        #
-        # ChatEngine may expose tool execution
-        # information under one of these keys.
-        #
-        # Do NOT discard it while normalizing
-        # the response for the benchmark.
-        # ---------------------------------
 
         tool_trace = (
 
@@ -1471,12 +1698,17 @@ def run_single_test(chat_engine, test):
             scores,
 
         # ---------------------------------
-        # Tool Test Mode
+        # Prompt configuration
         # ---------------------------------
-        #
-        # Preserve the complete tool trace so
-        # the formatter, analyzer, raw results,
-        # and dashboard can use it.
+
+        "prompt_preset":
+            prompt_preset,
+
+        "prompt_layers":
+            prompt_layers,
+
+        # ---------------------------------
+        # Tool Test Mode
         # ---------------------------------
 
         "tool_test":
@@ -1504,12 +1736,6 @@ def run_benchmark(
 
     # ---------------------------------
     # Apply benchmark filters
-    # ---------------------------------
-    #
-    # Suite selection happens first.
-    #
-    # Category and limit filters then
-    # operate on the selected tests.
     # ---------------------------------
 
     if limit is None and not categories:
@@ -1691,15 +1917,7 @@ def run_benchmark(
             )
 
             # ---------------------------------
-            # Preserve Tool Test Mode data
-            # ---------------------------------
-            #
-            # format_benchmark_result() currently
-            # does not receive tool_test explicitly.
-            #
-            # Therefore attach the tool trace after
-            # formatting without changing the
-            # formatter structure.
+            # Preserve benchmark metadata
             # ---------------------------------
 
             if isinstance(
@@ -1725,6 +1943,28 @@ def run_benchmark(
 
                     result.get(
                         "tool_test",
+                        {}
+                    )
+
+                )
+
+                # ---------------------------------
+                # Preserve prompt configuration
+                # ---------------------------------
+
+                formatted_result["prompt_preset"] = (
+
+                    result.get(
+                        "prompt_preset",
+                        DEFAULT_PROMPT_PRESET
+                    )
+
+                )
+
+                formatted_result["prompt_layers"] = (
+
+                    result.get(
+                        "prompt_layers",
                         {}
                     )
 
@@ -1860,9 +2100,11 @@ def create_cynx_engine():
         cfg.db_path
 
     )
+
     memory_store = MemoryManager(
         conn
     )
+
     memory_manager = MemoryManager(
 
         conn
@@ -1991,9 +2233,6 @@ def run_command(engine):
 
     ):
 
-        # Backwards compatibility with
-        # the old CLI.
-
         mode = command
 
         settings = get_benchmark_mode(
@@ -2096,11 +2335,6 @@ def run_command(engine):
 
     # ---------------------------------
     # ALL MODE
-    # ---------------------------------
-    #
-    # No suite list means all suite files.
-    #
-    # A supplied --limit is still respected.
     # ---------------------------------
 
     if str(mode).lower() == "all":
