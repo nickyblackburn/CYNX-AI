@@ -3,14 +3,356 @@
 
 <head>
 
-<title>CYN-X</title>
+    <title>CYN-X</title>
 
-<link rel="stylesheet" href="/static/style.css">
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
 
 </head>
 
 
 <body>
+
+
+<!-- =====================================================
+     PROMPT LAYERS SIDE PANEL
+     ===================================================== -->
+
+
+<div
+    id="prompt-layers-overlay"
+    class="prompt-layers-overlay"
+></div>
+
+
+<div
+    id="prompt-layers-panel"
+    class="prompt-layers-panel"
+>
+
+
+    <div class="prompt-layers-header">
+
+
+        <div class="prompt-layers-title">
+
+            🧠 Prompt Layers
+
+        </div>
+
+
+        <button
+            id="prompt-layers-toggle"
+            type="button"
+        >
+
+            ✕
+
+        </button>
+
+
+    </div>
+
+
+    <div
+        id="prompt-layer-status"
+        class="prompt-layer-status"
+    >
+
+        Full CYN
+
+    </div>
+
+
+    <!-- PRESETS -->
+
+    <div class="prompt-preset">
+
+
+        <label for="prompt-preset">
+
+            Preset
+
+        </label>
+
+
+        <select id="prompt-preset">
+
+
+            <option value="base">
+
+                Base
+
+            </option>
+
+
+            <option value="core_only">
+
+                Core Only
+
+            </option>
+
+
+            <option value="core_safety">
+
+                Core + Safety
+
+            </option>
+
+
+            <option value="core_personality">
+
+                Core + Personality
+
+            </option>
+
+
+            <option
+                value="full_cyn"
+                selected
+            >
+
+                Full CYN
+
+            </option>
+
+
+            <option value="custom">
+
+                Custom
+
+            </option>
+
+
+        </select>
+
+
+    </div>
+
+
+    <!-- CORE -->
+
+    <label class="prompt-layer">
+
+        <input
+            type="checkbox"
+            class="prompt-layer-checkbox"
+            data-layer="core"
+            checked
+        >
+
+        <span>
+            Core
+        </span>
+
+    </label>
+
+
+    <div class="prompt-layer-description">
+
+        Core identity and instructions
+
+    </div>
+
+
+    <!-- PERSONALITY -->
+
+    <label class="prompt-layer">
+
+        <input
+            type="checkbox"
+            class="prompt-layer-checkbox"
+            data-layer="personality"
+            checked
+        >
+
+        <span>
+            Personality
+        </span>
+
+    </label>
+
+
+    <div class="prompt-layer-description">
+
+        Personality behavior
+
+    </div>
+
+
+    <!-- VOICE -->
+
+    <label class="prompt-layer">
+
+        <input
+            type="checkbox"
+            class="prompt-layer-checkbox"
+            data-layer="voice"
+            checked
+        >
+
+        <span>
+            Voice
+        </span>
+
+    </label>
+
+
+    <div class="prompt-layer-description">
+
+        Speaking style and tone
+
+    </div>
+
+
+    <!-- CONVERSATION -->
+
+    <label class="prompt-layer">
+
+        <input
+            type="checkbox"
+            class="prompt-layer-checkbox"
+            data-layer="conversation"
+            checked
+        >
+
+        <span>
+            Conversation
+        </span>
+
+    </label>
+
+
+    <div class="prompt-layer-description">
+
+        Conversation context
+
+    </div>
+
+
+    <!-- SAFETY -->
+
+    <label class="prompt-layer">
+
+        <input
+            type="checkbox"
+            class="prompt-layer-checkbox"
+            data-layer="safety"
+            checked
+        >
+
+        <span>
+            Safety
+        </span>
+
+    </label>
+
+
+    <div class="prompt-layer-description">
+
+        Safety instructions
+
+    </div>
+
+
+    <!-- MODES -->
+
+    <label class="prompt-layer">
+
+        <input
+            type="checkbox"
+            class="prompt-layer-checkbox"
+            data-layer="modes"
+            checked
+        >
+
+        <span>
+            Modes
+        </span>
+
+    </label>
+
+
+    <div class="prompt-layer-description">
+
+        Active CYN modes
+
+    </div>
+
+
+    <!-- EXAMPLES -->
+
+    <label class="prompt-layer">
+
+        <input
+            type="checkbox"
+            class="prompt-layer-checkbox"
+            data-layer="examples"
+            checked
+        >
+
+        <span>
+            Examples
+        </span>
+
+    </label>
+
+
+    <div class="prompt-layer-description">
+
+        Few-shot examples
+
+    </div>
+
+
+    <!-- OVERRIDES -->
+
+    <label class="prompt-layer">
+
+        <input
+            type="checkbox"
+            class="prompt-layer-checkbox"
+            data-layer="overrides"
+            checked
+        >
+
+        <span>
+            Overrides
+        </span>
+
+    </label>
+
+
+    <div class="prompt-layer-description">
+
+        Prompt overrides
+
+    </div>
+
+
+    <!-- APPLY -->
+
+    <button
+        id="apply-prompt-layers"
+        type="button"
+    >
+
+        Apply Prompt Layers
+
+    </button>
+
+
+</div>
+
+
+
+
+
+<!-- =====================================================
+     MAIN CYN-X PAGE
+     ===================================================== -->
 
 
 <div class="container">
@@ -26,8 +368,20 @@
 
 
         <div id="response-time">
+
             Last Response: 0.00 seconds
+
         </div>
+
+
+        <button
+            id="open-prompt-layers"
+            type="button"
+        >
+
+            ⚙ Layers
+
+        </button>
 
 
     </div>
@@ -38,10 +392,10 @@
 
     <!-- CYN THINKING PANEL -->
 
-    <div 
-    id="thinking" 
-    class="loading-panel" 
-    style="display:none;"
+    <div
+        id="thinking"
+        class="loading-panel"
+        style="display:none;"
     >
 
 
@@ -55,24 +409,23 @@
             </div>
 
 
-
             <div class="diagnostic-status">
 
 
                 <div class="diagnostic-line">
 
-                    <span 
-                    class="spinner" 
-                    id="spinner">
+                    <span
+                        class="spinner"
+                        id="spinner"
+                    >
 
-                    ◐
+                        ◐
 
                     </span>
 
                     Neural processes active
 
                 </div>
-
 
 
                 <div class="diagnostic-line">
@@ -82,13 +435,11 @@
                 </div>
 
 
-
                 <div class="diagnostic-line">
 
                     ◑ Generating response
 
                 </div>
-
 
 
                 <div class="diagnostic-line">
@@ -99,9 +450,6 @@
 
 
             </div>
-
-
-
 
 
             <div class="diagnostic-footer">
@@ -119,15 +467,10 @@
             </div>
 
 
-
         </div>
 
 
     </div>
-
-
-
-
 
 
 
@@ -142,47 +485,43 @@
 
 
 
-
-
-
-
     <!-- INPUT -->
 
 
     <div class="input">
 
 
-        <input 
-
-        id="message"
-
-        placeholder="Talk to Cyn..."
-
-        />
+        <input
+            id="message"
+            placeholder="Talk to Cyn..."
+        >
 
 
-
-        <button 
-        id="sendButton">
+        <button
+            id="sendButton"
+            type="button"
+        >
 
             Send
 
         </button>
 
 
-
     </div>
 
 
-
+</div>
 
 
 
 
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script src="/static/chat.js"></script>
 
 
