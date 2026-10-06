@@ -8,3 +8,5 @@ __pycache__/
 *.logs
 *.png
 results/
+.venv/
+cynx_voz/datos/

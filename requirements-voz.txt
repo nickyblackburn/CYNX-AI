@@ -1,0 +1,11 @@
+# CYN-X Voz (Python 3.12)
+requests
+numpy
+sounddevice
+webrtcvad-wheels
+setuptools<81
+faster-whisper
+piper-tts
+# DLL de CUDA para Whisper en la GPU (Windows)
+nvidia-cublas-cu12
+nvidia-cudnn-cu12==9.*
