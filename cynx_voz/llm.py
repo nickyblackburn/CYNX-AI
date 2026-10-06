@@ -21,12 +21,14 @@ def disponible():
 
 
 def precargar():
-    """Carga el modelo en la GPU para que la primera respuesta no tarde."""
+    """Carga los dos modelos en la GPU para que la primera respuesta no tarde."""
     requests.post(
         f"{config.OLLAMA_URL}/api/generate",
-        json={"model": config.MODELO, "keep_alive": "30m"},
+        # mismas opciones que el chat: si cambia num_ctx, Ollama recarga el modelo
+        json={"model": config.MODELO, "keep_alive": "30m", "options": _opciones()},
         timeout=300,
     )
+    embeber(["hola"])
 
 
 def chat_stream(mensajes):

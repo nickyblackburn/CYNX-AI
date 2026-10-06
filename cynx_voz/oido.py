@@ -43,6 +43,7 @@ def _dlls_cuda():
 
 def _cargar_whisper():
     _dlls_cuda()
+    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
     from faster_whisper import WhisperModel
 
     try:

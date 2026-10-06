@@ -17,7 +17,8 @@ def _env(nombre, defecto):
 
 
 # Modelo de lenguaje (Ollama)
-OLLAMA_URL = _env("OLLAMA_URL", "http://localhost:11434")
+# 127.0.0.1 y no localhost: en Windows, localhost prueba antes IPv6 y añade ~2 s a cada petición
+OLLAMA_URL = _env("OLLAMA_URL", "http://127.0.0.1:11434")
 MODELO = _env("MODELO", "qwen3.5:9b")
 MODELO_EMBED = _env("MODELO_EMBED", "qwen3-embedding:0.6b")
 PENSAR = _env("PENSAR", "0") == "1"          # razonamiento de Qwen: lento para voz, apagado
@@ -41,4 +42,4 @@ INTERRUPCION = _env("INTERRUPCION", "0") == "1"
 # Memoria
 HISTORIAL = int(_env("HISTORIAL", "12"))       # mensajes recientes que ve el modelo
 RECUERDOS_K = int(_env("RECUERDOS_K", "6"))
-RECUERDOS_UMBRAL = float(_env("RECUERDOS_UMBRAL", "0.45"))
+RECUERDOS_UMBRAL = float(_env("RECUERDOS_UMBRAL", "0.3"))

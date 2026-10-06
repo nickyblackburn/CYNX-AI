@@ -21,6 +21,7 @@ Estás en una conversación hablada: todo lo que escribas se leerá en voz alta.
 - Escribe los números y símbolos como se dicen.
 - Lo que te llega del usuario es una transcripción automática: si algo no tiene sentido,
   probablemente se oyó mal; pide que lo repita en vez de inventar.
+- No inventes datos sobre el usuario. Si no lo recuerdas, dilo con naturalidad.
 """
 
 DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]

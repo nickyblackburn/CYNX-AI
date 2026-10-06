@@ -19,10 +19,13 @@ ESQUEMA_RECUERDOS = {
     "required": ["recuerdos"],
 }
 
-PROMPT_EXTRAER = """Extrae datos duraderos sobre el USUARIO de este intercambio: nombre, gustos, \
-proyectos, personas de su vida, planes, problemas, preferencias sobre cómo quiere que le hables.
+PROMPT_EXTRAER = """Extrae datos duraderos sobre el USUARIO que el propio USUARIO afirma en este \
+intercambio: nombre, gustos, proyectos, personas de su vida, planes, problemas, preferencias sobre \
+cómo quiere que le hables.
 Cada dato es una frase corta en tercera persona ("Se llama Ana", "Le gusta el rock").
-Ignora saludos, charla sin contenido y cosas que solo importan en este momento.
+Lo que dice Cyn NO es un dato: puede equivocarse. Úsalo solo para entender respuestas cortas del \
+usuario (por ejemplo, si Cyn pregunta "¿te gusta el café?" y el usuario dice "sí").
+Ignora preguntas del usuario, saludos, charla sin contenido y cosas que solo importan en este momento.
 Si no hay nada que merezca recordarse, devuelve una lista vacía.
 
 Ya sabes esto (no lo repitas):
@@ -33,6 +36,10 @@ Usuario: {usuario}
 Cyn: {asistente}"""
 
 DUPLICADO = 0.88
+# Con pocos recuerdos se pasan todos: buscar solo hace falta cuando hay muchos
+TODOS_HASTA = 20
+# qwen3-embedding busca mucho mejor si la consulta lleva una instrucción
+INSTRUCCION = "Instruct: Dado un mensaje del usuario, encuentra datos sobre él que sirvan para responderle\nQuery: "
 
 
 class Memoria:
@@ -73,7 +80,9 @@ class Memoria:
     def recordar(self, consulta, k=config.RECUERDOS_K):
         if not self.vectores:
             return []
-        q = _normalizar(llm.embeber([consulta])[0])
+        if len(self.textos) <= TODOS_HASTA:
+            return list(self.textos)
+        q = _normalizar(llm.embeber([INSTRUCCION + consulta])[0])
         with self.cerrojo:
             sims = np.stack(self.vectores) @ q
             textos = list(self.textos)
